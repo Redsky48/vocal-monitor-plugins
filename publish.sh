@@ -86,7 +86,26 @@ else
     echo "• Nothing to commit"
 fi
 
-# ── 5. Configure 'origin' remote ──────────────────────────────────────
+# ── 5. Create the GitHub repo if missing (gh available) ───────────────
+# Done BEFORE setting up 'origin' ourselves, because `gh repo create
+# --source=. --remote=origin` adds origin as part of its work and fails
+# if we've already added it.
+if command -v gh &>/dev/null; then
+    if gh repo view "$USER/$REPO" &>/dev/null; then
+        echo "• GitHub repo $USER/$REPO already exists"
+    else
+        echo "→ Creating public GitHub repo $USER/$REPO …"
+        # If origin is already set (re-run after a prior partial failure),
+        # remove it so `gh repo create --remote=origin` can add it cleanly.
+        git remote remove origin 2>/dev/null || true
+        gh repo create "$USER/$REPO" --public --source=. --remote=origin --description "Community JS audio plugins for the Vocal Monitor Android app" || {
+            echo "✗ gh repo create failed. You may need to run \`gh auth login\` first."
+            exit 1
+        }
+    fi
+fi
+
+# ── 6. Configure 'origin' remote (idempotent, after gh create) ────────
 if ! git remote get-url origin &>/dev/null; then
     git remote add origin "$REMOTE_URL"
     echo "✓ Added remote origin → $REMOTE_URL"
@@ -100,17 +119,8 @@ else
     echo "• origin already set"
 fi
 
-# ── 6. Create the GitHub repo (if gh available) and push ──────────────
+# ── 7. Push to origin ─────────────────────────────────────────────────
 if command -v gh &>/dev/null; then
-    if gh repo view "$USER/$REPO" &>/dev/null; then
-        echo "• GitHub repo $USER/$REPO already exists"
-    else
-        echo "→ Creating public GitHub repo $USER/$REPO …"
-        gh repo create "$USER/$REPO" --public --source=. --remote=origin --description "Community JS audio plugins for the Vocal Monitor Android app" || {
-            echo "✗ gh repo create failed. You may need to run \`gh auth login\` first."
-            exit 1
-        }
-    fi
     git push -u origin main
     echo "✓ Pushed to $REMOTE_URL"
 else
@@ -137,7 +147,7 @@ gh CLI not installed — manual step required to create the GitHub repo:
 EOF
 fi
 
-# ── 7. Done — show the URL the app needs ──────────────────────────────
+# ── 8. Done — show the URL the app needs ──────────────────────────────
 cat <<EOF
 
 ──────────────────────────────────────────────────────────────────────
