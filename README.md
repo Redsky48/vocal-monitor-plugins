@@ -31,10 +31,18 @@ The top-level [`manifest.json`](manifest.json) is auto-generated from `plugins/<
 
 ## Contribute a plugin
 
-1. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and the constraints the Rhino interpreter places on plugin code.
-2. Read [PLUGIN_API.md](PLUGIN_API.md) for the exact `registerProcessor()` / `process()` contract.
-3. Fork → add `plugins/<category>/<your-id>/{plugin.json, your-id.js}` → PR.
-4. CI validates the plugin (syntax, manifest schema, forbidden constructs). Merge triggers an automatic manifest rebuild.
+1. Fork on GitHub, clone your fork.
+2. `npm run new -- <category> <id> "<Display Name>"` — scaffolds the folder, `plugin.json`, and a starter `.js` from [`template/`](template).
+3. Edit the generated `.js` to implement your DSP. See [PLUGIN_API.md](PLUGIN_API.md) for the exact `registerProcessor()` / `process()` contract and [CONTRIBUTING.md](CONTRIBUTING.md) for the constraints the Rhino interpreter places on plugin code.
+4. `npm run validate` locally, then commit, push, open a PR.
+5. CI auto-runs the validator. Merge triggers an automatic manifest rebuild — your plugin appears in everyone's app catalogue on next refresh.
+
+Bug reports, ideas, and questions are very welcome:
+
+- 🐞 [Plugin doesn't work](https://github.com/Redsky48/vocal-monitor-plugins/issues/new?template=plugin-bug.yml)
+- 💡 [Suggest a new plugin](https://github.com/Redsky48/vocal-monitor-plugins/issues/new?template=plugin-idea.yml)
+- 📱 [App-side feedback](https://github.com/Redsky48/vocal-monitor-plugins/issues/new?template=app-feedback.yml)
+- 💬 [Discussions](https://github.com/Redsky48/vocal-monitor-plugins/discussions) for open-ended chat / show-and-tell.
 
 ## First-time publish
 

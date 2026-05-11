@@ -1,0 +1,67 @@
+name: Suggest a new plugin
+description: An effect you'd love to see in the registry. Anyone can pick this up and PR it.
+labels: ["idea", "good first issue"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Plugin ideas are great. If you can code one up yourself, see
+        [CONTRIBUTING.md](https://github.com/Redsky48/vocal-monitor-plugins/blob/main/CONTRIBUTING.md)
+        — it's typically 50–100 lines of pure JS. Otherwise, leaving an idea here
+        lets someone else pick it up.
+
+  - type: input
+    id: name
+    attributes:
+      label: Plugin name
+      placeholder: e.g. Tape Saturator, Gate Reverb, Vocoder
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Distortion
+        - Modulation
+        - Delay
+        - Filter
+        - Lo-Fi
+        - Voice FX
+        - Reverb
+        - Dynamics
+        - Other (mention in description)
+    validations:
+      required: true
+
+  - type: textarea
+    id: sound
+    attributes:
+      label: What should it sound like?
+      description: Describe the *sound* and the use-case, not the algorithm. A reference track / pedal / VST helps.
+      placeholder: |
+        Like the Strymon BigSky's "shimmer" reverb — adds an octave-up reverb tail
+        under the dry signal so sustained notes bloom into pad-like chords.
+    validations:
+      required: true
+
+  - type: textarea
+    id: params
+    attributes:
+      label: Suggested parameters
+      description: What should the user be able to tweak? Min, max, default for each.
+      placeholder: |
+        - shimmer (0..1, default 0.5)
+        - decay (0.5s..10s, default 4s)
+        - mix (0..1, default 0.3)
+    validations:
+      required: false
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References / inspiration
+      description: Links to demos, papers, similar plugins.
+    validations:
+      required: false

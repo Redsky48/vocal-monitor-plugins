@@ -1,0 +1,26 @@
+name: App-side feedback
+description: The plugin system itself, the library UI, or how the app loads plugins — not a specific plugin.
+labels: ["app"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for things like: "the library dialog should show stars", "I want
+        to share my chain as a preset", "plugin install fails when offline". For
+        an issue with a specific plugin's sound, use the "Plugin doesn't work"
+        template instead.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What's the feedback?
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why does it matter?
+      description: Concrete user scenario beats abstract preference.
+    validations:
+      required: false

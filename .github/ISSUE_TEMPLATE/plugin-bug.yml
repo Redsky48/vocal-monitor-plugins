@@ -1,0 +1,60 @@
+name: Plugin doesn't work as expected
+description: An installed plugin sounds wrong, crashes, or behaves unexpectedly in the Vocal Monitor app.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. The more concrete you can be about
+        what you heard vs. what you expected, the faster we can ship a fix.
+
+  - type: input
+    id: plugin
+    attributes:
+      label: Which plugin?
+      placeholder: e.g. saturator, phaser
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to hear?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What did you actually hear?
+      description: Pops, clicks, silence, distortion, DC offset, etc. A short clip on YouTube/SoundCloud helps a lot.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to reproduce
+      placeholder: |
+        1. Add <plugin> to the chain
+        2. Set <param> to <value>
+        3. Play <kind of source>
+        4. Notice that …
+    validations:
+      required: true
+
+  - type: input
+    id: params
+    attributes:
+      label: Parameter values when the issue showed up
+      placeholder: drive=0.85, mix=1.0
+    validations:
+      required: false
+
+  - type: input
+    id: device
+    attributes:
+      label: Phone / Android version
+      placeholder: e.g. Pixel 7 / Android 14
+    validations:
+      required: false

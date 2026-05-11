@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "validate": "node scripts/validate-plugins.mjs",
-    "build": "node scripts/build-manifest.mjs"
+    "build": "node scripts/build-manifest.mjs",
+    "new": "node scripts/new-plugin.mjs"
   },
   "engines": {
     "node": ">=20"

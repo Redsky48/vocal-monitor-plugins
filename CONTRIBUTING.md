@@ -9,27 +9,24 @@ Thanks for considering it! The workflow is intentionally simple: fork, add one f
 git clone https://github.com/<you>/vocal-monitor-plugins.git
 cd vocal-monitor-plugins
 
-# 2. Add a folder named after your plugin id, under the right category.
-mkdir -p plugins/distortion/my-fuzz
-cat > plugins/distortion/my-fuzz/plugin.json <<'EOF'
-{
-  "id": "my-fuzz",
-  "name": "My Fuzz",
-  "author": "Your Name",
-  "version": "1.0.0",
-  "description": "Aggressive transistor fuzz with bias modulation.",
-  "tags": ["distortion", "fuzz"]
-}
-EOF
+# 2. Scaffold a new plugin from the template. This creates the folder,
+#    plugin.json with the right id, and a starter .js file.
+npm run new -- distortion my-fuzz "My Fuzz"
+# (or: node scripts/new-plugin.mjs distortion my-fuzz "My Fuzz")
 
-# 3. Write the plugin source. Filename MUST match the id.
-$EDITOR plugins/distortion/my-fuzz/my-fuzz.js
+# 3. Open the generated plugins/distortion/my-fuzz/my-fuzz.js and write
+#    your DSP. The template ships with a no-op pass-through to start from.
 
 # 4. Validate locally before opening the PR.
-node scripts/validate-plugins.mjs
+npm run validate
+# (or: node scripts/validate-plugins.mjs)
 
 # 5. Push and open a PR. CI runs the same validator + tries a manifest build.
 ```
+
+The [`template/`](template) folder is the source of truth for what a new
+plugin looks like — `npm run new` is just a convenience wrapper around
+copying that folder and substituting your id in the right places.
 
 ## Repo layout rules
 

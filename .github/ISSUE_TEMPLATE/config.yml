@@ -1,0 +1,13 @@
+# Disable the "blank issue" path so every report goes through a template —
+# saves maintainer time, surfaces the info we always end up asking for.
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question / share an idea
+    url: https://github.com/Redsky48/vocal-monitor-plugins/discussions
+    about: For open-ended discussion, plugin design help, or to show off what you built — use Discussions instead of an issue.
+  - name: Plugin API reference
+    url: https://github.com/Redsky48/vocal-monitor-plugins/blob/main/PLUGIN_API.md
+    about: The exact contract your plugin must follow (parameterDescriptors, process(), Rhino limits).
+  - name: How to contribute
+    url: https://github.com/Redsky48/vocal-monitor-plugins/blob/main/CONTRIBUTING.md
+    about: Step-by-step guide to writing and submitting a new plugin.
