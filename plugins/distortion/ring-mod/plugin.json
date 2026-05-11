@@ -1,0 +1,8 @@
+{
+  "id": "ring-mod",
+  "name": "Ring Mod",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Multiplies input by a sine carrier. Low carrier = tremolo; speech-band = Dalek robot; above 1 kHz = clangorous bell-tone.",
+  "tags": ["distortion", "modulation", "robot", "metallic"]
+}

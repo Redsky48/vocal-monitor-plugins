@@ -1,0 +1,8 @@
+{
+  "id": "vibrato",
+  "name": "Vibrato",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Pure pitch wobble via LFO-modulated delay tap — no dry blend, so no comb filtering. Subtle warmth at low depth, seasick wobble at high.",
+  "tags": ["modulation", "pitch", "lfo"]
+}

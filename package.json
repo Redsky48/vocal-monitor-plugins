@@ -1,0 +1,15 @@
+{
+  "name": "vocal-monitor-plugins",
+  "version": "1.0.0",
+  "description": "Community registry of JavaScript audio plugins for the Vocal Monitor Android app.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "validate": "node scripts/validate-plugins.mjs",
+    "build": "node scripts/build-manifest.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,8 @@
+{
+  "id": "saturator",
+  "name": "Saturator",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Soft-clip tube-style saturation. Drive pushes the signal into the tanh curve; mix blends back the dry path so even extreme drive sits in a mix.",
+  "tags": ["distortion", "saturation", "tube", "warmth"]
+}

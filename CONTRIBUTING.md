@@ -1,0 +1,91 @@
+# Contributing a plugin
+
+Thanks for considering it! The workflow is intentionally simple: fork, add one folder, open a PR. CI handles the rest.
+
+## TL;DR
+
+```sh
+# 1. Fork on GitHub, then clone your fork.
+git clone https://github.com/<you>/vocal-monitor-plugins.git
+cd vocal-monitor-plugins
+
+# 2. Add a folder named after your plugin id, under the right category.
+mkdir -p plugins/distortion/my-fuzz
+cat > plugins/distortion/my-fuzz/plugin.json <<'EOF'
+{
+  "id": "my-fuzz",
+  "name": "My Fuzz",
+  "author": "Your Name",
+  "version": "1.0.0",
+  "description": "Aggressive transistor fuzz with bias modulation.",
+  "tags": ["distortion", "fuzz"]
+}
+EOF
+
+# 3. Write the plugin source. Filename MUST match the id.
+$EDITOR plugins/distortion/my-fuzz/my-fuzz.js
+
+# 4. Validate locally before opening the PR.
+node scripts/validate-plugins.mjs
+
+# 5. Push and open a PR. CI runs the same validator + tries a manifest build.
+```
+
+## Repo layout rules
+
+- One folder per plugin, under one of the existing categories:
+  `distortion`, `delay`, `filter`, `lofi`, `modulation`, `voice-fx`.
+- New categories: create the folder and add a label in `scripts/build-manifest.mjs` (`CATEGORY_LABELS`). The app then shows it as a chip.
+- The folder name = the plugin **id**. Use kebab-case (`a-z`, `0-9`, `-`).
+- Every folder has exactly two files: `plugin.json` and `<id>.js`. No subfolders, no assets.
+
+## `plugin.json` schema
+
+```jsonc
+{
+  "id":          "my-fuzz",           // kebab-case, matches folder name
+  "name":        "My Fuzz",           // shown in the app's library card
+  "author":      "Your Name",         // free text — username, alias, real name
+  "version":     "1.0.0",             // semver, bumped on every breaking change
+  "description": "What it sounds like and what it's good for.",
+  "tags":        ["distortion", "fuzz"]   // optional, used for searching
+}
+```
+
+`category` is **not** in `plugin.json` — it's the folder it lives under.
+
+## Constraints the Rhino interpreter imposes
+
+The app runs plugins via [Mozilla Rhino](https://github.com/mozilla/rhino) in interpreter mode (no JVM bytecode generation, because Android's Dalvik / ART can't execute it). This means:
+
+- **No ES6 `class`.** Write prototype style: `function Foo() {}` + `Foo.prototype.method = function () {}`.
+- **No `import` / `export`.** The plugin file is the whole plugin.
+- **No `require()`.** No CommonJS either.
+- **No WebAssembly.** Pure JS DSP only.
+- **No DOM.** `document`, `window`, `localStorage`, `fetch`, `XMLHttpRequest` are all unavailable.
+- Numeric arrays are plain `Array`. `Float32Array` works but is no faster — the host bridges to JS through plain arrays.
+- `sampleRate` is a global the host sets before instantiation (just like browser AudioWorklet).
+
+The CI validator rejects PRs that use any of these — see [`scripts/validate-plugins.mjs`](scripts/validate-plugins.mjs).
+
+## What good plugins look like
+
+- **DSP-only**, no GUI. The host generates a slider for every `parameterDescriptors` entry automatically.
+- **Stateless across `process()` calls** except for what you put on `this` in the constructor (delay buffers, LFO phase, filter state).
+- **Block-safe.** The host passes ~1024 sample blocks; persist phase / pointers across blocks so the effect is continuous.
+- **Mono-aware.** The app is currently mono-only. Don't assume `inputs[0]` has multiple channels.
+- **Param-rate aware.** Parameters arrive as `params.name[0]` (single value per block — "k-rate").
+- **Sane defaults.** `defaultValue` should sound musical the moment the user adds the plugin.
+
+See `plugins/modulation/tremolo/tremolo.js` for a minimal example, `plugins/delay/tape-delay/tape-delay.js` for a buffer-based one, `plugins/modulation/phaser/phaser.js` for a multi-stage filter.
+
+## PR review
+
+A maintainer will listen to the plugin on a real take before merging. Things that get pushback:
+
+- Crashes on extreme parameter values (try the slider endpoints).
+- DC offset or runaway feedback.
+- Buffer allocations inside `process()` — allocate in the constructor and reuse.
+- Unclear `description` — describe the *sound*, not the algorithm.
+
+Once merged, the manifest rebuild Action publishes your plugin to every app instance pointed at this registry, within seconds.

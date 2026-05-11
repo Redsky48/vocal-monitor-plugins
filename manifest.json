@@ -1,0 +1,234 @@
+{
+  "version": 1,
+  "generatedAt": "2026-05-11T23:29:14.188Z",
+  "repository": "Redsky48/vocal-monitor-plugins",
+  "plugins": [
+    {
+      "id": "reverse-delay",
+      "name": "Reverse Delay",
+      "author": "Vocal Monitor",
+      "category": "Delay",
+      "description": "Records a window and plays it back in reverse — Pink Floyd / shoegaze swells. Feedback piles nested reversals into a swelling cloud.",
+      "version": "1.0.0",
+      "tags": [
+        "delay",
+        "reverse",
+        "ambient"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/delay/reverse-delay/reverse-delay.js"
+    },
+    {
+      "id": "tape-delay",
+      "name": "Tape Delay",
+      "author": "Vocal Monitor",
+      "category": "Delay",
+      "description": "Single-tap feedback delay with a low-pass on each repeat so echoes darken into a warm soup — analog tape style rather than harsh digital reps.",
+      "version": "1.0.0",
+      "tags": [
+        "delay",
+        "tape",
+        "feedback"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/delay/tape-delay/tape-delay.js"
+    },
+    {
+      "id": "octaver",
+      "name": "Octaver",
+      "author": "Vocal Monitor",
+      "category": "Distortion",
+      "description": "Full-wave rectification produces a signal one octave UP, DC-blocked and mixed under the dry. Classic fuzz-octaver flavour — gritty 8va parallel.",
+      "version": "1.0.0",
+      "tags": [
+        "distortion",
+        "octave",
+        "fuzz"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/distortion/octaver/octaver.js"
+    },
+    {
+      "id": "ring-mod",
+      "name": "Ring Mod",
+      "author": "Vocal Monitor",
+      "category": "Distortion",
+      "description": "Multiplies input by a sine carrier. Low carrier = tremolo; speech-band = Dalek robot; above 1 kHz = clangorous bell-tone.",
+      "version": "1.0.0",
+      "tags": [
+        "distortion",
+        "modulation",
+        "robot",
+        "metallic"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/distortion/ring-mod/ring-mod.js"
+    },
+    {
+      "id": "saturator",
+      "name": "Saturator",
+      "author": "Vocal Monitor",
+      "category": "Distortion",
+      "description": "Soft-clip tube-style saturation. Drive pushes the signal into the tanh curve; mix blends back the dry path so even extreme drive sits in a mix.",
+      "version": "1.0.0",
+      "tags": [
+        "distortion",
+        "saturation",
+        "tube",
+        "warmth"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/distortion/saturator/saturator.js"
+    },
+    {
+      "id": "auto-wah",
+      "name": "Auto-Wah",
+      "author": "Vocal Monitor",
+      "category": "Filter",
+      "description": "Envelope-following band-pass. Loud notes push the filter open, quiet notes close it — funky quack on guitar, expressive shape on a vocal.",
+      "version": "1.0.0",
+      "tags": [
+        "filter",
+        "envelope",
+        "wah"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/filter/auto-wah/auto-wah.js"
+    },
+    {
+      "id": "bitcrusher",
+      "name": "Bit Crusher",
+      "author": "Vocal Monitor",
+      "category": "Lo-Fi",
+      "description": "Quantises sample depth and downsamples by holding each value for N hops. From subtle 12-bit grain to full-on Atari beeper character.",
+      "version": "1.0.0",
+      "tags": [
+        "lofi",
+        "distortion",
+        "quantization",
+        "retro"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/lofi/bitcrusher/bitcrusher.js"
+    },
+    {
+      "id": "stutter",
+      "name": "Stutter",
+      "author": "Vocal Monitor",
+      "category": "Lo-Fi",
+      "description": "Beat-repeat. Captures the first slice of each cycle and replays it N-1 times — turns held vowels into staccato chops, drums into glitch fills.",
+      "version": "1.0.0",
+      "tags": [
+        "lofi",
+        "glitch",
+        "rhythm"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/lofi/stutter/stutter.js"
+    },
+    {
+      "id": "tape-stop",
+      "name": "Tape Stop",
+      "author": "Vocal Monitor",
+      "category": "Lo-Fi",
+      "description": "Variable-speed playback from a rolling buffer. Sweep speed → 0 to grind the audio to a tape-deck-unplugged halt with the pitch dropping with it.",
+      "version": "1.0.0",
+      "tags": [
+        "lofi",
+        "tape",
+        "pitch"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/lofi/tape-stop/tape-stop.js"
+    },
+    {
+      "id": "vinyl",
+      "name": "Vinyl",
+      "author": "Vocal Monitor",
+      "category": "Lo-Fi",
+      "description": "Old-record texture: pink-noise hiss plus randomly-triggered crackle pops with one-pole decay. Set it under a take to age it 40 years instantly.",
+      "version": "1.0.0",
+      "tags": [
+        "lofi",
+        "noise",
+        "vintage"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/lofi/vinyl/vinyl.js"
+    },
+    {
+      "id": "chorus",
+      "name": "Chorus",
+      "author": "Vocal Monitor",
+      "category": "Modulation",
+      "description": "LFO-modulated short delay blended with dry. Thickens a single voice into a small ensemble. Classic 80s pad sheen at slow rates, watery shimmer at higher ones.",
+      "version": "1.0.0",
+      "tags": [
+        "modulation",
+        "delay",
+        "ensemble"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/chorus/chorus.js"
+    },
+    {
+      "id": "flanger",
+      "name": "Flanger",
+      "author": "Vocal Monitor",
+      "category": "Modulation",
+      "description": "Short variable delay with feedback — comb-filter sweep produces the trademark jet-plane whoosh. Push feedback for hollow, metallic resonance.",
+      "version": "1.0.0",
+      "tags": [
+        "modulation",
+        "comb",
+        "delay"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/flanger/flanger.js"
+    },
+    {
+      "id": "phaser",
+      "name": "Phaser",
+      "author": "Vocal Monitor",
+      "category": "Modulation",
+      "description": "4-stage swept allpass with feedback. Whoosh that climbs and falls through the spectrum — MXR / Small Stone territory. Feedback turns notches into resonant peaks.",
+      "version": "1.0.0",
+      "tags": [
+        "modulation",
+        "allpass",
+        "sweep"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/phaser/phaser.js"
+    },
+    {
+      "id": "tremolo",
+      "name": "Tremolo",
+      "author": "Vocal Monitor",
+      "category": "Modulation",
+      "description": "Amplitude wobble via a sine LFO. Surf-rock chop, vintage amp pulse, slow-rate vocal swell — all the same engine, different rate and depth.",
+      "version": "1.0.0",
+      "tags": [
+        "modulation",
+        "lfo",
+        "amplitude"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/tremolo/tremolo.js"
+    },
+    {
+      "id": "vibrato",
+      "name": "Vibrato",
+      "author": "Vocal Monitor",
+      "category": "Modulation",
+      "description": "Pure pitch wobble via LFO-modulated delay tap — no dry blend, so no comb filtering. Subtle warmth at low depth, seasick wobble at high.",
+      "version": "1.0.0",
+      "tags": [
+        "modulation",
+        "pitch",
+        "lfo"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/vibrato/vibrato.js"
+    },
+    {
+      "id": "telephone",
+      "name": "Telephone",
+      "author": "Vocal Monitor",
+      "category": "Voice FX",
+      "description": "Band-pass 300 Hz–3.4 kHz with a touch of soft codec crunch. Classic 'caller on the other end' effect.",
+      "version": "1.0.0",
+      "tags": [
+        "voice",
+        "filter",
+        "bandpass"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/voice-fx/telephone/telephone.js"
+    }
+  ]
+}

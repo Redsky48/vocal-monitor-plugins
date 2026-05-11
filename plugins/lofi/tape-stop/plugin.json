@@ -1,0 +1,8 @@
+{
+  "id": "tape-stop",
+  "name": "Tape Stop",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Variable-speed playback from a rolling buffer. Sweep speed → 0 to grind the audio to a tape-deck-unplugged halt with the pitch dropping with it.",
+  "tags": ["lofi", "tape", "pitch"]
+}

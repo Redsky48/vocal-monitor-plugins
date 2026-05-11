@@ -1,0 +1,8 @@
+{
+  "id": "phaser",
+  "name": "Phaser",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "4-stage swept allpass with feedback. Whoosh that climbs and falls through the spectrum — MXR / Small Stone territory. Feedback turns notches into resonant peaks.",
+  "tags": ["modulation", "allpass", "sweep"]
+}

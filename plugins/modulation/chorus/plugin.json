@@ -1,0 +1,8 @@
+{
+  "id": "chorus",
+  "name": "Chorus",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "LFO-modulated short delay blended with dry. Thickens a single voice into a small ensemble. Classic 80s pad sheen at slow rates, watery shimmer at higher ones.",
+  "tags": ["modulation", "delay", "ensemble"]
+}
