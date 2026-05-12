@@ -11,23 +11,27 @@
 function ConvolverJsProcessor() {
   // Pre-compute the impulse response — decaying noise burst seeded from a
   // deterministic LCG so this plugin and the native sibling produce
-  // identical IRs sample-for-sample.
+  // identical IRs sample-for-sample. The multiplier and modulus come from
+  // Numerical Recipes and are sized to fit safely inside JS's 53-bit
+  // integer precision (1664525 * 0x7fffffff < 2^52) — Rhino's interpreter
+  // chokes on the classic glibc multiplier (1103515245) because the
+  // product overflows the safe integer range mid-loop.
   var TAPS = 256;
   this.ir = new Array(TAPS);
   var seed = 1;
   var sum = 0;
   for (var i = 0; i < TAPS; i++) {
-    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-    var noise = (seed / 0x7fffffff) * 2 - 1;
+    seed = (seed * 1664525 + 1013904223) % 2147483648;
+    var noise = (seed / 2147483648) * 2 - 1;
     this.ir[i] = noise * Math.exp(-i / 80);
     sum += this.ir[i] < 0 ? -this.ir[i] : this.ir[i];
   }
   // Normalize so |sum(ir)| ≈ 1 — output level stays sane regardless of
   // the random IR shape.
-  for (var i = 0; i < TAPS; i++) this.ir[i] /= sum;
+  for (var k = 0; k < TAPS; k++) this.ir[k] /= sum;
 
   this.history = new Array(TAPS);
-  for (var i = 0; i < TAPS; i++) this.history[i] = 0;
+  for (var n = 0; n < TAPS; n++) this.history[n] = 0;
   this.historyIdx = 0;
   this.taps = TAPS;
 }

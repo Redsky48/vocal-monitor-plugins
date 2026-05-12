@@ -25,12 +25,15 @@ public final class Convolver implements VocalMonitorNativePlugin {
 
     @Override
     public void init(int sampleRate) {
-        // Same LCG seed as convolver-js, so the IR is byte-identical.
-        int seed = 1;
+        // Numerical-Recipes LCG — matches convolver-js exactly so the
+        // two siblings produce the same impulse response. We keep the
+        // running state in a long because the intermediate product
+        // (seed * 1664525) needs 32 + 21 = 53 bits before the modulus.
+        long seed = 1;
         float sum = 0;
         for (int i = 0; i < TAPS; i++) {
-            seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-            float noise = ((float) seed / 0x7fffffff) * 2f - 1f;
+            seed = (seed * 1664525L + 1013904223L) % 2147483648L;
+            float noise = ((float) seed / 2147483648f) * 2f - 1f;
             ir[i] = noise * (float) Math.exp(-i / 80.0);
             sum += Math.abs(ir[i]);
         }
