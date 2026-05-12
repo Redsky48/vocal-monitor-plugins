@@ -4,5 +4,12 @@
   "author": "Vocal Monitor",
   "version": "1.0.0",
   "description": "Short variable delay with feedback — comb-filter sweep produces the trademark jet-plane whoosh. Push feedback for hollow, metallic resonance.",
-  "tags": ["modulation", "comb", "delay"]
+  "tags": [
+    "modulation",
+    "comb",
+    "delay",
+    "native"
+  ],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.Flanger"
 }

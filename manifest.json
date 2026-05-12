@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-12T21:25:29.709Z",
+  "generatedAt": "2026-05-12T22:21:09.049Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -13,10 +13,12 @@
       "tags": [
         "delay",
         "reverse",
-        "ambient"
+        "ambient",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/delay/reverse-delay/reverse-delay.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/delay/reverse-delay/reverse-delay.dex",
+      "className": "com.vocalmonitor.plugin.community.ReverseDelay"
     },
     {
       "id": "tape-delay",
@@ -28,10 +30,12 @@
       "tags": [
         "delay",
         "tape",
-        "feedback"
+        "feedback",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/delay/tape-delay/tape-delay.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/delay/tape-delay/tape-delay.dex",
+      "className": "com.vocalmonitor.plugin.community.TapeDelay"
     },
     {
       "id": "octaver",
@@ -43,10 +47,12 @@
       "tags": [
         "distortion",
         "octave",
-        "fuzz"
+        "fuzz",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/distortion/octaver/octaver.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/distortion/octaver/octaver.dex",
+      "className": "com.vocalmonitor.plugin.community.Octaver"
     },
     {
       "id": "ring-mod",
@@ -59,10 +65,12 @@
         "distortion",
         "modulation",
         "robot",
-        "metallic"
+        "metallic",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/distortion/ring-mod/ring-mod.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/distortion/ring-mod/ring-mod.dex",
+      "className": "com.vocalmonitor.plugin.community.RingMod"
     },
     {
       "id": "saturator",
@@ -75,10 +83,12 @@
         "distortion",
         "saturation",
         "tube",
-        "warmth"
+        "warmth",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/distortion/saturator/saturator.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/distortion/saturator/saturator.dex",
+      "className": "com.vocalmonitor.plugin.community.Saturator"
     },
     {
       "id": "compressor",
@@ -90,10 +100,12 @@
       "tags": [
         "dynamics",
         "compressor",
-        "vocal"
+        "vocal",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/compressor/compressor.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/compressor/compressor.dex",
+      "className": "com.vocalmonitor.plugin.community.Compressor"
     },
     {
       "id": "de-esser",
@@ -106,10 +118,12 @@
         "dynamics",
         "vocal",
         "sibilance",
-        "split-band"
+        "split-band",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/de-esser/de-esser.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/de-esser/de-esser.dex",
+      "className": "com.vocalmonitor.plugin.community.DeEsser"
     },
     {
       "id": "limiter",
@@ -121,10 +135,12 @@
       "tags": [
         "dynamics",
         "limiter",
-        "mastering"
+        "mastering",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/limiter/limiter.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/limiter/limiter.dex",
+      "className": "com.vocalmonitor.plugin.community.Limiter"
     },
     {
       "id": "noise-gate",
@@ -136,10 +152,12 @@
       "tags": [
         "dynamics",
         "gate",
-        "noise"
+        "noise",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/noise-gate/noise-gate.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/noise-gate/noise-gate.dex",
+      "className": "com.vocalmonitor.plugin.community.NoiseGate"
     },
     {
       "id": "transient-shaper",
@@ -151,10 +169,12 @@
       "tags": [
         "dynamics",
         "transient",
-        "envelope"
+        "envelope",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/transient-shaper/transient-shaper.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/transient-shaper/transient-shaper.dex",
+      "className": "com.vocalmonitor.plugin.community.TransientShaper"
     },
     {
       "id": "exciter",
@@ -167,10 +187,12 @@
         "eq",
         "exciter",
         "harmonics",
-        "aphex"
+        "aphex",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/eq/exciter/exciter.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/eq/exciter/exciter.dex",
+      "className": "com.vocalmonitor.plugin.community.Exciter"
     },
     {
       "id": "parametric-eq",
@@ -183,10 +205,12 @@
         "eq",
         "filter",
         "biquad",
-        "mixing"
+        "mixing",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/eq/parametric-eq/parametric-eq.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/eq/parametric-eq/parametric-eq.dex",
+      "className": "com.vocalmonitor.plugin.community.ParametricEq"
     },
     {
       "id": "auto-wah",
@@ -198,42 +222,12 @@
       "tags": [
         "filter",
         "envelope",
-        "wah"
-      ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/filter/auto-wah/auto-wah.js"
-    },
-    {
-      "id": "convolver-js",
-      "name": "Convolver (JS)",
-      "author": "Vocal Monitor",
-      "category": "Filter",
-      "description": "256-tap FIR convolution implemented in pure JavaScript. Identical DSP to Convolver Native — install both and A/B to feel the JS-vs-DEX speed gap. Audibly the same; the JS path stutters faster as you stack more plugins.",
-      "version": "1.0.0",
-      "tags": [
-        "filter",
-        "convolution",
-        "benchmark"
-      ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/filter/convolver-js/convolver-js.js"
-    },
-    {
-      "id": "convolver-native",
-      "name": "Convolver Native",
-      "author": "Vocal Monitor",
-      "category": "Filter",
-      "description": "256-tap FIR convolution in pre-compiled DEX bytecode — identical DSP to Convolver (JS) but the inner loop runs at full JVM speed. Roughly 30-80× faster than the JS sibling; install both and stack a few instances to feel the difference.",
-      "version": "1.0.0",
-      "tags": [
-        "filter",
-        "convolution",
-        "native",
-        "benchmark"
+        "wah",
+        "native"
       ],
       "engine": "native",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/filter/convolver-native/convolver-native.dex",
-      "className": "com.vocalmonitor.plugin.examples.Convolver"
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/filter/auto-wah/auto-wah.dex",
+      "className": "com.vocalmonitor.plugin.community.AutoWah"
     },
     {
       "id": "fast-eq",
@@ -261,10 +255,12 @@
         "filter",
         "resonance",
         "comb",
-        "karplus"
+        "karplus",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/filter/resonator/resonator.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/filter/resonator/resonator.dex",
+      "className": "com.vocalmonitor.plugin.community.Resonator"
     },
     {
       "id": "vowel-filter",
@@ -277,10 +273,12 @@
         "filter",
         "vowel",
         "formant",
-        "talk-wah"
+        "talk-wah",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/filter/vowel-filter/vowel-filter.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/filter/vowel-filter/vowel-filter.dex",
+      "className": "com.vocalmonitor.plugin.community.VowelFilter"
     },
     {
       "id": "bitcrusher",
@@ -293,10 +291,12 @@
         "lofi",
         "distortion",
         "quantization",
-        "retro"
+        "retro",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/lofi/bitcrusher/bitcrusher.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/lofi/bitcrusher/bitcrusher.dex",
+      "className": "com.vocalmonitor.plugin.community.Bitcrusher"
     },
     {
       "id": "stutter",
@@ -308,10 +308,12 @@
       "tags": [
         "lofi",
         "glitch",
-        "rhythm"
+        "rhythm",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/lofi/stutter/stutter.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/lofi/stutter/stutter.dex",
+      "className": "com.vocalmonitor.plugin.community.Stutter"
     },
     {
       "id": "tape-stop",
@@ -323,10 +325,12 @@
       "tags": [
         "lofi",
         "tape",
-        "pitch"
+        "pitch",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/lofi/tape-stop/tape-stop.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/lofi/tape-stop/tape-stop.dex",
+      "className": "com.vocalmonitor.plugin.community.TapeStop"
     },
     {
       "id": "vinyl",
@@ -338,10 +342,12 @@
       "tags": [
         "lofi",
         "noise",
-        "vintage"
+        "vintage",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/lofi/vinyl/vinyl.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/lofi/vinyl/vinyl.dex",
+      "className": "com.vocalmonitor.plugin.community.Vinyl"
     },
     {
       "id": "chorus",
@@ -353,10 +359,12 @@
       "tags": [
         "modulation",
         "delay",
-        "ensemble"
+        "ensemble",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/chorus/chorus.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/chorus/chorus.dex",
+      "className": "com.vocalmonitor.plugin.community.Chorus"
     },
     {
       "id": "flanger",
@@ -368,10 +376,12 @@
       "tags": [
         "modulation",
         "comb",
-        "delay"
+        "delay",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/flanger/flanger.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/flanger/flanger.dex",
+      "className": "com.vocalmonitor.plugin.community.Flanger"
     },
     {
       "id": "frequency-shifter",
@@ -401,10 +411,12 @@
       "tags": [
         "modulation",
         "allpass",
-        "sweep"
+        "sweep",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/phaser/phaser.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/phaser/phaser.dex",
+      "className": "com.vocalmonitor.plugin.community.Phaser"
     },
     {
       "id": "rotary-speaker",
@@ -417,10 +429,12 @@
         "modulation",
         "leslie",
         "rotary",
-        "vintage"
+        "vintage",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/rotary-speaker/rotary-speaker.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/rotary-speaker/rotary-speaker.dex",
+      "className": "com.vocalmonitor.plugin.community.RotarySpeaker"
     },
     {
       "id": "tremolo",
@@ -432,10 +446,12 @@
       "tags": [
         "modulation",
         "lfo",
-        "amplitude"
+        "amplitude",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/tremolo/tremolo.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/tremolo/tremolo.dex",
+      "className": "com.vocalmonitor.plugin.community.Tremolo"
     },
     {
       "id": "vibrato",
@@ -447,10 +463,12 @@
       "tags": [
         "modulation",
         "pitch",
-        "lfo"
+        "lfo",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/vibrato/vibrato.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/vibrato/vibrato.dex",
+      "className": "com.vocalmonitor.plugin.community.Vibrato"
     },
     {
       "id": "detune-doubler",
@@ -463,10 +481,12 @@
         "pitch",
         "doubler",
         "adt",
-        "vocal"
+        "vocal",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/pitch/detune-doubler/detune-doubler.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/pitch/detune-doubler/detune-doubler.dex",
+      "className": "com.vocalmonitor.plugin.community.DetuneDoubler"
     },
     {
       "id": "harmonizer",
@@ -513,10 +533,12 @@
         "reverb",
         "gated",
         "80s",
-        "drum"
+        "drum",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/reverb/gated-reverb/gated-reverb.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/reverb/gated-reverb/gated-reverb.dex",
+      "className": "com.vocalmonitor.plugin.community.GatedReverb"
     },
     {
       "id": "plate-reverb",
@@ -565,10 +587,12 @@
         "reverb",
         "spring",
         "vintage",
-        "dispersion"
+        "dispersion",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/reverb/spring-reverb/spring-reverb.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/reverb/spring-reverb/spring-reverb.dex",
+      "className": "com.vocalmonitor.plugin.community.SpringReverb"
     },
     {
       "id": "megaphone",
@@ -581,10 +605,12 @@
         "voice",
         "megaphone",
         "bullhorn",
-        "distortion"
+        "distortion",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/voice-fx/megaphone/megaphone.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/voice-fx/megaphone/megaphone.dex",
+      "className": "com.vocalmonitor.plugin.community.Megaphone"
     },
     {
       "id": "telephone",
@@ -596,10 +622,12 @@
       "tags": [
         "voice",
         "filter",
-        "bandpass"
+        "bandpass",
+        "native"
       ],
-      "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/voice-fx/telephone/telephone.js"
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/voice-fx/telephone/telephone.dex",
+      "className": "com.vocalmonitor.plugin.community.Telephone"
     }
   ]
 }

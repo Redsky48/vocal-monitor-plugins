@@ -4,5 +4,12 @@
   "author": "Vocal Monitor",
   "version": "1.0.0",
   "description": "Beat-repeat. Captures the first slice of each cycle and replays it N-1 times — turns held vowels into staccato chops, drums into glitch fills.",
-  "tags": ["lofi", "glitch", "rhythm"]
+  "tags": [
+    "lofi",
+    "glitch",
+    "rhythm",
+    "native"
+  ],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.Stutter"
 }

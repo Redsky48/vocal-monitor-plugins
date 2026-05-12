@@ -4,5 +4,12 @@
   "author": "Vocal Monitor",
   "version": "1.0.0",
   "description": "Amplitude wobble via a sine LFO. Surf-rock chop, vintage amp pulse, slow-rate vocal swell — all the same engine, different rate and depth.",
-  "tags": ["modulation", "lfo", "amplitude"]
+  "tags": [
+    "modulation",
+    "lfo",
+    "amplitude",
+    "native"
+  ],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.Tremolo"
 }

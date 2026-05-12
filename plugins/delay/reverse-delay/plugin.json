@@ -4,5 +4,12 @@
   "author": "Vocal Monitor",
   "version": "1.0.0",
   "description": "Records a window and plays it back in reverse — Pink Floyd / shoegaze swells. Feedback piles nested reversals into a swelling cloud.",
-  "tags": ["delay", "reverse", "ambient"]
+  "tags": [
+    "delay",
+    "reverse",
+    "ambient",
+    "native"
+  ],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.ReverseDelay"
 }

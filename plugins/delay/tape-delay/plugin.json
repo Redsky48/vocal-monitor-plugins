@@ -4,5 +4,12 @@
   "author": "Vocal Monitor",
   "version": "1.0.0",
   "description": "Single-tap feedback delay with a low-pass on each repeat so echoes darken into a warm soup — analog tape style rather than harsh digital reps.",
-  "tags": ["delay", "tape", "feedback"]
+  "tags": [
+    "delay",
+    "tape",
+    "feedback",
+    "native"
+  ],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.TapeDelay"
 }

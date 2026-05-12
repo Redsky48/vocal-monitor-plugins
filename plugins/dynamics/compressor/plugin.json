@@ -4,5 +4,12 @@
   "author": "Vocal Monitor",
   "version": "1.0.0",
   "description": "Feedforward peak compressor with split attack/release detector, soft-knee gain computer in the dB domain, and makeup gain. Tames vocal peaks, glues mixes.",
-  "tags": ["dynamics", "compressor", "vocal"]
+  "tags": [
+    "dynamics",
+    "compressor",
+    "vocal",
+    "native"
+  ],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.Compressor"
 }

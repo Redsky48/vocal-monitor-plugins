@@ -4,5 +4,12 @@
   "author": "Vocal Monitor",
   "version": "1.0.0",
   "description": "Old-record texture: pink-noise hiss plus randomly-triggered crackle pops with one-pole decay. Set it under a take to age it 40 years instantly.",
-  "tags": ["lofi", "noise", "vintage"]
+  "tags": [
+    "lofi",
+    "noise",
+    "vintage",
+    "native"
+  ],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.Vinyl"
 }

@@ -4,5 +4,13 @@
   "author": "Vocal Monitor",
   "version": "1.0.0",
   "description": "Bullhorn / drill-sergeant voice. Steep band-pass + 2 kHz honk resonance + asymmetric soft-clip cone distortion + post-LP to tame the fizz. Drop on shouted vocals or radio-comm chatter.",
-  "tags": ["voice", "megaphone", "bullhorn", "distortion"]
+  "tags": [
+    "voice",
+    "megaphone",
+    "bullhorn",
+    "distortion",
+    "native"
+  ],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.Megaphone"
 }

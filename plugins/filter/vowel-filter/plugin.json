@@ -4,5 +4,13 @@
   "author": "Vocal Monitor",
   "version": "1.0.0",
   "description": "Three parallel bandpass resonators tuned to F1/F2/F3 formants — morphs between A·E·I·O·U. Manual or LFO-swept. Talk-wah, robot-mouth, choir effect on a dry voice.",
-  "tags": ["filter", "vowel", "formant", "talk-wah"]
+  "tags": [
+    "filter",
+    "vowel",
+    "formant",
+    "talk-wah",
+    "native"
+  ],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.VowelFilter"
 }

@@ -4,5 +4,12 @@
   "author": "Vocal Monitor",
   "version": "1.0.0",
   "description": "Brickwall peak limiter with 8 ms lookahead. Detector sees what's coming and clamps gain before peaks reach the output — last-stage master-bus glue at 0 dBFS.",
-  "tags": ["dynamics", "limiter", "mastering"]
+  "tags": [
+    "dynamics",
+    "limiter",
+    "mastering",
+    "native"
+  ],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.Limiter"
 }

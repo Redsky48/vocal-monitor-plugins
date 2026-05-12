@@ -4,5 +4,12 @@
   "author": "Vocal Monitor",
   "version": "1.0.0",
   "description": "Envelope-following band-pass. Loud notes push the filter open, quiet notes close it — funky quack on guitar, expressive shape on a vocal.",
-  "tags": ["filter", "envelope", "wah"]
+  "tags": [
+    "filter",
+    "envelope",
+    "wah",
+    "native"
+  ],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.AutoWah"
 }

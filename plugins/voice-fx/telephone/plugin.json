@@ -4,5 +4,12 @@
   "author": "Vocal Monitor",
   "version": "1.0.0",
   "description": "Band-pass 300 Hz–3.4 kHz with a touch of soft codec crunch. Classic 'caller on the other end' effect.",
-  "tags": ["voice", "filter", "bandpass"]
+  "tags": [
+    "voice",
+    "filter",
+    "bandpass",
+    "native"
+  ],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.Telephone"
 }

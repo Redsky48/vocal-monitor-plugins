@@ -4,5 +4,12 @@
   "author": "Vocal Monitor",
   "version": "1.0.0",
   "description": "Full-wave rectification produces a signal one octave UP, DC-blocked and mixed under the dry. Classic fuzz-octaver flavour — gritty 8va parallel.",
-  "tags": ["distortion", "octave", "fuzz"]
+  "tags": [
+    "distortion",
+    "octave",
+    "fuzz",
+    "native"
+  ],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.Octaver"
 }

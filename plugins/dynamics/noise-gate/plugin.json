@@ -4,5 +4,12 @@
   "author": "Vocal Monitor",
   "version": "1.0.0",
   "description": "Hysteresis-based gate with attack/hold/release. Cleans up background hiss between phrases, kills bleed between drum mics, makes a noisy room presentable.",
-  "tags": ["dynamics", "gate", "noise"]
+  "tags": [
+    "dynamics",
+    "gate",
+    "noise",
+    "native"
+  ],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.NoiseGate"
 }

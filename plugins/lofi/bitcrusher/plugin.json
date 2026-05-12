@@ -4,5 +4,13 @@
   "author": "Vocal Monitor",
   "version": "1.0.0",
   "description": "Quantises sample depth and downsamples by holding each value for N hops. From subtle 12-bit grain to full-on Atari beeper character.",
-  "tags": ["lofi", "distortion", "quantization", "retro"]
+  "tags": [
+    "lofi",
+    "distortion",
+    "quantization",
+    "retro",
+    "native"
+  ],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.Bitcrusher"
 }

@@ -4,5 +4,12 @@
   "author": "Vocal Monitor",
   "version": "1.0.0",
   "description": "Independent attack/sustain control via the difference of fast and slow envelopes. SPL Transient Designer in spirit — fatten snares, soften plosives, add bite to vocals.",
-  "tags": ["dynamics", "transient", "envelope"]
+  "tags": [
+    "dynamics",
+    "transient",
+    "envelope",
+    "native"
+  ],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.TransientShaper"
 }
