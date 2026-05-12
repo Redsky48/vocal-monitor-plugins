@@ -56,11 +56,18 @@ async function readPlugin(categoryDir, pluginDir, cfg) {
   if (meta.id !== pluginDir) {
     throw new Error(`${categoryDir}/${pluginDir}/plugin.json: id "${meta.id}" must match folder name "${pluginDir}"`);
   }
-  const filename = `${meta.id}.js`;
-  await readFile(join(folder, filename), 'utf8');  // must exist
+  const engine = meta.engine ?? 'js';
+  // File extension follows the engine: JS plugins ship a `.js` source,
+  // native plugins ship a pre-compiled `.dex`. The app's installer
+  // routes to the matching engine based on this same field.
+  const filename = engine === 'native' ? `${meta.id}.dex` : `${meta.id}.js`;
+  await readFile(join(folder, filename));  // must exist
+  if (engine === 'native' && !meta.className) {
+    throw new Error(`${categoryDir}/${pluginDir}/plugin.json: native plugins must declare \`className\``);
+  }
   const category = CATEGORY_LABELS[categoryDir]
     ?? (categoryDir[0].toUpperCase() + categoryDir.slice(1));
-  return {
+  const entry = {
     id: meta.id,
     name: meta.name,
     author: meta.author ?? 'Unknown',
@@ -68,8 +75,11 @@ async function readPlugin(categoryDir, pluginDir, cfg) {
     description: meta.description ?? '',
     version: meta.version ?? '1.0.0',
     tags: Array.isArray(meta.tags) ? meta.tags : [],
+    engine,
     source: `https://raw.githubusercontent.com/${cfg.repository}/${cfg.branch}/plugins/${categoryDir}/${pluginDir}/${filename}`,
   };
+  if (engine === 'native') entry.className = meta.className;
+  return entry;
 }
 
 async function main() {

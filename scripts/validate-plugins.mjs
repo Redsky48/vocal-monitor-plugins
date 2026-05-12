@@ -76,6 +76,11 @@ async function validatePlugin(category, name) {
   if (!/^[a-z0-9-]+$/.test(meta.id)) {
     return fail(metaPath, `id "${meta.id}" must be kebab-case (a-z, 0-9, -)`);
   }
+  const engine = meta.engine ?? 'js';
+  if (engine === 'native') return validateNativePlugin(folder, category, name, meta);
+  if (engine !== 'js') {
+    return fail(metaPath, `unknown engine "${engine}" (expected "js" or "native")`);
+  }
   const jsPath = join(folder, `${meta.id}.js`);
   let src;
   try {
@@ -99,6 +104,36 @@ async function validatePlugin(category, name) {
     return fail(jsPath, 'does not call registerProcessor()');
   }
   console.log(`  ok  ${category}/${name}`);
+}
+
+/**
+ * Native plugins ship a `.dex` file rather than JS source. We can't run
+ * the bytecode here in CI (it's Android DEX, not JVM), but we can verify:
+ *
+ *   - plugin.json declares `className`
+ *   - <id>.dex exists and starts with the DEX magic ("dex\n035" or "dex\n038")
+ *   - file size is sane (under 5 MB to match the app's runtime cap)
+ */
+async function validateNativePlugin(folder, category, name, meta) {
+  if (!meta.className) {
+    return fail(join(folder, 'plugin.json'), 'native plugin must declare `className`');
+  }
+  const dexPath = join(folder, `${meta.id}.dex`);
+  let bytes;
+  try {
+    bytes = await readFile(dexPath);
+  } catch {
+    return fail(dexPath, 'missing .dex — compile your source with d8 and commit the result');
+  }
+  if (bytes.length > 5_000_000) {
+    return fail(dexPath, `dex too large (${bytes.length} bytes; cap is 5 MB)`);
+  }
+  // DEX magic: "dex\n<version>\0" where <version> is "035" through "041".
+  const magic = bytes.slice(0, 8).toString('ascii');
+  if (!/^dex\n0[0-9]{2}\0$/.test(magic)) {
+    return fail(dexPath, `not a DEX file (header was ${JSON.stringify(magic)})`);
+  }
+  console.log(`  ok  ${category}/${name}  [native, ${bytes.length} bytes]`);
 }
 
 const categories = (await listDir(PLUGINS_DIR)).sort();

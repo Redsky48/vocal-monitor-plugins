@@ -1,0 +1,8 @@
+{
+  "id": "fast-eq",
+  "name": "Fast EQ",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Reference plugin demonstrating the native DSP primitives API. Two cascaded biquads (low-pass + high-pass) run entirely in JVM-native code via host.biquadProcess — roughly 50-100× faster than the same filters written in pure JS.",
+  "tags": ["filter", "native", "reference"]
+}

@@ -33,7 +33,7 @@ The top-level [`manifest.json`](manifest.json) is auto-generated from `plugins/<
 
 1. Fork on GitHub, clone your fork.
 2. `npm run new -- <category> <id> "<Display Name>"` — scaffolds the folder, `plugin.json`, and a starter `.js` from [`template/`](template).
-3. Edit the generated `.js` to implement your DSP. See [PLUGIN_API.md](PLUGIN_API.md) for the exact `registerProcessor()` / `process()` contract and [CONTRIBUTING.md](CONTRIBUTING.md) for the constraints the Rhino interpreter places on plugin code.
+3. Edit the generated `.js` to implement your DSP. See [PLUGIN_API.md](PLUGIN_API.md) for the exact `registerProcessor()` / `process()` contract and [CONTRIBUTING.md](CONTRIBUTING.md) for the constraints the Rhino interpreter places on plugin code. For DSP-heavy plugins (FFT EQs, modular synth components, anything that benefits from Faust), see [NATIVE_PLUGIN_API.md](NATIVE_PLUGIN_API.md) — these compile to DEX bytecode and run at JVM-native speed. For a one-page overview of all three plugin runtimes (plain JS, JS + native primitives, native DEX), read [ARCHITECTURE.md](ARCHITECTURE.md).
 4. `npm run validate` locally, then commit, push, open a PR.
 5. CI auto-runs the validator. Merge triggers an automatic manifest rebuild — your plugin appears in everyone's app catalogue on next refresh.
 

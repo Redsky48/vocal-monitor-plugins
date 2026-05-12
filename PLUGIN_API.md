@@ -101,6 +101,96 @@ Two processors of the same kind in a chain are two independent instances — the
 
 ## Performance notes
 
-- Plain-array bridge has overhead — keep `process()` loops tight, no per-sample function calls if you can avoid it.
-- ~1024 samples per block ≈ 23 ms @ 44.1 kHz, so a plugin has well under that to stay realtime-safe even on mid-range Android.
-- The host renders **offline** (save / preview), so per-block latency doesn't compound — your effect doesn't have to be realtime, just deterministic.
+- The audio bridge transports samples as `Float32Array` — indexed access is a real array load, not a property lookup. Loops over `input[i]` / `output[i]` run as fast as compiled JS can go.
+- Rhino runs in **compiled mode** (`optimizationLevel = 9`) on Android via `rhino-android` — every function gets JVM bytecode, no interpreter dispatch. Tight DSP loops run roughly 10-20× faster than the original interpreter setup.
+- Blocks are **4096 samples** (~93 ms @ 44.1 kHz) — the offline renderer doesn't need realtime granularity, and the larger block amortises bridge overhead 4× versus the old 1024.
+- For *really* hot DSP — biquad cascades, long delay lines with feedback — use the **native primitives** below. Per-sample math runs in pure JVM/Kotlin and is roughly 50-200× faster than the same code in JS.
+
+## Native DSP primitives (`host.*`)
+
+The `host` global exposes opaque handles into pre-compiled Kotlin DSP code. Use these for any tight inner loop you'd otherwise write per-sample in JS.
+
+### Biquad filter
+
+```javascript
+function MyFilter() {
+  this.bq = host.createBiquad('lowpass');   // 'lowpass' | 'highpass' | 'bandpass'
+}
+MyFilter.prototype.process = function (inputs, outputs, parameters) {
+  host.biquadSetLowpass(this.bq, /* freq */ 800, /* q */ 0.707);
+  host.biquadProcess(this.bq, inputs[0][0], outputs[0][0]);
+  return true;
+};
+```
+
+API:
+- `host.createBiquad(type)` → handle (integer)
+- `host.biquadSetLowpass(handle, freqHz, q)` / `biquadSetHighpass(...)` / `biquadSetBandpass(...)`
+- `host.biquadProcess(handle, inputFloat32, outputFloat32)` — fills output in-place. Output may equal input (in-place processing).
+
+Filter state (`z⁻¹`, `z⁻²`) persists across blocks, so re-configuring the coefficients per block doesn't click.
+
+### Feedback delay line
+
+```javascript
+function MyDelay() {
+  this.delay = host.createDelayLine(/* max ms */ 2000);
+}
+MyDelay.prototype.process = function (inputs, outputs, parameters) {
+  host.delayProcess(
+    this.delay,
+    inputs[0][0], outputs[0][0],
+    /* time ms */ 350,
+    /* feedback */ 0.4,
+    /* mix */ 0.5,
+  );
+  return true;
+};
+```
+
+API:
+- `host.createDelayLine(maxMs)` → handle. Buffer is pre-allocated; subsequent `delayProcess` calls can use any time ≤ maxMs.
+- `host.delayProcess(handle, input, output, timeMs, feedback, mix)` — single-tap feedback delay with mix.
+
+### LFO
+
+```javascript
+function MyTremolo() {
+  this.lfo = host.createLfo('sine', /* rate Hz */ 4);
+  // Scratch buffer for the LFO output. Sized to match the engine's block.
+  // We re-allocate on first process() once we know the block length.
+  this.lfoBuf = null;
+}
+MyTremolo.prototype.process = function (inputs, outputs, parameters) {
+  var input = inputs[0][0], output = outputs[0][0];
+  if (!this.lfoBuf || this.lfoBuf.length !== input.length) {
+    this.lfoBuf = new Float32Array(input.length);
+  }
+  host.lfoSetRate(this.lfo, parameters.rate[0]);
+  host.lfoBlock(this.lfo, this.lfoBuf);
+  // The LFO buffer is now filled with values in [-1..1]. JS can do the
+  // sample-by-sample modulation (cheap) or pass it to other primitives.
+  for (var i = 0; i < input.length; i++) {
+    output[i] = input[i] * (1 + parameters.depth[0] * this.lfoBuf[i]);
+  }
+  return true;
+};
+```
+
+API:
+- `host.createLfo(type, rateHz)` → handle. type is `'sine'`, `'triangle'`, `'saw'`, or `'square'`.
+- `host.lfoSetRate(handle, rateHz)`
+- `host.lfoBlock(handle, outputFloat32)` — writes `output.length` LFO samples into the buffer, advancing phase.
+
+### When to use native primitives
+
+Use them when:
+- Your plugin is a filter, delay, or modulation effect.
+- You'd otherwise be writing a per-sample inner loop in JS.
+- You need to fit several instances of the same plugin into one chain without dropping samples.
+
+Skip them when:
+- Your DSP is something exotic the host doesn't expose (rectifier, pitch tracker, custom envelope detector). Write it in JS; it'll still be fast enough thanks to Rhino-compiled mode.
+- You're prototyping. Pure JS is the shortest path; you can swap in primitives later if profiling shows you need them.
+
+See [`plugins/filter/fast-eq/`](plugins/filter/fast-eq/) for a complete reference plugin using `host.createBiquad`.

@@ -1,0 +1,8 @@
+{
+  "id": "convolver-js",
+  "name": "Convolver (JS)",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "256-tap FIR convolution implemented in pure JavaScript. Identical DSP to Convolver Native — install both and A/B to feel the JS-vs-DEX speed gap. Audibly the same; the JS path stutters faster as you stack more plugins.",
+  "tags": ["filter", "convolution", "benchmark"]
+}
