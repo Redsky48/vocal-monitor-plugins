@@ -3,6 +3,8 @@
   "name": "Pitch Shifter",
   "author": "Vocal Monitor",
   "version": "1.0.0",
-  "description": "Granular pitch shift over ±2 octaves with cents-precision detune. Two Hann-windowed grains crossfaded — Eventide H910 / SoundTouch family. Vocal harmonies, demon growls, chipmunks.",
-  "tags": ["pitch", "shift", "granular"]
+  "description": "Granular pitch shift over ±2 octaves with cents-precision detune. Two Hann-windowed grains crossfaded — Eventide H910 / SoundTouch family. Native DEX with a pre-computed Hann LUT — vocal harmonies, demon growls, chipmunks at no CPU cost.",
+  "tags": ["pitch", "shift", "granular", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.PitchShifter"
 }

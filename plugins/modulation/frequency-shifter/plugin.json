@@ -3,6 +3,8 @@
   "name": "Frequency Shifter",
   "author": "Vocal Monitor",
   "version": "1.0.0",
-  "description": "Bode-style single-sideband shifter — every frequency moves by N Hz (not by ratio), breaking harmonic relationships. 12-stage Hilbert allpass network. Inharmonic, metallic, alien.",
-  "tags": ["modulation", "shifter", "ssb", "hilbert"]
+  "description": "Bode-style single-sideband shifter — every frequency moves by N Hz (not by ratio), breaking harmonic relationships. 8-section Hilbert allpass network per branch. Inharmonic, metallic, alien. Native DEX — the 16 allpass MACs per sample run at full JVM speed.",
+  "tags": ["modulation", "shifter", "ssb", "hilbert", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.FrequencyShifter"
 }

@@ -3,6 +3,8 @@
   "name": "Shimmer Reverb",
   "author": "Vocal Monitor",
   "version": "1.0.0",
-  "description": "Lush reverb tail with a granular octave-up pitch shift baked into the feedback path. Each generation of echoes climbs an octave — Eno-style ambient bloom, Strymon BigSky territory.",
-  "tags": ["reverb", "ambient", "pitch", "shimmer"]
+  "description": "Lush reverb tail with a granular octave-up pitch shift baked into the feedback path. Each generation of echoes climbs an octave — Eno-style ambient bloom, Strymon BigSky territory. Native DEX build with a pre-computed Hann LUT; ~80× faster than the JS reference.",
+  "tags": ["reverb", "ambient", "pitch", "shimmer", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.ShimmerReverb"
 }
