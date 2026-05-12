@@ -1,0 +1,8 @@
+{
+  "id": "de-esser",
+  "name": "De-esser",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Split-band sibilance ducker. Sidechain HP feeds an envelope follower that drops gain only on the HF band of the main signal — voice body stays intact, only the harsh sssss gets tamed.",
+  "tags": ["dynamics", "vocal", "sibilance", "split-band"]
+}

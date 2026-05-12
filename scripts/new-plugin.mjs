@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-const CATEGORIES = ['distortion', 'modulation', 'delay', 'filter', 'lofi', 'voice-fx', 'reverb', 'dynamics', 'utility'];
+const CATEGORIES = ['distortion', 'modulation', 'delay', 'filter', 'lofi', 'voice-fx', 'reverb', 'dynamics', 'utility', 'pitch', 'eq'];
 
 const [category, id, ...rest] = process.argv.slice(2);
 const displayName = rest.join(' ').trim();

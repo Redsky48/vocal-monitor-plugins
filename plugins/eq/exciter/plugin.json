@@ -1,0 +1,8 @@
+{
+  "id": "exciter",
+  "name": "Exciter",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Aphex-style high-frequency harmonic generator. Splits highs, runs them through asymmetric soft-clip, sums the new harmonics back under dry. Re-airs dull vocals and cassette transfers.",
+  "tags": ["eq", "exciter", "harmonics", "aphex"]
+}

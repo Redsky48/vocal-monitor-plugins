@@ -1,0 +1,8 @@
+{
+  "id": "parametric-eq",
+  "name": "Parametric EQ",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Three RBJ biquad bands — low shelf, peaking bell with Q, high shelf. Channel-strip tone shaping with cookbook-accurate filter math.",
+  "tags": ["eq", "filter", "biquad", "mixing"]
+}

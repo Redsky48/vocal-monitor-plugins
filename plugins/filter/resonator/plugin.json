@@ -1,0 +1,8 @@
+{
+  "id": "resonator",
+  "name": "Resonator",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Karplus-Strong tuned comb. Delay-line feedback rings at the selected pitch, damped by a one-pole LP. Sympathetic-resonance harmonics; high feedback = infinite drone.",
+  "tags": ["filter", "resonance", "comb", "karplus"]
+}

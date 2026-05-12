@@ -1,0 +1,8 @@
+{
+  "id": "gated-reverb",
+  "name": "Gated Reverb",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Six-comb plate reverb followed by a hard envelope gate — huge, dense, then abruptly silent. The Phil Collins / Hugh Padgham 80s drum sound on a vocal.",
+  "tags": ["reverb", "gated", "80s", "drum"]
+}

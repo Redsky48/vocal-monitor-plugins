@@ -1,0 +1,8 @@
+{
+  "id": "harmonizer",
+  "name": "Harmonizer",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Two parallel granular pitch shifters tuned to musical intervals under the dry voice. Defaults to a 3rd + 5th — instant three-part vocal harmony, Eventide style.",
+  "tags": ["pitch", "harmony", "vocal"]
+}

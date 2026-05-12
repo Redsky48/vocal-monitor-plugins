@@ -1,0 +1,8 @@
+{
+  "id": "spring-reverb",
+  "name": "Spring Reverb",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Eight-stage allpass dispersion network feeding two cross-coupled delay lines — the trademark drippy, chirpy boing of a Fender guitar amp tank or Hammond organ.",
+  "tags": ["reverb", "spring", "vintage", "dispersion"]
+}

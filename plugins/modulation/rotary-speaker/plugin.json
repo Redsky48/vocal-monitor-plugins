@@ -1,0 +1,8 @@
+{
+  "id": "rotary-speaker",
+  "name": "Rotary Speaker",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Leslie cabinet sim — crossover splits the signal into bass drum and treble horn, each modulated by its own Doppler-delay LFO. Two-speed switching ramps like real motor inertia. Hammond B-3 / Procol Harum.",
+  "tags": ["modulation", "leslie", "rotary", "vintage"]
+}

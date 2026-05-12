@@ -1,0 +1,8 @@
+{
+  "id": "frequency-shifter",
+  "name": "Frequency Shifter",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Bode-style single-sideband shifter — every frequency moves by N Hz (not by ratio), breaking harmonic relationships. 12-stage Hilbert allpass network. Inharmonic, metallic, alien.",
+  "tags": ["modulation", "shifter", "ssb", "hilbert"]
+}

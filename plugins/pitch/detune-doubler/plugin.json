@@ -1,0 +1,8 @@
+{
+  "id": "detune-doubler",
+  "name": "Detune Doubler",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "ADT-style doubler: two granular voices flat/sharp by N cents and a few ms late, blended under the dry. Subtle thickening to in-your-face Bee Gees shimmer.",
+  "tags": ["pitch", "doubler", "adt", "vocal"]
+}

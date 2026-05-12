@@ -1,0 +1,8 @@
+{
+  "id": "plate-reverb",
+  "name": "Plate Reverb",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Schroeder topology — four parallel feedback combs with per-tap damping, diffused through two series allpasses. Dense shimmery plate flavour from 60s/70s records.",
+  "tags": ["reverb", "plate", "schroeder", "vintage"]
+}

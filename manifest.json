@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-11T23:29:51.247Z",
+  "generatedAt": "2026-05-12T00:02:46.166Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -76,6 +76,107 @@
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/distortion/saturator/saturator.js"
     },
     {
+      "id": "compressor",
+      "name": "Compressor",
+      "author": "Vocal Monitor",
+      "category": "Dynamics",
+      "description": "Feedforward peak compressor with split attack/release detector, soft-knee gain computer in the dB domain, and makeup gain. Tames vocal peaks, glues mixes.",
+      "version": "1.0.0",
+      "tags": [
+        "dynamics",
+        "compressor",
+        "vocal"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/compressor/compressor.js"
+    },
+    {
+      "id": "de-esser",
+      "name": "De-esser",
+      "author": "Vocal Monitor",
+      "category": "Dynamics",
+      "description": "Split-band sibilance ducker. Sidechain HP feeds an envelope follower that drops gain only on the HF band of the main signal — voice body stays intact, only the harsh sssss gets tamed.",
+      "version": "1.0.0",
+      "tags": [
+        "dynamics",
+        "vocal",
+        "sibilance",
+        "split-band"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/de-esser/de-esser.js"
+    },
+    {
+      "id": "limiter",
+      "name": "Limiter",
+      "author": "Vocal Monitor",
+      "category": "Dynamics",
+      "description": "Brickwall peak limiter with 8 ms lookahead. Detector sees what's coming and clamps gain before peaks reach the output — last-stage master-bus glue at 0 dBFS.",
+      "version": "1.0.0",
+      "tags": [
+        "dynamics",
+        "limiter",
+        "mastering"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/limiter/limiter.js"
+    },
+    {
+      "id": "noise-gate",
+      "name": "Noise Gate",
+      "author": "Vocal Monitor",
+      "category": "Dynamics",
+      "description": "Hysteresis-based gate with attack/hold/release. Cleans up background hiss between phrases, kills bleed between drum mics, makes a noisy room presentable.",
+      "version": "1.0.0",
+      "tags": [
+        "dynamics",
+        "gate",
+        "noise"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/noise-gate/noise-gate.js"
+    },
+    {
+      "id": "transient-shaper",
+      "name": "Transient Shaper",
+      "author": "Vocal Monitor",
+      "category": "Dynamics",
+      "description": "Independent attack/sustain control via the difference of fast and slow envelopes. SPL Transient Designer in spirit — fatten snares, soften plosives, add bite to vocals.",
+      "version": "1.0.0",
+      "tags": [
+        "dynamics",
+        "transient",
+        "envelope"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/transient-shaper/transient-shaper.js"
+    },
+    {
+      "id": "exciter",
+      "name": "Exciter",
+      "author": "Vocal Monitor",
+      "category": "EQ",
+      "description": "Aphex-style high-frequency harmonic generator. Splits highs, runs them through asymmetric soft-clip, sums the new harmonics back under dry. Re-airs dull vocals and cassette transfers.",
+      "version": "1.0.0",
+      "tags": [
+        "eq",
+        "exciter",
+        "harmonics",
+        "aphex"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/eq/exciter/exciter.js"
+    },
+    {
+      "id": "parametric-eq",
+      "name": "Parametric EQ",
+      "author": "Vocal Monitor",
+      "category": "EQ",
+      "description": "Three RBJ biquad bands — low shelf, peaking bell with Q, high shelf. Channel-strip tone shaping with cookbook-accurate filter math.",
+      "version": "1.0.0",
+      "tags": [
+        "eq",
+        "filter",
+        "biquad",
+        "mixing"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/eq/parametric-eq/parametric-eq.js"
+    },
+    {
       "id": "auto-wah",
       "name": "Auto-Wah",
       "author": "Vocal Monitor",
@@ -88,6 +189,36 @@
         "wah"
       ],
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/filter/auto-wah/auto-wah.js"
+    },
+    {
+      "id": "resonator",
+      "name": "Resonator",
+      "author": "Vocal Monitor",
+      "category": "Filter",
+      "description": "Karplus-Strong tuned comb. Delay-line feedback rings at the selected pitch, damped by a one-pole LP. Sympathetic-resonance harmonics; high feedback = infinite drone.",
+      "version": "1.0.0",
+      "tags": [
+        "filter",
+        "resonance",
+        "comb",
+        "karplus"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/filter/resonator/resonator.js"
+    },
+    {
+      "id": "vowel-filter",
+      "name": "Vowel Filter",
+      "author": "Vocal Monitor",
+      "category": "Filter",
+      "description": "Three parallel bandpass resonators tuned to F1/F2/F3 formants — morphs between A·E·I·O·U. Manual or LFO-swept. Talk-wah, robot-mouth, choir effect on a dry voice.",
+      "version": "1.0.0",
+      "tags": [
+        "filter",
+        "vowel",
+        "formant",
+        "talk-wah"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/filter/vowel-filter/vowel-filter.js"
     },
     {
       "id": "bitcrusher",
@@ -175,6 +306,21 @@
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/flanger/flanger.js"
     },
     {
+      "id": "frequency-shifter",
+      "name": "Frequency Shifter",
+      "author": "Vocal Monitor",
+      "category": "Modulation",
+      "description": "Bode-style single-sideband shifter — every frequency moves by N Hz (not by ratio), breaking harmonic relationships. 12-stage Hilbert allpass network. Inharmonic, metallic, alien.",
+      "version": "1.0.0",
+      "tags": [
+        "modulation",
+        "shifter",
+        "ssb",
+        "hilbert"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/frequency-shifter/frequency-shifter.js"
+    },
+    {
       "id": "phaser",
       "name": "Phaser",
       "author": "Vocal Monitor",
@@ -187,6 +333,21 @@
         "sweep"
       ],
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/phaser/phaser.js"
+    },
+    {
+      "id": "rotary-speaker",
+      "name": "Rotary Speaker",
+      "author": "Vocal Monitor",
+      "category": "Modulation",
+      "description": "Leslie cabinet sim — crossover splits the signal into bass drum and treble horn, each modulated by its own Doppler-delay LFO. Two-speed switching ramps like real motor inertia. Hammond B-3 / Procol Harum.",
+      "version": "1.0.0",
+      "tags": [
+        "modulation",
+        "leslie",
+        "rotary",
+        "vintage"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/rotary-speaker/rotary-speaker.js"
     },
     {
       "id": "tremolo",
@@ -215,6 +376,124 @@
         "lfo"
       ],
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/vibrato/vibrato.js"
+    },
+    {
+      "id": "detune-doubler",
+      "name": "Detune Doubler",
+      "author": "Vocal Monitor",
+      "category": "Pitch",
+      "description": "ADT-style doubler: two granular voices flat/sharp by N cents and a few ms late, blended under the dry. Subtle thickening to in-your-face Bee Gees shimmer.",
+      "version": "1.0.0",
+      "tags": [
+        "pitch",
+        "doubler",
+        "adt",
+        "vocal"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/pitch/detune-doubler/detune-doubler.js"
+    },
+    {
+      "id": "harmonizer",
+      "name": "Harmonizer",
+      "author": "Vocal Monitor",
+      "category": "Pitch",
+      "description": "Two parallel granular pitch shifters tuned to musical intervals under the dry voice. Defaults to a 3rd + 5th — instant three-part vocal harmony, Eventide style.",
+      "version": "1.0.0",
+      "tags": [
+        "pitch",
+        "harmony",
+        "vocal"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/pitch/harmonizer/harmonizer.js"
+    },
+    {
+      "id": "pitch-shifter",
+      "name": "Pitch Shifter",
+      "author": "Vocal Monitor",
+      "category": "Pitch",
+      "description": "Granular pitch shift over ±2 octaves with cents-precision detune. Two Hann-windowed grains crossfaded — Eventide H910 / SoundTouch family. Vocal harmonies, demon growls, chipmunks.",
+      "version": "1.0.0",
+      "tags": [
+        "pitch",
+        "shift",
+        "granular"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/pitch/pitch-shifter/pitch-shifter.js"
+    },
+    {
+      "id": "gated-reverb",
+      "name": "Gated Reverb",
+      "author": "Vocal Monitor",
+      "category": "Reverb",
+      "description": "Six-comb plate reverb followed by a hard envelope gate — huge, dense, then abruptly silent. The Phil Collins / Hugh Padgham 80s drum sound on a vocal.",
+      "version": "1.0.0",
+      "tags": [
+        "reverb",
+        "gated",
+        "80s",
+        "drum"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/reverb/gated-reverb/gated-reverb.js"
+    },
+    {
+      "id": "plate-reverb",
+      "name": "Plate Reverb",
+      "author": "Vocal Monitor",
+      "category": "Reverb",
+      "description": "Schroeder topology — four parallel feedback combs with per-tap damping, diffused through two series allpasses. Dense shimmery plate flavour from 60s/70s records.",
+      "version": "1.0.0",
+      "tags": [
+        "reverb",
+        "plate",
+        "schroeder",
+        "vintage"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/reverb/plate-reverb/plate-reverb.js"
+    },
+    {
+      "id": "shimmer-reverb",
+      "name": "Shimmer Reverb",
+      "author": "Vocal Monitor",
+      "category": "Reverb",
+      "description": "Lush reverb tail with a granular octave-up pitch shift baked into the feedback path. Each generation of echoes climbs an octave — Eno-style ambient bloom, Strymon BigSky territory.",
+      "version": "1.0.0",
+      "tags": [
+        "reverb",
+        "ambient",
+        "pitch",
+        "shimmer"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/reverb/shimmer-reverb/shimmer-reverb.js"
+    },
+    {
+      "id": "spring-reverb",
+      "name": "Spring Reverb",
+      "author": "Vocal Monitor",
+      "category": "Reverb",
+      "description": "Eight-stage allpass dispersion network feeding two cross-coupled delay lines — the trademark drippy, chirpy boing of a Fender guitar amp tank or Hammond organ.",
+      "version": "1.0.0",
+      "tags": [
+        "reverb",
+        "spring",
+        "vintage",
+        "dispersion"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/reverb/spring-reverb/spring-reverb.js"
+    },
+    {
+      "id": "megaphone",
+      "name": "Megaphone",
+      "author": "Vocal Monitor",
+      "category": "Voice FX",
+      "description": "Bullhorn / drill-sergeant voice. Steep band-pass + 2 kHz honk resonance + asymmetric soft-clip cone distortion + post-LP to tame the fizz. Drop on shouted vocals or radio-comm chatter.",
+      "version": "1.0.0",
+      "tags": [
+        "voice",
+        "megaphone",
+        "bullhorn",
+        "distortion"
+      ],
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/voice-fx/megaphone/megaphone.js"
     },
     {
       "id": "telephone",
