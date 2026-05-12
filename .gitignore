@@ -3,3 +3,7 @@ node_modules/
 *.log
 .idea/
 .vscode/
+
+# Native plugin build artefacts (compile output is the .dex next to source).
+build/
+*.class
