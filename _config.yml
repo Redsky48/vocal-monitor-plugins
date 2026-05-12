@@ -1,0 +1,19 @@
+# Jekyll config for GitHub Pages.
+# Renders every .md in this repo as a clean HTML page so external links
+# (e.g. Play Store's privacy-policy URL field) point at something that
+# looks like a real document instead of a code-host markdown viewer.
+title: Vocal Monitor
+description: Community JavaScript audio plugin registry for the Vocal Monitor Android app.
+theme: jekyll-theme-cayman
+
+# Skip these from the rendered site — they're for contributors / CI, not
+# end users, and rendering them just clutters the Pages output.
+exclude:
+  - scripts/
+  - plugins/
+  - template/
+  - .github/
+  - repo.config.json
+  - package.json
+  - publish.sh
+  - manifest.json

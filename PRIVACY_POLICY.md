@@ -1,3 +1,8 @@
+---
+layout: default
+title: Privacy Policy — Vocal Monitor
+---
+
 # Vocal Monitor — Privacy Policy
 
 _Last updated: 2026-05-12_
