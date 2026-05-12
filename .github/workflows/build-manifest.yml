@@ -7,6 +7,9 @@ on:
       - 'plugins/**'
       - 'scripts/build-manifest.mjs'
       - 'repo.config.json'
+  # Manual trigger — useful after edits made via the GitHub web UI or to
+  # recover from a transient push failure during an earlier rebuild.
+  workflow_dispatch:
 
 permissions:
   contents: write
