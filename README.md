@@ -63,6 +63,13 @@ node scripts/build-manifest.mjs     # regenerate manifest.json
 
 `build-manifest.mjs` derives source URLs from `repo.config.json` (for local runs) or `$GITHUB_REPOSITORY` (in CI). `publish.sh` writes `repo.config.json` for you so local builds bake the right owner into the URLs automatically.
 
+## Privacy
+
+The Vocal Monitor Android app's privacy policy lives at
+[redsky48.github.io/vocal-monitor-plugins/PRIVACY_POLICY.html](https://redsky48.github.io/vocal-monitor-plugins/PRIVACY_POLICY.html)
+— short version: no data ever leaves the device. The only network traffic
+the app makes is the public HTTPS fetch to this registry.
+
 ## License
 
 [MIT](LICENSE) — use, fork, modify freely. Per-plugin authorship lives in each `plugin.json`.
