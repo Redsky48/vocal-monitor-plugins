@@ -1,0 +1,10 @@
+{
+  "id": "slicer",
+  "name": "Slicer",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "8-step rhythmic gate with duty cycle. Each on-step holds for a configurable fraction of the step length — chop with low duty, near-full hold with high duty. Rhythmic gating for pads, vocals, drones.",
+  "tags": ["modulation", "slicer", "gate", "rhythm", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.Slicer"
+}

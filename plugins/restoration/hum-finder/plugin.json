@@ -1,0 +1,10 @@
+{
+  "id": "hum-finder",
+  "name": "Hum Finder",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Auto-detects 50 Hz vs 60 Hz mains contamination via narrow bandpass detectors, then notches the winning fundamental + 5 harmonics. No more guessing which power grid a downloaded interview came from.",
+  "tags": ["restoration", "hum", "notch", "adaptive", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.HumFinder"
+}

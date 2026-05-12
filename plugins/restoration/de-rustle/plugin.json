@@ -1,0 +1,10 @@
+{
+  "id": "de-rustle",
+  "name": "De-rustle",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Catches lavalier-mic clothing rustle and mic-handling crackle. Sidechain 24 dB/oct HP at ~5 kHz feeds fast/slow envelopes; when the fast env overshoots the slow we crossfade a high-shelf cut onto the main signal for the duration of the event. iZotope RX De-rustle family.",
+  "tags": ["restoration", "rustle", "vocal", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.DeRustle"
+}

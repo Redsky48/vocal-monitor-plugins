@@ -1,0 +1,10 @@
+{
+  "id": "sample-hold-filter",
+  "name": "S&H Filter",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Random stair-step LFO drives the cutoff of a bandpass biquad. Pure step at smoothness=0 (classic 80s arcade chirp), gliding burble at higher smoothness. Berlin-school synth / Daft Punk filter stutter.",
+  "tags": ["modulation", "filter", "sample-hold", "random", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.SampleHoldFilter"
+}

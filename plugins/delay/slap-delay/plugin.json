@@ -1,0 +1,10 @@
+{
+  "id": "slap-delay",
+  "name": "Slap Delay",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Single 80–150 ms tap with no feedback — the trademark 1950s Sun Studio rockabilly vocal sound. Thickens a voice without producing audible repeats. Tone knob dulls the tap so it sits behind the dry.",
+  "tags": ["delay", "slap", "rockabilly", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.SlapDelay"
+}

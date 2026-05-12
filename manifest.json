@@ -1,8 +1,128 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-12T22:44:54.445Z",
+  "generatedAt": "2026-05-12T23:16:39.547Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
+    {
+      "id": "beat-repeat",
+      "name": "Beat Repeat",
+      "author": "Vocal Monitor",
+      "category": "Creative",
+      "description": "Period-locked stutter where each cycle randomly chooses to half-length, pitch-shift, or reverse the slice. Squarepusher / Aphex Twin-style glitchy chops on any source.",
+      "version": "1.0.0",
+      "tags": [
+        "creative",
+        "glitch",
+        "stutter",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/creative/beat-repeat/beat-repeat.dex",
+      "className": "com.vocalmonitor.plugin.community.BeatRepeat"
+    },
+    {
+      "id": "drone-generator",
+      "name": "Drone Generator",
+      "author": "Vocal Monitor",
+      "category": "Creative",
+      "description": "Tracks the dominant input pitch via zero-crossing periods and synthesises a continuously-sustained drone underneath via a Karplus-Strong resonator excited by pink noise. Instant shruti-box / harmonium accompaniment.",
+      "version": "1.0.0",
+      "tags": [
+        "creative",
+        "drone",
+        "pitch",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/creative/drone-generator/drone-generator.dex",
+      "className": "com.vocalmonitor.plugin.community.DroneGenerator"
+    },
+    {
+      "id": "freeze",
+      "name": "Freeze",
+      "author": "Vocal Monitor",
+      "category": "Creative",
+      "description": "Captures the last N ms of input and loops it forever with two Hann-windowed read heads offset by half the loop — no audible seam, just sustain. EHX Freeze pedal / Strymon Mobius freeze block on a vocal.",
+      "version": "1.0.0",
+      "tags": [
+        "creative",
+        "freeze",
+        "sustain",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/creative/freeze/freeze.dex",
+      "className": "com.vocalmonitor.plugin.community.Freeze"
+    },
+    {
+      "id": "granular-cloud",
+      "name": "Granular Cloud",
+      "author": "Vocal Monitor",
+      "category": "Creative",
+      "description": "1–8 simultaneous Hann-windowed grains fire from random positions in a 2-second sliding buffer at random pitches. Stack them and the source dissolves into a continuous shimmery texture. Mutable Instruments Clouds / Ableton Grain Delay.",
+      "version": "1.0.0",
+      "tags": [
+        "creative",
+        "granular",
+        "texture",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/creative/granular-cloud/granular-cloud.dex",
+      "className": "com.vocalmonitor.plugin.community.GranularCloud"
+    },
+    {
+      "id": "reverse-looper",
+      "name": "Reverse Looper",
+      "author": "Vocal Monitor",
+      "category": "Creative",
+      "description": "Records the last N seconds into a sliding buffer; toggle 'Play Rev' to play that window backwards with crossfaded read heads. Shoegaze swells, backwards-vocal transitions, instant Beatles-era reverse trick.",
+      "version": "1.0.0",
+      "tags": [
+        "creative",
+        "reverse",
+        "loop",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/creative/reverse-looper/reverse-looper.dex",
+      "className": "com.vocalmonitor.plugin.community.ReverseLooper"
+    },
+    {
+      "id": "dub-delay",
+      "name": "Dub Delay",
+      "author": "Vocal Monitor",
+      "category": "Delay",
+      "description": "Tape-delay with an LFO-swept bandpass filter and soft saturation in the feedback path. Each repeat passes through a moving filter window and gets gently distorted — King Tubby / Lee Perry console-dub territory.",
+      "version": "1.0.0",
+      "tags": [
+        "delay",
+        "dub",
+        "filter",
+        "feedback",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/delay/dub-delay/dub-delay.dex",
+      "className": "com.vocalmonitor.plugin.community.DubDelay"
+    },
+    {
+      "id": "multi-tap-delay",
+      "name": "Multi-tap Delay",
+      "author": "Vocal Monitor",
+      "category": "Delay",
+      "description": "Four independent taps reading from one shared delay buffer, each with its own time (5–1500 ms) and gain, plus shared feedback. Set rhythmic ratios for programmable patterns — Roland SDE-3000 territory.",
+      "version": "1.0.0",
+      "tags": [
+        "delay",
+        "multi-tap",
+        "rhythm",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/delay/multi-tap-delay/multi-tap-delay.dex",
+      "className": "com.vocalmonitor.plugin.community.MultiTapDelay"
+    },
     {
       "id": "reverse-delay",
       "name": "Reverse Delay",
@@ -19,6 +139,23 @@
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/delay/reverse-delay/reverse-delay.dex",
       "className": "com.vocalmonitor.plugin.community.ReverseDelay"
+    },
+    {
+      "id": "slap-delay",
+      "name": "Slap Delay",
+      "author": "Vocal Monitor",
+      "category": "Delay",
+      "description": "Single 80–150 ms tap with no feedback — the trademark 1950s Sun Studio rockabilly vocal sound. Thickens a voice without producing audible repeats. Tone knob dulls the tap so it sits behind the dry.",
+      "version": "1.0.0",
+      "tags": [
+        "delay",
+        "slap",
+        "rockabilly",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/delay/slap-delay/slap-delay.dex",
+      "className": "com.vocalmonitor.plugin.community.SlapDelay"
     },
     {
       "id": "tape-delay",
@@ -143,6 +280,23 @@
       "className": "com.vocalmonitor.plugin.community.Limiter"
     },
     {
+      "id": "multiband-compressor",
+      "name": "Multiband Compressor",
+      "author": "Vocal Monitor",
+      "category": "Dynamics",
+      "description": "Three-band feedforward peak compressor (LR2 crossovers at 300 Hz / 3 kHz). Independent threshold per band keeps a heavy bass hit from pumping the highs and a vocal ess from squashing the lows.",
+      "version": "1.0.0",
+      "tags": [
+        "dynamics",
+        "compressor",
+        "multiband",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/multiband-compressor/multiband-compressor.dex",
+      "className": "com.vocalmonitor.plugin.community.MultibandCompressor"
+    },
+    {
       "id": "noise-gate",
       "name": "Noise Gate",
       "author": "Vocal Monitor",
@@ -175,6 +329,23 @@
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/transient-shaper/transient-shaper.dex",
       "className": "com.vocalmonitor.plugin.community.TransientShaper"
+    },
+    {
+      "id": "upward-compressor",
+      "name": "Upward Compressor",
+      "author": "Vocal Monitor",
+      "category": "Dynamics",
+      "description": "Pushes quiet signals UP toward a target level (the opposite of normal compression). Whispered passages get audible without flattening the loud parts. Vocal clarity / podcast dialogue intelligibility.",
+      "version": "1.0.0",
+      "tags": [
+        "dynamics",
+        "upward",
+        "clarity",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/upward-compressor/upward-compressor.dex",
+      "className": "com.vocalmonitor.plugin.community.UpwardCompressor"
     },
     {
       "id": "exciter",
@@ -367,6 +538,24 @@
       "className": "com.vocalmonitor.plugin.community.Chorus"
     },
     {
+      "id": "ensemble",
+      "name": "Ensemble",
+      "author": "Vocal Monitor",
+      "category": "Modulation",
+      "description": "Six chorus voices with phase-offset LFOs running at slightly different rates. Solina String Ensemble / Eminent 310 thick-string sound; turns a mono voice into a swirling pad.",
+      "version": "1.0.0",
+      "tags": [
+        "modulation",
+        "chorus",
+        "ensemble",
+        "string",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/ensemble/ensemble.dex",
+      "className": "com.vocalmonitor.plugin.community.Ensemble"
+    },
+    {
       "id": "flanger",
       "name": "Flanger",
       "author": "Vocal Monitor",
@@ -437,6 +626,59 @@
       "className": "com.vocalmonitor.plugin.community.RotarySpeaker"
     },
     {
+      "id": "sample-hold-filter",
+      "name": "S&H Filter",
+      "author": "Vocal Monitor",
+      "category": "Modulation",
+      "description": "Random stair-step LFO drives the cutoff of a bandpass biquad. Pure step at smoothness=0 (classic 80s arcade chirp), gliding burble at higher smoothness. Berlin-school synth / Daft Punk filter stutter.",
+      "version": "1.0.0",
+      "tags": [
+        "modulation",
+        "filter",
+        "sample-hold",
+        "random",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/sample-hold-filter/sample-hold-filter.dex",
+      "className": "com.vocalmonitor.plugin.community.SampleHoldFilter"
+    },
+    {
+      "id": "slicer",
+      "name": "Slicer",
+      "author": "Vocal Monitor",
+      "category": "Modulation",
+      "description": "8-step rhythmic gate with duty cycle. Each on-step holds for a configurable fraction of the step length — chop with low duty, near-full hold with high duty. Rhythmic gating for pads, vocals, drones.",
+      "version": "1.0.0",
+      "tags": [
+        "modulation",
+        "slicer",
+        "gate",
+        "rhythm",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/slicer/slicer.dex",
+      "className": "com.vocalmonitor.plugin.community.Slicer"
+    },
+    {
+      "id": "trance-gate",
+      "name": "Trance Gate",
+      "author": "Vocal Monitor",
+      "category": "Modulation",
+      "description": "16-step on/off gate with four built-in patterns (syncopated, straight 8th, 2× dotted, 1+3 emphasis). Smoothness blends from hard chops to breathy fade-ins. The trademark late-90s trance pad stutter.",
+      "version": "1.0.0",
+      "tags": [
+        "modulation",
+        "gate",
+        "rhythm",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/trance-gate/trance-gate.dex",
+      "className": "com.vocalmonitor.plugin.community.TranceGate"
+    },
+    {
       "id": "tremolo",
       "name": "Tremolo",
       "author": "Vocal Monitor",
@@ -452,6 +694,24 @@
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/tremolo/tremolo.dex",
       "className": "com.vocalmonitor.plugin.community.Tremolo"
+    },
+    {
+      "id": "uni-vibe",
+      "name": "Uni-Vibe",
+      "author": "Vocal Monitor",
+      "category": "Modulation",
+      "description": "Shin-Ei Univibe — 4 allpass stages with phase-offset LFOs and asymmetrically-tuned centre frequencies. Vocal, rotary-speaker-with-bite character. Hendrix \"Machine Gun\" / Robin Trower territory.",
+      "version": "1.0.0",
+      "tags": [
+        "modulation",
+        "phaser",
+        "univibe",
+        "vintage",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/uni-vibe/uni-vibe.dex",
+      "className": "com.vocalmonitor.plugin.community.UniVibe"
     },
     {
       "id": "vibrato",
@@ -539,6 +799,23 @@
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/air-enhancer/air-enhancer.dex",
       "className": "com.vocalmonitor.plugin.community.AirEnhancer"
+    },
+    {
+      "id": "click-suite",
+      "name": "Click Suite",
+      "author": "Vocal Monitor",
+      "category": "Restoration",
+      "description": "One-knob combo of De-clicker (linear predictor) + De-mouth (2.5 kHz BP ducker) + De-plosive (sidechain LF detector) in series. Drag intensity, get 80% of a manual three-plugin chain for one knob-turn.",
+      "version": "1.0.0",
+      "tags": [
+        "restoration",
+        "vocal",
+        "combo",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/click-suite/click-suite.dex",
+      "className": "com.vocalmonitor.plugin.community.ClickSuite"
     },
     {
       "id": "de-breath",
@@ -659,6 +936,58 @@
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/de-rumble/de-rumble.dex",
       "className": "com.vocalmonitor.plugin.community.DeRumble"
+    },
+    {
+      "id": "de-rustle",
+      "name": "De-rustle",
+      "author": "Vocal Monitor",
+      "category": "Restoration",
+      "description": "Catches lavalier-mic clothing rustle and mic-handling crackle. Sidechain 24 dB/oct HP at ~5 kHz feeds fast/slow envelopes; when the fast env overshoots the slow we crossfade a high-shelf cut onto the main signal for the duration of the event. iZotope RX De-rustle family.",
+      "version": "1.0.0",
+      "tags": [
+        "restoration",
+        "rustle",
+        "vocal",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/de-rustle/de-rustle.dex",
+      "className": "com.vocalmonitor.plugin.community.DeRustle"
+    },
+    {
+      "id": "de-wind",
+      "name": "De-wind",
+      "author": "Vocal Monitor",
+      "category": "Restoration",
+      "description": "Removes sustained sub-100 Hz wind buffeting. Slow envelope on a 24 dB/oct sidechain LP arms a 24 dB/oct HPF crossfade on the main path — kicks in only when LF energy dominates, so the rest of the signal stays unchanged.",
+      "version": "1.0.0",
+      "tags": [
+        "restoration",
+        "wind",
+        "lf",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/de-wind/de-wind.dex",
+      "className": "com.vocalmonitor.plugin.community.DeWind"
+    },
+    {
+      "id": "hum-finder",
+      "name": "Hum Finder",
+      "author": "Vocal Monitor",
+      "category": "Restoration",
+      "description": "Auto-detects 50 Hz vs 60 Hz mains contamination via narrow bandpass detectors, then notches the winning fundamental + 5 harmonics. No more guessing which power grid a downloaded interview came from.",
+      "version": "1.0.0",
+      "tags": [
+        "restoration",
+        "hum",
+        "notch",
+        "adaptive",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/hum-finder/hum-finder.dex",
+      "className": "com.vocalmonitor.plugin.community.HumFinder"
     },
     {
       "id": "noise-reduction",

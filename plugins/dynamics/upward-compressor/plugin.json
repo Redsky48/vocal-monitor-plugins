@@ -1,0 +1,10 @@
+{
+  "id": "upward-compressor",
+  "name": "Upward Compressor",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Pushes quiet signals UP toward a target level (the opposite of normal compression). Whispered passages get audible without flattening the loud parts. Vocal clarity / podcast dialogue intelligibility.",
+  "tags": ["dynamics", "upward", "clarity", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.UpwardCompressor"
+}

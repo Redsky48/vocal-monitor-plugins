@@ -1,0 +1,10 @@
+{
+  "id": "dub-delay",
+  "name": "Dub Delay",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Tape-delay with an LFO-swept bandpass filter and soft saturation in the feedback path. Each repeat passes through a moving filter window and gets gently distorted — King Tubby / Lee Perry console-dub territory.",
+  "tags": ["delay", "dub", "filter", "feedback", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.DubDelay"
+}

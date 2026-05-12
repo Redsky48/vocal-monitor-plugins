@@ -1,0 +1,10 @@
+{
+  "id": "uni-vibe",
+  "name": "Uni-Vibe",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Shin-Ei Univibe — 4 allpass stages with phase-offset LFOs and asymmetrically-tuned centre frequencies. Vocal, rotary-speaker-with-bite character. Hendrix \"Machine Gun\" / Robin Trower territory.",
+  "tags": ["modulation", "phaser", "univibe", "vintage", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.UniVibe"
+}

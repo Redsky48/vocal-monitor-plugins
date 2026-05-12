@@ -1,0 +1,10 @@
+{
+  "id": "drone-generator",
+  "name": "Drone Generator",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Tracks the dominant input pitch via zero-crossing periods and synthesises a continuously-sustained drone underneath via a Karplus-Strong resonator excited by pink noise. Instant shruti-box / harmonium accompaniment.",
+  "tags": ["creative", "drone", "pitch", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.DroneGenerator"
+}

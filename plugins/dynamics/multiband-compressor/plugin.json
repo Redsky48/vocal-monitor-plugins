@@ -1,0 +1,10 @@
+{
+  "id": "multiband-compressor",
+  "name": "Multiband Compressor",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Three-band feedforward peak compressor (LR2 crossovers at 300 Hz / 3 kHz). Independent threshold per band keeps a heavy bass hit from pumping the highs and a vocal ess from squashing the lows.",
+  "tags": ["dynamics", "compressor", "multiband", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.MultibandCompressor"
+}

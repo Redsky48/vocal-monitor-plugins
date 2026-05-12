@@ -28,6 +28,7 @@ const CATEGORY_LABELS = {
   pitch: 'Pitch',
   eq: 'EQ',
   restoration: 'Restoration',
+  creative: 'Creative',
 };
 
 async function repoConfig() {

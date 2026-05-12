@@ -1,0 +1,10 @@
+{
+  "id": "granular-cloud",
+  "name": "Granular Cloud",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "1–8 simultaneous Hann-windowed grains fire from random positions in a 2-second sliding buffer at random pitches. Stack them and the source dissolves into a continuous shimmery texture. Mutable Instruments Clouds / Ableton Grain Delay.",
+  "tags": ["creative", "granular", "texture", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.GranularCloud"
+}

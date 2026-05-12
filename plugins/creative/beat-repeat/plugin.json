@@ -1,0 +1,10 @@
+{
+  "id": "beat-repeat",
+  "name": "Beat Repeat",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Period-locked stutter where each cycle randomly chooses to half-length, pitch-shift, or reverse the slice. Squarepusher / Aphex Twin-style glitchy chops on any source.",
+  "tags": ["creative", "glitch", "stutter", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.BeatRepeat"
+}

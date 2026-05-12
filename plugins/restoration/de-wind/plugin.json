@@ -1,0 +1,10 @@
+{
+  "id": "de-wind",
+  "name": "De-wind",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Removes sustained sub-100 Hz wind buffeting. Slow envelope on a 24 dB/oct sidechain LP arms a 24 dB/oct HPF crossfade on the main path — kicks in only when LF energy dominates, so the rest of the signal stays unchanged.",
+  "tags": ["restoration", "wind", "lf", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.DeWind"
+}

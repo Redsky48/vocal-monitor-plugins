@@ -1,0 +1,10 @@
+{
+  "id": "multi-tap-delay",
+  "name": "Multi-tap Delay",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Four independent taps reading from one shared delay buffer, each with its own time (5–1500 ms) and gain, plus shared feedback. Set rhythmic ratios for programmable patterns — Roland SDE-3000 territory.",
+  "tags": ["delay", "multi-tap", "rhythm", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.MultiTapDelay"
+}

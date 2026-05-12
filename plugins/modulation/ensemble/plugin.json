@@ -1,0 +1,10 @@
+{
+  "id": "ensemble",
+  "name": "Ensemble",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Six chorus voices with phase-offset LFOs running at slightly different rates. Solina String Ensemble / Eminent 310 thick-string sound; turns a mono voice into a swirling pad.",
+  "tags": ["modulation", "chorus", "ensemble", "string", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.Ensemble"
+}

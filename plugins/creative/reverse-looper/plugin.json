@@ -1,0 +1,10 @@
+{
+  "id": "reverse-looper",
+  "name": "Reverse Looper",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Records the last N seconds into a sliding buffer; toggle 'Play Rev' to play that window backwards with crossfaded read heads. Shoegaze swells, backwards-vocal transitions, instant Beatles-era reverse trick.",
+  "tags": ["creative", "reverse", "loop", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.ReverseLooper"
+}

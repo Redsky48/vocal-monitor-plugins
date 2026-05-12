@@ -1,0 +1,10 @@
+{
+  "id": "trance-gate",
+  "name": "Trance Gate",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "16-step on/off gate with four built-in patterns (syncopated, straight 8th, 2× dotted, 1+3 emphasis). Smoothness blends from hard chops to breathy fade-ins. The trademark late-90s trance pad stutter.",
+  "tags": ["modulation", "gate", "rhythm", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.TranceGate"
+}

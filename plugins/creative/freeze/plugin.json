@@ -1,0 +1,10 @@
+{
+  "id": "freeze",
+  "name": "Freeze",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Captures the last N ms of input and loops it forever with two Hann-windowed read heads offset by half the loop — no audible seam, just sustain. EHX Freeze pedal / Strymon Mobius freeze block on a vocal.",
+  "tags": ["creative", "freeze", "sustain", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.Freeze"
+}
