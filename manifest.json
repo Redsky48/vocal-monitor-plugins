@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-12T22:21:09.049Z",
+  "generatedAt": "2026-05-12T22:41:43.608Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -521,6 +521,179 @@
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/pitch/pitch-shifter/pitch-shifter.dex",
       "className": "com.vocalmonitor.plugin.community.PitchShifter"
+    },
+    {
+      "id": "air-enhancer",
+      "name": "Air Enhancer",
+      "author": "Vocal Monitor",
+      "category": "Restoration",
+      "description": "Dynamic high shelf that only kicks in above a configurable envelope threshold. Lifts vocal air (8–15 kHz) without amplifying the noise floor between phrases — same trick as iZotope Vocal Enhancer's presence band.",
+      "version": "1.0.0",
+      "tags": [
+        "restoration",
+        "vocal",
+        "air",
+        "shelf",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/air-enhancer/air-enhancer.dex",
+      "className": "com.vocalmonitor.plugin.community.AirEnhancer"
+    },
+    {
+      "id": "de-breath",
+      "name": "De-breath",
+      "author": "Vocal Monitor",
+      "category": "Restoration",
+      "description": "Auto-ducks inter-phrase breath inhalations. Combines a sub-threshold total envelope check with a 4 kHz / 800 Hz spectral ratio — breaths are quiet + HF-skewed, sustained vowels are loud + LF-rich. Smooth open/close transitions avoid chattering on word edges.",
+      "version": "1.0.0",
+      "tags": [
+        "restoration",
+        "breath",
+        "vocal",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/de-breath/de-breath.dex",
+      "className": "com.vocalmonitor.plugin.community.DeBreath"
+    },
+    {
+      "id": "de-clicker",
+      "name": "De-clicker",
+      "author": "Vocal Monitor",
+      "category": "Restoration",
+      "description": "Click / pop / vinyl-crackle removal via 3rd-order linear predictor. The residual between the predictor and the input flags impulsive transients that break polynomial continuity; flagged samples are replaced with the predictor's own output across a short repair window. Sonnox DeClicker / iZotope RX De-click family.",
+      "version": "1.0.0",
+      "tags": [
+        "restoration",
+        "click",
+        "repair",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/de-clicker/de-clicker.dex",
+      "className": "com.vocalmonitor.plugin.community.DeClicker"
+    },
+    {
+      "id": "de-clipper",
+      "name": "De-clipper",
+      "author": "Vocal Monitor",
+      "category": "Restoration",
+      "description": "Restores hard-clipped peaks by detecting flat-top runs above threshold and bowing them outward via Hermite extrapolation from the neighbouring slopes. Recovers some of what the converter rail flattened. iZotope RX De-clip family.",
+      "version": "1.0.0",
+      "tags": [
+        "restoration",
+        "clipping",
+        "repair",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/de-clipper/de-clipper.dex",
+      "className": "com.vocalmonitor.plugin.community.DeClipper"
+    },
+    {
+      "id": "de-hum",
+      "name": "De-hum",
+      "author": "Vocal Monitor",
+      "category": "Restoration",
+      "description": "Six high-Q notches tuned to mains frequency (50 or 60 Hz) and its first five harmonics. Surgical buzz removal — leaves everything between the notches essentially flat. Switchable between EU and US power grids.",
+      "version": "1.0.0",
+      "tags": [
+        "restoration",
+        "hum",
+        "notch",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/de-hum/de-hum.dex",
+      "className": "com.vocalmonitor.plugin.community.DeHum"
+    },
+    {
+      "id": "de-mouth",
+      "name": "De-mouth click",
+      "author": "Vocal Monitor",
+      "category": "Restoration",
+      "description": "Removes lip smacks, tongue clicks and saliva pops between words. A 2.5 kHz bandpass detector + slow envelope sees the fast HF spike, and a wideband envelope confirms the singer isn't actually singing — only then does the gain dip. 64-sample lookahead so word edges stay intact.",
+      "version": "1.0.0",
+      "tags": [
+        "restoration",
+        "mouth",
+        "vocal",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/de-mouth/de-mouth.dex",
+      "className": "com.vocalmonitor.plugin.community.DeMouth"
+    },
+    {
+      "id": "de-plosive",
+      "name": "De-plosive",
+      "author": "Vocal Monitor",
+      "category": "Restoration",
+      "description": "P/B-pop reduction. Sidechain 24 dB/oct LP detector spots brief sub-200 Hz energy bursts that overshoot the slow envelope, then crossfades a 24 dB/oct HPF onto the main signal for the duration of the event. iZotope RX De-plosive architecture.",
+      "version": "1.0.0",
+      "tags": [
+        "restoration",
+        "plosive",
+        "pop",
+        "vocal",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/de-plosive/de-plosive.dex",
+      "className": "com.vocalmonitor.plugin.community.DePlosive"
+    },
+    {
+      "id": "de-rumble",
+      "name": "De-rumble",
+      "author": "Vocal Monitor",
+      "category": "Restoration",
+      "description": "24 dB/oct high-pass cascade for subsonic mic-stand thumps, HVAC drone and wind buffeting. Cutoff 20–250 Hz, so the same plugin handles gentle subsonic cleanup or aggressive broadcast vocal carving.",
+      "version": "1.0.0",
+      "tags": [
+        "restoration",
+        "rumble",
+        "highpass",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/de-rumble/de-rumble.dex",
+      "className": "com.vocalmonitor.plugin.community.DeRumble"
+    },
+    {
+      "id": "noise-reduction",
+      "name": "Noise Reduction",
+      "author": "Vocal Monitor",
+      "category": "Restoration",
+      "description": "Three-band downward expander (300 Hz and 3 kHz crossovers, LR2). Steady-state noise per band sits below its threshold and gets pulled down; transient vocal energy passes through unchanged. Simpler than spectral subtraction but very effective on broadband mic hiss.",
+      "version": "1.0.0",
+      "tags": [
+        "restoration",
+        "noise",
+        "expander",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/noise-reduction/noise-reduction.dex",
+      "className": "com.vocalmonitor.plugin.community.NoiseReduction"
+    },
+    {
+      "id": "vocal-leveler",
+      "name": "Vocal Leveler",
+      "author": "Vocal Monitor",
+      "category": "Restoration",
+      "description": "Automated fader-riding for vocals. Long-window RMS measures running loudness and a slow inverse-gain envelope steers it toward the target — the same musical level-balancing a mixing engineer does by hand. Waves Vocal Rider / iZotope Vocal Volume.",
+      "version": "1.0.0",
+      "tags": [
+        "restoration",
+        "vocal",
+        "leveler",
+        "rider",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/vocal-leveler/vocal-leveler.dex",
+      "className": "com.vocalmonitor.plugin.community.VocalLeveler"
     },
     {
       "id": "gated-reverb",
