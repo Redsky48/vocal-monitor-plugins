@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-12T23:16:39.547Z",
+  "generatedAt": "2026-05-12T23:32:14.198Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -729,6 +729,25 @@
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/vibrato/vibrato.dex",
       "className": "com.vocalmonitor.plugin.community.Vibrato"
+    },
+    {
+      "id": "auto-tune",
+      "name": "Auto-Tune",
+      "author": "Vocal Monitor",
+      "category": "Pitch",
+      "description": "Pro-grade vocal pitch correction. YIN pitch detector (the algorithm Antares/Melodyne use for monophonic) tracks fundamental every ~6 ms with cents-accurate parabolic interpolation. Detected pitch is snapped to the nearest note in the chosen scale (chromatic / major / minor / harmonic / pentatonic), and a Hann-windowed granular shifter applies the correction with a smoothed retune time — instant 'Cher' snap at retune=0, natural pitch correction at higher settings. Voicing gate avoids destroying sibilants and breath; humanize adds ±cents random drift for natural feel.",
+      "version": "1.0.0",
+      "tags": [
+        "pitch",
+        "auto-tune",
+        "vocal",
+        "correction",
+        "yin",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/pitch/auto-tune/auto-tune.dex",
+      "className": "com.vocalmonitor.plugin.community.AutoTune"
     },
     {
       "id": "detune-doubler",

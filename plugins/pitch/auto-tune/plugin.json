@@ -1,0 +1,10 @@
+{
+  "id": "auto-tune",
+  "name": "Auto-Tune",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Pro-grade vocal pitch correction. YIN pitch detector (the algorithm Antares/Melodyne use for monophonic) tracks fundamental every ~6 ms with cents-accurate parabolic interpolation. Detected pitch is snapped to the nearest note in the chosen scale (chromatic / major / minor / harmonic / pentatonic), and a Hann-windowed granular shifter applies the correction with a smoothed retune time — instant 'Cher' snap at retune=0, natural pitch correction at higher settings. Voicing gate avoids destroying sibilants and breath; humanize adds ±cents random drift for natural feel.",
+  "tags": ["pitch", "auto-tune", "vocal", "correction", "yin", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.AutoTune"
+}
