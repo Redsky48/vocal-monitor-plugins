@@ -1,0 +1,10 @@
+{
+  "id": "de-clicker",
+  "name": "De-clicker",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Click / pop / vinyl-crackle removal via 3rd-order linear predictor. The residual between the predictor and the input flags impulsive transients that break polynomial continuity; flagged samples are replaced with the predictor's own output across a short repair window. Sonnox DeClicker / iZotope RX De-click family.",
+  "tags": ["restoration", "click", "repair", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.DeClicker"
+}

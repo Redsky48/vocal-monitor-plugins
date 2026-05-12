@@ -1,0 +1,10 @@
+{
+  "id": "vocal-leveler",
+  "name": "Vocal Leveler",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Automated fader-riding for vocals. Long-window RMS measures running loudness and a slow inverse-gain envelope steers it toward the target — the same musical level-balancing a mixing engineer does by hand. Waves Vocal Rider / iZotope Vocal Volume.",
+  "tags": ["restoration", "vocal", "leveler", "rider", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.VocalLeveler"
+}

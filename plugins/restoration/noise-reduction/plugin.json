@@ -1,0 +1,10 @@
+{
+  "id": "noise-reduction",
+  "name": "Noise Reduction",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Three-band downward expander (300 Hz and 3 kHz crossovers, LR2). Steady-state noise per band sits below its threshold and gets pulled down; transient vocal energy passes through unchanged. Simpler than spectral subtraction but very effective on broadband mic hiss.",
+  "tags": ["restoration", "noise", "expander", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.NoiseReduction"
+}

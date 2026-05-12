@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node scripts/promote-native.mjs tremolo vibrato chorus flanger phaser rotary-speaker)",
+      "Bash(node scripts/promote-native.mjs octaver ring-mod saturator)",
+      "Bash(node scripts/promote-native.mjs auto-wah resonator vowel-filter)",
+      "Bash(node scripts/promote-native.mjs bitcrusher stutter tape-stop vinyl)",
+      "Bash(node scripts/promote-native.mjs compressor limiter de-esser noise-gate transient-shaper)",
+      "Bash(node scripts/promote-native.mjs spring-reverb gated-reverb)",
+      "Bash(node scripts/promote-native.mjs detune-doubler)",
+      "Bash(node scripts/validate-plugins.mjs)",
+      "Bash(node scripts/build-manifest.mjs)"
+    ]
+  }
+}

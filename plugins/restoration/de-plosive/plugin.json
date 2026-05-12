@@ -1,0 +1,10 @@
+{
+  "id": "de-plosive",
+  "name": "De-plosive",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "P/B-pop reduction. Sidechain 24 dB/oct LP detector spots brief sub-200 Hz energy bursts that overshoot the slow envelope, then crossfades a 24 dB/oct HPF onto the main signal for the duration of the event. iZotope RX De-plosive architecture.",
+  "tags": ["restoration", "plosive", "pop", "vocal", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.DePlosive"
+}

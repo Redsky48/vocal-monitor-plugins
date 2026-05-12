@@ -1,0 +1,10 @@
+{
+  "id": "de-mouth",
+  "name": "De-mouth click",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Removes lip smacks, tongue clicks and saliva pops between words. A 2.5 kHz bandpass detector + slow envelope sees the fast HF spike, and a wideband envelope confirms the singer isn't actually singing — only then does the gain dip. 64-sample lookahead so word edges stay intact.",
+  "tags": ["restoration", "mouth", "vocal", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.DeMouth"
+}

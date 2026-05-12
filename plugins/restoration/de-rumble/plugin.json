@@ -1,0 +1,10 @@
+{
+  "id": "de-rumble",
+  "name": "De-rumble",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "24 dB/oct high-pass cascade for subsonic mic-stand thumps, HVAC drone and wind buffeting. Cutoff 20–250 Hz, so the same plugin handles gentle subsonic cleanup or aggressive broadcast vocal carving.",
+  "tags": ["restoration", "rumble", "highpass", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.DeRumble"
+}

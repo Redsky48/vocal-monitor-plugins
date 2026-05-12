@@ -27,6 +27,7 @@ const CATEGORY_LABELS = {
   dynamics: 'Dynamics',
   pitch: 'Pitch',
   eq: 'EQ',
+  restoration: 'Restoration',
 };
 
 async function repoConfig() {

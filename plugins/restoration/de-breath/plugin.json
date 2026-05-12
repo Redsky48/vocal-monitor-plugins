@@ -1,0 +1,10 @@
+{
+  "id": "de-breath",
+  "name": "De-breath",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Auto-ducks inter-phrase breath inhalations. Combines a sub-threshold total envelope check with a 4 kHz / 800 Hz spectral ratio — breaths are quiet + HF-skewed, sustained vowels are loud + LF-rich. Smooth open/close transitions avoid chattering on word edges.",
+  "tags": ["restoration", "breath", "vocal", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.DeBreath"
+}

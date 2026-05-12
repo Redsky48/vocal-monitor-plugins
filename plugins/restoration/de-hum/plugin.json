@@ -1,0 +1,10 @@
+{
+  "id": "de-hum",
+  "name": "De-hum",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Six high-Q notches tuned to mains frequency (50 or 60 Hz) and its first five harmonics. Surgical buzz removal — leaves everything between the notches essentially flat. Switchable between EU and US power grids.",
+  "tags": ["restoration", "hum", "notch", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.DeHum"
+}
