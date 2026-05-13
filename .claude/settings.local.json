@@ -11,7 +11,9 @@
       "Bash(node scripts/validate-plugins.mjs)",
       "Bash(node scripts/build-manifest.mjs)",
       "Bash(node scripts/build-native.mjs)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(node scripts/test-autotune.mjs)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

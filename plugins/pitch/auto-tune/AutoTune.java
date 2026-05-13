@@ -64,7 +64,7 @@ public final class AutoTune implements VocalMonitorNativePlugin {
     private float voicingConfidence = 0f;
 
     // ============================================================
-    //  Pitch state (with octave-error correction)
+    //  Pitch state (with octave-error correction + vibrato preservation)
     // ============================================================
     private float detectedFreq = 220f;
     private float detectedPeriod = 200f;
@@ -72,6 +72,22 @@ public final class AutoTune implements VocalMonitorNativePlugin {
     private float stableConfidence = 0f;
     private float targetRatio = 1f;
     private float currentRatio = 1f;
+
+    // Vibrato preservation: track a slow-IIR note centre so we can snap
+    // it (not the raw f0) to the scale grid, then ADD BACK the natural
+    // deviation (f0 - centre). This preserves 3-7 Hz vibrato through the
+    // correction instead of flattening it.
+    private float noteCenter = 220f;
+    private static final int PITCH_HISTORY = 32;
+    private final float[] pitchHistory = new float[PITCH_HISTORY];
+    private int pitchHistoryIdx = 0;
+    private float pitchVariance = 0f;
+    private float lastTargetCenter = 220f;
+
+    // Confidence hold: when YIN drops to unvoiced briefly (mid-phrase
+    // consonants), keep the last good targetRatio for a hold window
+    // before easing back to passthrough.
+    private int unvoicedSamples = 0;
 
     // ============================================================
     //  LPC formant preservation
@@ -186,6 +202,12 @@ public final class AutoTune implements VocalMonitorNativePlugin {
         voicingConfidence = 0f;
         targetRatio = 1f;
         currentRatio = 1f;
+        noteCenter = 220f;
+        for (int i = 0; i < PITCH_HISTORY; i++) pitchHistory[i] = 220f;
+        pitchHistoryIdx = 0;
+        pitchVariance = 0f;
+        lastTargetCenter = 220f;
+        unvoicedSamples = 0;
 
         fastEnv = 0f;
         slowEnv = 1e-4f;
@@ -530,6 +552,40 @@ public final class AutoTune implements VocalMonitorNativePlugin {
         return srcPos;
     }
 
+    // Glottal-closure-instant snap. The LPC residual of a voiced signal
+    // is essentially a train of impulses at the moments of vocal-fold
+    // closure (each "glottal pulse"). Aligning PSOLA grain centres to
+    // these impulses minimises the phase mismatch at grain boundaries
+    // and gives the cleanest possible PSOLA output. We search a window
+    // of ±T_in/4 around the proposed grain start position for the
+    // sample with maximum |residual|. That's our GCI estimate.
+    //
+    // For unvoiced regions the residual is noise-like and the search
+    // returns an arbitrary peak, but the grain won't be audible during
+    // unvoiced regions anyway (voicing gate closes), so this is fine.
+    private float snapToGCI(float expectedPos, float period) {
+        int radius = (int) (period * 0.25f);
+        if (radius < 4) radius = 4;
+        int center = (int) expectedPos;
+        int bestOffset = 0;
+        float bestVal = -1f;
+        final float[] r = residualBuf;
+        final int bL = residualBufLen;
+        for (int o = -radius; o <= radius; o++) {
+            int idx = center + o;
+            while (idx < 0) idx += bL;
+            while (idx >= bL) idx -= bL;
+            float v = r[idx]; if (v < 0) v = -v;
+            if (v > bestVal) { bestVal = v; bestOffset = o; }
+        }
+        // Pure-sine LPC residual is essentially zero — there are no real
+        // glottal pulses to find, just floating-point noise. If the peak
+        // is below a sensible voiced-signal threshold, skip the snap and
+        // let the synthetic pitch-mark schedule control grain timing.
+        if (bestVal < 0.01f) return expectedPos;
+        return expectedPos + bestOffset;
+    }
+
     // ============================================================
     //  process()
     // ============================================================
@@ -541,8 +597,17 @@ public final class AutoTune implements VocalMonitorNativePlugin {
         final int rBL = residualBufLen;
 
         // Smoothing time constants.
+        // Adaptive retune: base time is `retune`-driven (1ms..400ms). When
+        // pitch variance is high (singer mid-slide between notes), shrink
+        // the time constant so the correction snaps on faster. When the
+        // pitch is stable (sustained note), keep the base time so vibrato
+        // and natural micro-variation aren't crushed.
         final float retuneSec = 0.001f + retune * retune * 0.4f;
-        final float ratioCoef = 1f - (float) Math.exp(-1.0 / Math.max(1, sampleRate * retuneSec));
+        // Variance is in Hz²; for a typical 5 Hz / ±5 Hz vibrato it sits
+        // around 12; for a note slide it can reach hundreds.
+        final float varSpeedup = 1f / (1f + pitchVariance * 0.02f);
+        final float adaptiveRetuneSec = retuneSec * varSpeedup;
+        final float ratioCoef = 1f - (float) Math.exp(-1.0 / Math.max(1, sampleRate * adaptiveRetuneSec));
         final float voiceOpen = 1f - (float) Math.exp(-1.0 / (sampleRate * 0.005));
         final float voiceClose = 1f - (float) Math.exp(-1.0 / (sampleRate * 0.060));
         final float humanCoef = 1f - (float) Math.exp(-1.0 / (sampleRate * 0.250));
@@ -595,10 +660,49 @@ public final class AutoTune implements VocalMonitorNativePlugin {
                 if (f0 > 50f && f0 < 2000f) {
                     detectedFreq = f0;
                     detectedPeriod = sampleRate / f0;
-                    float tgt = snapToScale(f0);
-                    targetR = tgt / f0;
+
+                    // --- Vibrato preservation pipeline ---
+                    //
+                    // We need to separate the SLOWLY-CHANGING centre of
+                    // the note from the FAST natural pitch micro-variation
+                    // (vibrato). The centre gets quantised to the scale
+                    // grid; the variation is added back unchanged. This
+                    // way a 5 Hz, ±20-cent vibrato around 220 Hz becomes
+                    // a 5 Hz, ±20-cent vibrato around the snapped target
+                    // (e.g. still 220 Hz, or 247 Hz, etc.) — instead of
+                    // being flattened by the correction.
+                    pitchHistory[pitchHistoryIdx] = f0;
+                    pitchHistoryIdx = (pitchHistoryIdx + 1) % PITCH_HISTORY;
+                    // Slow IIR on f0 → note centre. ~200 ms time constant
+                    // at 170 Hz YIN rate ≈ 30 detections to settle.
+                    noteCenter = noteCenter + 0.07f * (f0 - noteCenter);
+
+                    // Pitch variance over recent history → adaptive
+                    // retune speed. High variance = singer is moving
+                    // between notes, snap faster. Low variance = sustained
+                    // note, ease retune so vibrato isn't crushed.
+                    float varAcc = 0f;
+                    for (int k = 0; k < PITCH_HISTORY; k++) {
+                        float d = pitchHistory[k] - noteCenter;
+                        varAcc += d * d;
+                    }
+                    pitchVariance = pitchVariance + 0.2f * (varAcc / PITCH_HISTORY - pitchVariance);
+                    if (pitchVariance < 0f) pitchVariance = 0f;
+
+                    // Snap centre, not raw f0, to scale grid.
+                    float targetCenter = snapToScale(noteCenter);
+                    lastTargetCenter = targetCenter;
+                    // Add back the natural deviation around centre.
+                    targetR = (targetCenter + (f0 - noteCenter)) / f0;
+                    unvoicedSamples = 0;
                 } else {
-                    targetR = targetR + 0.5f * (1f - targetR);
+                    // Unvoiced — confidence-hold the last targetR for
+                    // up to ~100 ms (so brief consonants don't reset the
+                    // correction) then ease toward passthrough.
+                    unvoicedSamples += ANALYSIS_INTERVAL;
+                    if (unvoicedSamples > sampleRate / 10) {
+                        targetR = targetR + 0.3f * (1f - targetR);
+                    }
                 }
             }
             ssl++;
@@ -684,6 +788,10 @@ public final class AutoTune implements VocalMonitorNativePlugin {
                 while (vAsrc >= rBL) vAsrc -= rBL;
                 while (vAsrc < 0) vAsrc += rBL;
                 vAsrc = wrapIfClose(vAsrc, vAsrcLen);
+                // Snap to nearest glottal-closure instant in the residual.
+                vAsrc = snapToGCI(vAsrc, vAsrcLen);
+                while (vAsrc < 0) vAsrc += rBL;
+                while (vAsrc >= rBL) vAsrc -= rBL;
             }
             float fracA = (float) vAphase / (float) vAoutLen;
             float sA = residualRead(vAsrc + fracA * vAsrcLen);
@@ -698,6 +806,9 @@ public final class AutoTune implements VocalMonitorNativePlugin {
                 while (vBsrc >= rBL) vBsrc -= rBL;
                 while (vBsrc < 0) vBsrc += rBL;
                 vBsrc = wrapIfClose(vBsrc, vBsrcLen);
+                vBsrc = snapToGCI(vBsrc, vBsrcLen);
+                while (vBsrc < 0) vBsrc += rBL;
+                while (vBsrc >= rBL) vBsrc -= rBL;
             }
             float fracB = (float) vBphase / (float) vBoutLen;
             float sB = residualRead(vBsrc + fracB * vBsrcLen);
