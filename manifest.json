@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-13T08:10:21.523Z",
+  "generatedAt": "2026-05-13T08:12:44.313Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -535,45 +535,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/chorus/chorus.dex",
-      "className": "com.vocalmonitor.plugin.community.Chorus",
-      "presets": [
-        {
-          "name": "Subtle Width",
-          "description": "barely-there ensemble, sits behind a lead vocal",
-          "params": {
-            "depth": 0.2,
-            "rate": 0.4,
-            "mix": 0.2
-          }
-        },
-        {
-          "name": "80s Pad",
-          "description": "slow, deep, lush — classic shimmer",
-          "params": {
-            "depth": 0.6,
-            "rate": 0.5,
-            "mix": 0.45
-          }
-        },
-        {
-          "name": "Watery",
-          "description": "fast modulation, swirl effect",
-          "params": {
-            "depth": 0.5,
-            "rate": 4.5,
-            "mix": 0.5
-          }
-        },
-        {
-          "name": "Doubler",
-          "description": "dry-mix-forward — sounds like one extra take",
-          "params": {
-            "depth": 0.35,
-            "rate": 0.3,
-            "mix": 0.3
-          }
-        }
-      ]
+      "className": "com.vocalmonitor.plugin.community.Chorus"
     },
     {
       "id": "ensemble",
