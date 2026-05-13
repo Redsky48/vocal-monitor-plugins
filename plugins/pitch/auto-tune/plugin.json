@@ -3,8 +3,40 @@
   "name": "Auto-Tune",
   "author": "Vocal Monitor",
   "version": "1.0.0",
-  "description": "Pro-grade vocal pitch correction. YIN pitch detector + TD-PSOLA shifter + 16th-order LPC formant preservation with bandwidth expansion + Lanczos-3 windowed-sinc interpolation + 100 ms input lookahead + GCI grain snapping + vibrato preservation + adaptive retune + transient bypass. Preset slider (0=Custom · 1=Natural · 2=Pop · 3=Hard/Snap · 4=Cher · 5=Country · 6=Subtle) selects voicings; when 1-6, it overrides Retune/Humanize/Strength/Formant — Key, Scale and Mix stay user-set. Designed for offline / batch vocal processing; ~100 ms latency in exchange for quality.",
+  "description": "Pro-grade vocal pitch correction. YIN pitch detector + TD-PSOLA shifter + 16th-order LPC formant preservation with bandwidth expansion + Lanczos-3 windowed-sinc interpolation + 20 ms input lookahead + GCI grain snapping + vibrato preservation + adaptive retune + transient bypass. Pick a preset from the list (Natural / Pop / Hard / Cher / Country / Subtle) or dial Retune / Humanize / Strength / Formant by hand. Key, Scale and Mix are always user-controlled.",
   "tags": ["pitch", "auto-tune", "vocal", "correction", "yin", "psola", "lpc", "native"],
   "engine": "native",
-  "className": "com.vocalmonitor.plugin.community.AutoTune"
+  "className": "com.vocalmonitor.plugin.community.AutoTune",
+  "presets": [
+    {
+      "name": "Natural",
+      "description": "Gentle pop correction that preserves the performance",
+      "params": { "retune": 0.45, "humanize": 0.30, "strength": 0.70, "formant": 1.00 }
+    },
+    {
+      "name": "Pop",
+      "description": "Modern pop vocal — snappy but still musical",
+      "params": { "retune": 0.20, "humanize": 0.15, "strength": 0.95, "formant": 1.00 }
+    },
+    {
+      "name": "Hard / Snap",
+      "description": "T-Pain / trap instant pitch snap",
+      "params": { "retune": 0.00, "humanize": 0.00, "strength": 1.00, "formant": 0.80 }
+    },
+    {
+      "name": "Cher",
+      "description": "The original 'Believe' chipmunk character (no formant preservation)",
+      "params": { "retune": 0.00, "humanize": 0.00, "strength": 1.00, "formant": 0.00 }
+    },
+    {
+      "name": "Country",
+      "description": "Slow drift preserved, gentle correction",
+      "params": { "retune": 0.60, "humanize": 0.35, "strength": 0.60, "formant": 1.00 }
+    },
+    {
+      "name": "Subtle",
+      "description": "Barely-there ride correction — minimal touch",
+      "params": { "retune": 0.70, "humanize": 0.40, "strength": 0.40, "formant": 1.00 }
+    }
+  ]
 }
