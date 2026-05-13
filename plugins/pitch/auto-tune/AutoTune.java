@@ -190,6 +190,7 @@ public final class AutoTune implements VocalMonitorNativePlugin {
     private float fastEnv = 0f;
     private float slowEnv = 1e-4f;
     private float transientGate = 0f;   // 0 = correcting, 1 = bypassing
+    private float silenceEnv = 0f;      // tracks dry-input amplitude for silence muting
 
     // ============================================================
     //  Voicing gate + humanize
@@ -329,6 +330,7 @@ public final class AutoTune implements VocalMonitorNativePlugin {
         fastEnv = 0f;
         slowEnv = 1e-4f;
         transientGate = 0f;
+        silenceEnv = 0f;
 
         voicingGate = 0f;
         humanizeState = 0f;
@@ -395,10 +397,23 @@ public final class AutoTune implements VocalMonitorNativePlugin {
         final float[] aBuf = analysisBuf;
         final float[] yBuf = yinBuf;
         final int aw = analysisWrite;
+        double energy = 0;
         for (int k = 0; k < ANALYSIS_SIZE; k++) {
             int idx = aw + k;
             if (idx >= ANALYSIS_SIZE) idx -= ANALYSIS_SIZE;
-            yBuf[k] = aBuf[idx];
+            float s = aBuf[idx];
+            yBuf[k] = s;
+            energy += s * s;
+        }
+        // Amplitude gate: YIN's CMND function can produce confident
+        // pitch estimates on pure noise — silence + numerical noise still
+        // has correlation structure. Without this gate, voicing stays open
+        // through silent passages and PSOLA reads stale residual content,
+        // producing a low-level buzz instead of true silence.
+        float rms = (float) Math.sqrt(energy / ANALYSIS_SIZE);
+        if (rms < 0.003f) {
+            voicingConfidence = 0f;
+            return -1f;
         }
         final int halfSize = ANALYSIS_SIZE / 2;
         final int maxLag = Math.min(halfSize, LAG_MAX);
@@ -699,25 +714,42 @@ public final class AutoTune implements VocalMonitorNativePlugin {
     // returns an arbitrary peak, but the grain won't be audible during
     // unvoiced regions anyway (voicing gate closes), so this is fine.
     private float snapToGCI(float expectedPos, float period) {
-        int radius = (int) (period * 0.25f);
-        if (radius < 4) radius = 4;
+        // Tight snap window — ±period/8. Wider windows let the snap jump
+        // to a neighbouring glottal cycle, breaking grain-to-grain phase
+        // continuity. ±period/8 is enough to track natural GCI drift
+        // (which is small per period) without allowing cross-cycle jumps.
+        int radius = (int) (period * 0.125f);
+        if (radius < 3) radius = 3;
         int center = (int) expectedPos;
         int bestOffset = 0;
-        float bestVal = -1f;
+        float bestSignedVal = 0f;
+        float bestAbsVal = -1f;
         final float[] r = residualBuf;
         final int bL = residualBufLen;
+        // Lock onto POSITIVE peaks only. Pre-emphasised LPC residual of a
+        // voiced signal has dominantly positive-going glottal-closure
+        // impulses; locking on |value| can land on either polarity, which
+        // produces phase-inverted grains and audible sign-flip glitches
+        // at note transitions.
         for (int o = -radius; o <= radius; o++) {
             int idx = center + o;
             while (idx < 0) idx += bL;
             while (idx >= bL) idx -= bL;
-            float v = r[idx]; if (v < 0) v = -v;
-            if (v > bestVal) { bestVal = v; bestOffset = o; }
+            float v = r[idx];
+            if (v > bestSignedVal) { bestSignedVal = v; bestOffset = o; }
+            float a = v < 0 ? -v : v;
+            if (a > bestAbsVal) bestAbsVal = a;
         }
         // Pure-sine LPC residual is essentially zero — there are no real
         // glottal pulses to find, just floating-point noise. If the peak
         // is below a sensible voiced-signal threshold, skip the snap and
         // let the synthetic pitch-mark schedule control grain timing.
-        if (bestVal < 0.01f) return expectedPos;
+        if (bestAbsVal < 0.01f) return expectedPos;
+        // If the best peak isn't meaningfully larger than the largest peak
+        // we found (e.g., dominant peak in window is negative — antiphase
+        // residual), skip the snap rather than locking onto a weak positive
+        // peak that doesn't represent a real glottal closure.
+        if (bestSignedVal < bestAbsVal * 0.5f) return expectedPos;
         return expectedPos + bestOffset;
     }
 
@@ -1036,7 +1068,25 @@ public final class AutoTune implements VocalMonitorNativePlugin {
             // Dry side must come from xDelayed so the dry/wet timeline
             // stays coherent with the wet (which is the corrected delayed
             // input).
-            float gateMix = voiceG * (1f - tGate);
+            // Silence gate: peak-follower (fast attack, 30 ms release) on
+            // the dry input. When the dry peak falls below ~-60 dBFS the
+            // wet contribution is muted. Without this, the slow
+            // voicing-close IIR keeps gateMix elevated through ~60 ms of
+            // silence after a note ends, during which the PSOLA pipeline
+            // keeps reading stale residual and produces a low-level buzz
+            // where the dry signal is true silence.
+            float drySignalAbs = xDelayed < 0 ? -xDelayed : xDelayed;
+            if (drySignalAbs > silenceEnv) {
+                silenceEnv = drySignalAbs;             // instant attack
+            } else {
+                silenceEnv += transCloseCoef * (drySignalAbs - silenceEnv);  // ~40 ms release
+            }
+            // silenceMul ramps 0..1 over input range 0.0005..0.002
+            float silenceMul;
+            if (silenceEnv < 0.0005f) silenceMul = 0f;
+            else if (silenceEnv > 0.002f) silenceMul = 1f;
+            else silenceMul = (silenceEnv - 0.0005f) / 0.0015f;
+            float gateMix = voiceG * (1f - tGate) * silenceMul;
             float wet = xDelayed * (1f - gateMix) + yPre * gateMix;
             output[i] = xDelayed * dryMix + wet * mixLocal;
         }
