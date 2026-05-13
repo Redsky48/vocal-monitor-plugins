@@ -115,10 +115,19 @@ public final class AutoTune implements VocalMonitorNativePlugin {
     // ============================================================
     //  LPC formant preservation
     // ============================================================
-    private static final int LPC_ORDER = 12;
+    // Order 16 captures the first ~4 formants accurately at 44.1 kHz
+    // (more poles than 12 lets the predictor separate F3 and F4 in
+    // soprano voices where they sit close together).
+    private static final int LPC_ORDER = 16;
     private static final int LPC_FRAME_SIZE = 512;
     private static final int LPC_UPDATE_INTERVAL = 256;
     private static final float PRE_EMPHASIS = 0.97f;
+    // Bandwidth expansion gamma: after Levinson-Durbin we multiply each
+    // a[k] by γ^k for γ slightly less than 1. This pulls every pole
+    // radially toward the origin in the z-plane, broadening formant
+    // resonances. The synthesis filter rings less and sounds more
+    // natural — a standard speech-synthesis post-processing step.
+    private static final float LPC_GAMMA = 0.99f;
 
     // LPC analyzes the SAME (delayed) signal that the inverse filter
     // operates on, so the modelled formants are consistent with the
@@ -142,6 +151,22 @@ public final class AutoTune implements VocalMonitorNativePlugin {
     private int samplesSinceLPC = 0;
     private float lpcRampPos = 1f;   // 0..1 ramp progress between coef updates
     private int totalSamplesProcessed = 0; // hold off LPC until buffer filled
+
+    // ============================================================
+    //  Lanczos-3 windowed-sinc interpolation table for residual reads
+    // ============================================================
+    //
+    // For each fractional bin in [0, 1) we pre-compute six tap weights
+    //   w[k] = sinc(k - f) · sinc((k - f) / 3)     for k ∈ {-2..3}
+    // normalised so that they sum to 1 (preserves DC). Reading a
+    // fractional buffer position then costs 6 multiplies + 5 adds plus
+    // one table lookup — same family as the standard SRC libraries.
+    //
+    // 256 bins gives ~0.004-sample precision; 6 taps gives < -60 dB
+    // alias rejection at quarter-Nyquist. Total table size 6 KB.
+    private static final int LANCZOS_BINS = 256;
+    private static final int LANCZOS_TAPS = 6;     // -2..+3
+    private final float[][] lanczosTable = new float[LANCZOS_BINS][LANCZOS_TAPS];
 
     // ============================================================
     //  PSOLA two-voice state (operates on LPC residual)
@@ -203,9 +228,37 @@ public final class AutoTune implements VocalMonitorNativePlugin {
         for (int i = 0; i < ANALYSIS_SIZE; i++) analysisBuf[i] = 0f;
         for (int i = 0; i < yinD.length; i++) { yinD[i] = 0f; yinCMND[i] = 0f; }
 
-        // Lookahead buffer (50 ms) + the LPC analysis buffer that holds
+        // Build the Lanczos-3 weight table once at init.
+        for (int b = 0; b < LANCZOS_BINS; b++) {
+            float frac = (float) b / LANCZOS_BINS;
+            float wSum = 0f;
+            for (int t = 0; t < LANCZOS_TAPS; t++) {
+                float x = (t - 2) - frac;   // tap offsets: -2..+3
+                float w;
+                if (x == 0f) {
+                    w = 1f;
+                } else if (x <= -3f || x >= 3f) {
+                    w = 0f;
+                } else {
+                    double piX = Math.PI * x;
+                    double piXa = piX / 3.0;
+                    w = (float) (Math.sin(piX) * Math.sin(piXa) / (piX * piXa));
+                }
+                lanczosTable[b][t] = w;
+                wSum += w;
+            }
+            // Normalise so DC gain is exactly 1 (otherwise small
+            // amplitude error accumulates at non-integer reads).
+            if (Math.abs(wSum) > 1e-9f) {
+                for (int t = 0; t < LANCZOS_TAPS; t++) lanczosTable[b][t] /= wSum;
+            }
+        }
+
+        // Lookahead buffer (100 ms) + the LPC analysis buffer that holds
         // the delayed input so LPC sees what the inverse filter sees.
-        lookaheadSamples = (int) (sr * 0.05);
+        // 100 ms gives plenty of head-start for the ratio IIR to converge
+        // toward each new note before that note arrives at the output.
+        lookaheadSamples = (int) (sr * 0.1);
         inputDelayRingLen = lookaheadSamples + 64;  // small headroom
         inputDelayRing = new float[inputDelayRingLen];
         inputDelayWrite = 0;
@@ -521,6 +574,13 @@ public final class AutoTune implements VocalMonitorNativePlugin {
             if (a[k] > 3f) a[k] = 3f;
             if (a[k] < -3f) a[k] = -3f;
         }
+        // Bandwidth expansion: a[k] *= γ^k. Slightly broadens formant
+        // resonances for a more natural, less-ringing synthesis filter.
+        float gPow = 1f;
+        for (int k = 1; k <= LPC_ORDER; k++) {
+            gPow *= LPC_GAMMA;
+            a[k] *= gPow;
+        }
     }
 
     // Linear interpolation between lpcAprev and lpcAtarget by ramp position.
@@ -558,26 +618,33 @@ public final class AutoTune implements VocalMonitorNativePlugin {
     }
 
     // ============================================================
-    //  Cubic Hermite interpolation for residual reads
+    //  Lanczos-3 windowed-sinc interpolation
     // ============================================================
+    //
+    // 6-tap fractional read. Alias rejection at quarter-Nyquist > 60 dB
+    // (vs ~35 dB for cubic Hermite). Audible improvement: cleaner upper
+    // harmonics, no "shrinky" buzz when grain reads at off-period
+    // fractional positions.
     private float residualRead(float pos) {
         while (pos < 0) pos += residualBufLen;
         while (pos >= residualBufLen) pos -= residualBufLen;
         int i1 = (int) pos;
         float frac = pos - i1;
-        int i0 = i1 - 1; if (i0 < 0) i0 += residualBufLen;
-        int i2 = i1 + 1; if (i2 >= residualBufLen) i2 = 0;
-        int i3 = i1 + 2; if (i3 >= residualBufLen) i3 = i3 - residualBufLen;
-        float y0 = residualBuf[i0];
-        float y1 = residualBuf[i1];
-        float y2 = residualBuf[i2];
-        float y3 = residualBuf[i3];
-        // Catmull-Rom cubic.
-        float a0 = -0.5f * y0 + 1.5f * y1 - 1.5f * y2 + 0.5f * y3;
-        float a1 = y0 - 2.5f * y1 + 2f * y2 - 0.5f * y3;
-        float a2 = -0.5f * y0 + 0.5f * y2;
-        float a3 = y1;
-        return ((a0 * frac + a1) * frac + a2) * frac + a3;
+        int bin = (int) (frac * LANCZOS_BINS);
+        if (bin >= LANCZOS_BINS) bin = LANCZOS_BINS - 1;
+        if (bin < 0) bin = 0;
+        final float[] w = lanczosTable[bin];
+        final float[] buf = residualBuf;
+        final int bL = residualBufLen;
+        // Tap offsets -2..+3 around i1.
+        int idx0 = i1 - 2; if (idx0 < 0) idx0 += bL;
+        int idx1 = i1 - 1; if (idx1 < 0) idx1 += bL;
+        int idx2 = i1;
+        int idx3 = i1 + 1; if (idx3 >= bL) idx3 -= bL;
+        int idx4 = i1 + 2; if (idx4 >= bL) idx4 -= bL;
+        int idx5 = i1 + 3; if (idx5 >= bL) idx5 -= bL;
+        return buf[idx0] * w[0] + buf[idx1] * w[1] + buf[idx2] * w[2]
+             + buf[idx3] * w[3] + buf[idx4] * w[4] + buf[idx5] * w[5];
     }
 
     private float wrapIfClose(float srcPos, float srcLen) {
@@ -883,7 +950,16 @@ public final class AutoTune implements VocalMonitorNativePlugin {
             float envB = 0.5f - 0.5f * (float) Math.cos(2.0 * Math.PI * fracB);
             vBphase++;
 
-            float shiftedResidual = sA * envA + sB * envB;
+            // Envelope normalisation: with GCI snap moving each voice's
+            // anchor independently, envA + envB no longer sums exactly
+            // to 1.0 (the theoretical guarantee from staggered Hann
+            // overlap only holds when the two voices stay precisely
+            // half-period apart). Without normalisation, amplitude
+            // wobbles at the grain rate. Dividing by the actual envelope
+            // sum eliminates that wobble.
+            float envSum = envA + envB;
+            if (envSum < 1e-4f) envSum = 1e-4f;
+            float shiftedResidual = (sA * envA + sB * envB) / envSum;
 
             // --- LPC synthesis (restore formants) + de-emphasis ---
             float yPre;
