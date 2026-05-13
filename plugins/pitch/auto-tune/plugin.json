@@ -7,6 +7,11 @@
   "tags": ["pitch", "auto-tune", "vocal", "correction", "yin", "psola", "lpc", "native"],
   "engine": "native",
   "className": "com.vocalmonitor.plugin.community.AutoTune",
+  "ui_kind": "canvas",
+  "ui": {
+    "aspect": "16:9",
+    "min_height_dp": 240
+  },
   "presets": [
     {
       "name": "Natural",

@@ -11,5 +11,10 @@
     "native"
   ],
   "engine": "native",
-  "className": "com.vocalmonitor.plugin.community.Compressor"
+  "className": "com.vocalmonitor.plugin.community.Compressor",
+  "ui_kind": "canvas",
+  "ui": {
+    "aspect": "16:9",
+    "min_height_dp": 240
+  }
 }

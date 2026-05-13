@@ -19,7 +19,11 @@
       "Bash(java tools/test-app/RunTest.java)",
       "Bash(xargs grep *)",
       "Bash(javac -d /tmp/testapp-check -encoding utf-8 tools/test-app/TestApp.java)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git restore *)",
+      "Bash(git checkout *)",
+      "Bash(git stash *)",
+      "Bash(java \"C:/Users/edza/AppData/Local/Temp/Viz3.java\")"
     ]
   }
 }

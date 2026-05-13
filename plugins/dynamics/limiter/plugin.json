@@ -11,5 +11,10 @@
     "native"
   ],
   "engine": "native",
-  "className": "com.vocalmonitor.plugin.community.Limiter"
+  "className": "com.vocalmonitor.plugin.community.Limiter",
+  "ui_kind": "canvas",
+  "ui": {
+    "aspect": "16:9",
+    "min_height_dp": 220
+  }
 }

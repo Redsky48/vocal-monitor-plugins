@@ -1,6 +1,13 @@
 package com.vocalmonitor.plugin.community;
 
+import com.vocalmonitor.plugin.PluginCanvas;
+import com.vocalmonitor.plugin.PluginPaint;
+import com.vocalmonitor.plugin.PluginPath;
+import com.vocalmonitor.plugin.PluginStyle;
 import com.vocalmonitor.plugin.VocalMonitorNativePlugin;
+import com.vocalmonitor.plugin.VocalMonitorVisualPlugin;
+
+import java.util.Map;
 
 // Auto-Tune — production-grade vocal pitch correction. Six engines wired
 // in series, all built on published industry-standard DSP:
@@ -44,7 +51,21 @@ import com.vocalmonitor.plugin.VocalMonitorNativePlugin;
 // Voicing gate (YIN-confidence-driven) and humanize (slow random walk
 // on the ratio) round out the chain.
 
-public final class AutoTune implements VocalMonitorNativePlugin {
+public final class AutoTune
+        implements VocalMonitorNativePlugin, VocalMonitorVisualPlugin {
+
+    // ============================================================
+    //  Visual history — pushed to from process() at ~5 ms resolution.
+    //  Visualises the YIN-detected pitch (yellow) against the
+    //  scale-snapped target (dim yellow) on a semitone grid.
+    // ============================================================
+    private static final int VIZ_HIST_LEN = 384;
+    private final float[] vizHistDetectedHz = new float[VIZ_HIST_LEN];
+    private final float[] vizHistTargetHz   = new float[VIZ_HIST_LEN];
+    private final boolean[] vizHistVoiced   = new boolean[VIZ_HIST_LEN];
+    private int vizHistWrite = 0;
+    private int vizHistAcc = 0;
+
 
     // ============================================================
     //  YIN pitch detector
@@ -1089,6 +1110,17 @@ public final class AutoTune implements VocalMonitorNativePlugin {
             float gateMix = voiceG * (1f - tGate) * silenceMul;
             float wet = xDelayed * (1f - gateMix) + yPre * gateMix;
             output[i] = xDelayed * dryMix + wet * mixLocal;
+
+            // History capture for the visual — downsample to ~5 ms
+            // per slot so the ring keeps ~2 s of meaningful contour.
+            vizHistAcc++;
+            if (vizHistAcc >= (int) (sampleRate / 200)) {
+                vizHistAcc = 0;
+                vizHistDetectedHz[vizHistWrite] = detectedFreq;
+                vizHistTargetHz[vizHistWrite]   = lastTargetCenter;
+                vizHistVoiced[vizHistWrite]     = voiceG > 0.3f;
+                vizHistWrite = (vizHistWrite + 1) % VIZ_HIST_LEN;
+            }
         }
 
         analysisWrite = aw;
@@ -1111,5 +1143,162 @@ public final class AutoTune implements VocalMonitorNativePlugin {
         voiceA_phase = vAphase; voiceB_phase = vBphase;
         voiceA_outLen = vAoutLen; voiceB_outLen = vBoutLen;
         voiceA_srcLen = vAsrcLen; voiceB_srcLen = vBsrcLen;
+    }
+
+    // ============================================================
+    //  Canvas-mode visualisation — pitch contour
+    // ============================================================
+    private static final int VIZ_BG          = 0xFF050505;
+    private static final int VIZ_GRID        = 0xFF18181C;
+    private static final int VIZ_GRID_MID    = 0xFF2A2A2E;
+    private static final int VIZ_TEXT_DIM    = 0xFF7C7C82;
+    private static final int VIZ_TEXT_BRIGHT = 0xFFE6E6EA;
+    private static final int VIZ_YELLOW      = 0xFFF5C842;
+    private static final int VIZ_YELLOW_DIM  = 0x88F5C842;
+    private static final int VIZ_TARGET      = 0xCCB0FFFF;  // cyan-tinged
+    private static final int VIZ_TARGET_DIM  = 0x44B0FFFF;
+    private static final String[] NOTE_NAMES = {
+        "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
+    };
+
+    private PluginPaint vizBg, vizGrid, vizTextDim, vizTextBright,
+            vizDetectedLine, vizTargetLine, vizUnvoicedFill;
+    private PluginPath vizDetectedPath, vizTargetPath;
+
+    @Override public void render(
+            PluginCanvas canvas, int width, int height, long timeMs,
+            Map<String, Float> params, Map<String, float[]> streams
+    ) {
+        if (vizBg == null) initVizPaints(canvas);
+        final float W = width, H = height;
+
+        // Background.
+        vizBg.setColor(VIZ_BG);
+        canvas.drawRect(0, 0, W, H, vizBg);
+
+        // Layout.
+        float pad = 12f;
+        float headerH = 22f;
+        float labelW = 28f;
+        float plotX0 = pad + labelW;
+        float plotY0 = pad + headerH;
+        float plotX1 = W - pad;
+        float plotY1 = H - pad - 12f;
+        float plotW = plotX1 - plotX0;
+        float plotH = plotY1 - plotY0;
+        if (plotW < 60f || plotH < 60f) return;
+
+        // Header.
+        vizTextBright.setColor(VIZ_TEXT_BRIGHT).setTextSize(12f).setTextAlign(0);
+        canvas.drawText("AUTO-TUNE", pad, pad + 13, vizTextBright);
+        if (detectedFreq > 50f && voicingGate > 0.3f) {
+            vizTextBright.setColor(VIZ_YELLOW).setTextSize(11f).setTextAlign(2);
+            String label = String.format("%.1f Hz → %.1f Hz",
+                    detectedFreq, lastTargetCenter);
+            canvas.drawText(label, W - pad, pad + 13, vizTextBright);
+        } else {
+            vizTextDim.setColor(VIZ_TEXT_DIM).setTextSize(11f).setTextAlign(2);
+            canvas.drawText("--", W - pad, pad + 13, vizTextDim);
+        }
+
+        // Auto-scale Y: pick a 2-octave window centred on the recent
+        // pitch activity. Stays stable on sustained notes; tracks
+        // slowly during glides.
+        float[] yRange = autoYRange();
+        float minHz = yRange[0], maxHz = yRange[1];
+        double minLn = Math.log(minHz), maxLn = Math.log(maxHz);
+
+        // Semitone grid lines (every 1 semitone, brighter at C / A4).
+        // Sample MIDI numbers spanning the visible Hz range.
+        int midiLow  = (int) Math.floor(69 + 12 * Math.log(minHz / 440.0) / Math.log(2));
+        int midiHigh = (int) Math.ceil(69 + 12 * Math.log(maxHz / 440.0) / Math.log(2));
+        for (int midi = midiLow; midi <= midiHigh; midi++) {
+            float hz = (float) (440.0 * Math.pow(2.0, (midi - 69) / 12.0));
+            if (hz < minHz || hz > maxHz) continue;
+            float t = (float) ((Math.log(hz) - minLn) / (maxLn - minLn));
+            float y = plotY1 - t * plotH;
+            int noteIdx = ((midi % 12) + 12) % 12;
+            int col = (noteIdx == 0 || noteIdx == 9) ? VIZ_GRID_MID : VIZ_GRID;
+            vizGrid.setColor(col).setStyle(PluginStyle.STROKE).setStrokeWidth(1f);
+            canvas.drawLine(plotX0, y, plotX1, y, vizGrid);
+            if (noteIdx == 0) {  // label only the C lines for density
+                vizTextDim.setColor(VIZ_TEXT_DIM).setTextSize(8.5f).setTextAlign(2);
+                int oct = (midi / 12) - 1;
+                canvas.drawText("C" + oct, plotX0 - 3f, y + 3f, vizTextDim);
+            }
+        }
+
+        // Target pitch contour — what auto-tune is trying to land on.
+        vizTargetPath.reset();
+        float step = plotW / (VIZ_HIST_LEN - 1f);
+        boolean tStarted = false;
+        for (int i = 0; i < VIZ_HIST_LEN; i++) {
+            int idx = (vizHistWrite + i) % VIZ_HIST_LEN;
+            if (!vizHistVoiced[idx]) { tStarted = false; continue; }
+            float hz = vizHistTargetHz[idx];
+            if (hz < minHz * 0.5f || hz > maxHz * 2f) { tStarted = false; continue; }
+            float clamped = Math.max(minHz, Math.min(maxHz, hz));
+            float t = (float) ((Math.log(clamped) - minLn) / (maxLn - minLn));
+            float px = plotX0 + i * step;
+            float py = plotY1 - t * plotH;
+            if (!tStarted) { vizTargetPath.moveTo(px, py); tStarted = true; }
+            else vizTargetPath.lineTo(px, py);
+        }
+        vizTargetLine.setColor(VIZ_TARGET).setStyle(PluginStyle.STROKE).setStrokeWidth(2.2f);
+        canvas.drawPath(vizTargetPath, vizTargetLine);
+
+        // Detected pitch contour — what's coming in raw from YIN.
+        vizDetectedPath.reset();
+        boolean dStarted = false;
+        for (int i = 0; i < VIZ_HIST_LEN; i++) {
+            int idx = (vizHistWrite + i) % VIZ_HIST_LEN;
+            if (!vizHistVoiced[idx]) { dStarted = false; continue; }
+            float hz = vizHistDetectedHz[idx];
+            if (hz < minHz * 0.5f || hz > maxHz * 2f) { dStarted = false; continue; }
+            float clamped = Math.max(minHz, Math.min(maxHz, hz));
+            float t = (float) ((Math.log(clamped) - minLn) / (maxLn - minLn));
+            float px = plotX0 + i * step;
+            float py = plotY1 - t * plotH;
+            if (!dStarted) { vizDetectedPath.moveTo(px, py); dStarted = true; }
+            else vizDetectedPath.lineTo(px, py);
+        }
+        vizDetectedLine.setColor(VIZ_YELLOW).setStyle(PluginStyle.STROKE)
+                .setStrokeWidth(1.6f).setGlow(VIZ_YELLOW, 4f);
+        canvas.drawPath(vizDetectedPath, vizDetectedLine);
+
+        // Legend at the bottom.
+        vizTextDim.setColor(VIZ_YELLOW).setTextSize(9f).setTextAlign(0);
+        canvas.drawText("— detected", plotX0, plotY1 + 10f, vizTextDim);
+        vizTextDim.setColor(VIZ_TARGET).setTextSize(9f).setTextAlign(0);
+        canvas.drawText("— target", plotX0 + 70f, plotY1 + 10f, vizTextDim);
+    }
+
+    // Returns [minHz, maxHz] for a 2-octave window roughly centred on
+    // the recent target pitch, snapping to musically-sensible bounds.
+    private float[] autoYRange() {
+        // Use lastTargetCenter as the anchor — it's the snapped scale
+        // note, so the window stays octave-stable across glides.
+        float c = lastTargetCenter;
+        if (c < 50f || c > 2000f) c = 220f;
+        // 1.5 octaves down, 0.5 octaves up — songs go up rarely, down
+        // often (sustained notes drop). Snap to nearest octave so
+        // the visible C-lines stay anchored across frames.
+        float minHz = c * 0.35f;
+        float maxHz = c * 2.0f;
+        if (minHz < 60f) minHz = 60f;
+        if (maxHz > 1500f) maxHz = 1500f;
+        return new float[] { minHz, maxHz };
+    }
+
+    private void initVizPaints(PluginCanvas c) {
+        vizBg            = c.newPaint();
+        vizGrid          = c.newPaint();
+        vizTextDim       = c.newPaint();
+        vizTextBright    = c.newPaint();
+        vizDetectedLine  = c.newPaint();
+        vizTargetLine    = c.newPaint();
+        vizUnvoicedFill  = c.newPaint();
+        vizDetectedPath  = c.newPath();
+        vizTargetPath    = c.newPath();
     }
 }
