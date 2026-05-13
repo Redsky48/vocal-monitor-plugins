@@ -13,7 +13,16 @@ app or test through the phone.
 - A working sound card and (for the mic-record button) a default
   microphone.
 
-## Run
+## Run — easiest way
+
+**Windows:** double-click `tools/test-app/run.bat`.
+**macOS / Linux:** in a terminal, `bash tools/test-app/run.sh`
+(or `chmod +x` it once and then double-click).
+
+Both launchers locate the repo root automatically and pop a friendly
+message if no `java` is on your PATH.
+
+## Run — manual way
 
 From the repo root:
 
@@ -21,8 +30,7 @@ From the repo root:
 java tools/test-app/TestApp.java
 ```
 
-That's it — JEP 330 single-file source-code launch compiles and runs
-in one step.
+JEP 330 single-file source-code launch — compiles and runs in one step.
 
 The GUI scans the `plugins/` tree for every folder whose `plugin.json`
 declares `"engine": "native"` and lists them in the **Plugin** dropdown.

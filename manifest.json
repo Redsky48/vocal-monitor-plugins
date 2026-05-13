@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-13T08:22:30.832Z",
+  "generatedAt": "2026-05-13T10:04:48.500Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -18,6 +18,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/creative/beat-repeat/beat-repeat.dex",
+      "sizeBytes": 3560,
       "className": "com.vocalmonitor.plugin.community.BeatRepeat"
     },
     {
@@ -35,6 +36,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/creative/drone-generator/drone-generator.dex",
+      "sizeBytes": 3892,
       "className": "com.vocalmonitor.plugin.community.DroneGenerator"
     },
     {
@@ -52,6 +54,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/creative/freeze/freeze.dex",
+      "sizeBytes": 3340,
       "className": "com.vocalmonitor.plugin.community.Freeze"
     },
     {
@@ -69,6 +72,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/creative/granular-cloud/granular-cloud.dex",
+      "sizeBytes": 4356,
       "className": "com.vocalmonitor.plugin.community.GranularCloud"
     },
     {
@@ -86,6 +90,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/creative/reverse-looper/reverse-looper.dex",
+      "sizeBytes": 3348,
       "className": "com.vocalmonitor.plugin.community.ReverseLooper"
     },
     {
@@ -104,6 +109,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/delay/dub-delay/dub-delay.dex",
+      "sizeBytes": 4108,
       "className": "com.vocalmonitor.plugin.community.DubDelay"
     },
     {
@@ -121,6 +127,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/delay/multi-tap-delay/multi-tap-delay.dex",
+      "sizeBytes": 4084,
       "className": "com.vocalmonitor.plugin.community.MultiTapDelay"
     },
     {
@@ -138,6 +145,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/delay/reverse-delay/reverse-delay.dex",
+      "sizeBytes": 2816,
       "className": "com.vocalmonitor.plugin.community.ReverseDelay"
     },
     {
@@ -155,6 +163,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/delay/slap-delay/slap-delay.dex",
+      "sizeBytes": 2652,
       "className": "com.vocalmonitor.plugin.community.SlapDelay"
     },
     {
@@ -172,6 +181,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/delay/tape-delay/tape-delay.dex",
+      "sizeBytes": 2980,
       "className": "com.vocalmonitor.plugin.community.TapeDelay"
     },
     {
@@ -189,6 +199,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/distortion/octaver/octaver.dex",
+      "sizeBytes": 1860,
       "className": "com.vocalmonitor.plugin.community.Octaver"
     },
     {
@@ -207,6 +218,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/distortion/ring-mod/ring-mod.dex",
+      "sizeBytes": 2092,
       "className": "com.vocalmonitor.plugin.community.RingMod"
     },
     {
@@ -225,6 +237,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/distortion/saturator/saturator.dex",
+      "sizeBytes": 1844,
       "className": "com.vocalmonitor.plugin.community.Saturator"
     },
     {
@@ -242,6 +255,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/compressor/compressor.dex",
+      "sizeBytes": 4048,
       "className": "com.vocalmonitor.plugin.community.Compressor"
     },
     {
@@ -260,6 +274,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/de-esser/de-esser.dex",
+      "sizeBytes": 4580,
       "className": "com.vocalmonitor.plugin.community.DeEsser"
     },
     {
@@ -277,6 +292,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/limiter/limiter.dex",
+      "sizeBytes": 2560,
       "className": "com.vocalmonitor.plugin.community.Limiter"
     },
     {
@@ -294,6 +310,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/multiband-compressor/multiband-compressor.dex",
+      "sizeBytes": 6080,
       "className": "com.vocalmonitor.plugin.community.MultibandCompressor"
     },
     {
@@ -311,6 +328,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/noise-gate/noise-gate.dex",
+      "sizeBytes": 3840,
       "className": "com.vocalmonitor.plugin.community.NoiseGate"
     },
     {
@@ -328,6 +346,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/transient-shaper/transient-shaper.dex",
+      "sizeBytes": 2952,
       "className": "com.vocalmonitor.plugin.community.TransientShaper"
     },
     {
@@ -345,6 +364,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/upward-compressor/upward-compressor.dex",
+      "sizeBytes": 3820,
       "className": "com.vocalmonitor.plugin.community.UpwardCompressor"
     },
     {
@@ -363,6 +383,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/eq/exciter/exciter.dex",
+      "sizeBytes": 3048,
       "className": "com.vocalmonitor.plugin.community.Exciter"
     },
     {
@@ -381,6 +402,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/eq/parametric-eq/parametric-eq.dex",
+      "sizeBytes": 5088,
       "className": "com.vocalmonitor.plugin.community.ParametricEq"
     },
     {
@@ -398,6 +420,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/filter/auto-wah/auto-wah.dex",
+      "sizeBytes": 4064,
       "className": "com.vocalmonitor.plugin.community.AutoWah"
     },
     {
@@ -413,7 +436,8 @@
         "reference"
       ],
       "engine": "js",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/filter/fast-eq/fast-eq.js"
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/filter/fast-eq/fast-eq.js",
+      "sizeBytes": 2193
     },
     {
       "id": "resonator",
@@ -431,6 +455,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/filter/resonator/resonator.dex",
+      "sizeBytes": 3108,
       "className": "com.vocalmonitor.plugin.community.Resonator"
     },
     {
@@ -449,6 +474,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/filter/vowel-filter/vowel-filter.dex",
+      "sizeBytes": 4176,
       "className": "com.vocalmonitor.plugin.community.VowelFilter"
     },
     {
@@ -467,6 +493,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/lofi/bitcrusher/bitcrusher.dex",
+      "sizeBytes": 2160,
       "className": "com.vocalmonitor.plugin.community.Bitcrusher"
     },
     {
@@ -484,6 +511,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/lofi/stutter/stutter.dex",
+      "sizeBytes": 2824,
       "className": "com.vocalmonitor.plugin.community.Stutter"
     },
     {
@@ -501,6 +529,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/lofi/tape-stop/tape-stop.dex",
+      "sizeBytes": 2072,
       "className": "com.vocalmonitor.plugin.community.TapeStop"
     },
     {
@@ -518,6 +547,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/lofi/vinyl/vinyl.dex",
+      "sizeBytes": 2676,
       "className": "com.vocalmonitor.plugin.community.Vinyl"
     },
     {
@@ -535,7 +565,46 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/chorus/chorus.dex",
-      "className": "com.vocalmonitor.plugin.community.Chorus"
+      "sizeBytes": 2824,
+      "className": "com.vocalmonitor.plugin.community.Chorus",
+      "presets": [
+        {
+          "name": "Subtle Width",
+          "description": "barely-there ensemble, sits behind a lead vocal",
+          "params": {
+            "depth": 0.2,
+            "rate": 0.4,
+            "mix": 0.2
+          }
+        },
+        {
+          "name": "80s Pad",
+          "description": "slow, deep, lush — classic shimmer",
+          "params": {
+            "depth": 0.6,
+            "rate": 0.5,
+            "mix": 0.45
+          }
+        },
+        {
+          "name": "Watery",
+          "description": "fast modulation, swirl effect",
+          "params": {
+            "depth": 0.5,
+            "rate": 4.5,
+            "mix": 0.5
+          }
+        },
+        {
+          "name": "Doubler",
+          "description": "dry-mix-forward — sounds like one extra take",
+          "params": {
+            "depth": 0.35,
+            "rate": 0.3,
+            "mix": 0.3
+          }
+        }
+      ]
     },
     {
       "id": "ensemble",
@@ -553,6 +622,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/ensemble/ensemble.dex",
+      "sizeBytes": 3312,
       "className": "com.vocalmonitor.plugin.community.Ensemble"
     },
     {
@@ -570,6 +640,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/flanger/flanger.dex",
+      "sizeBytes": 3144,
       "className": "com.vocalmonitor.plugin.community.Flanger"
     },
     {
@@ -588,6 +659,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/frequency-shifter/frequency-shifter.dex",
+      "sizeBytes": 3080,
       "className": "com.vocalmonitor.plugin.community.FrequencyShifter"
     },
     {
@@ -605,6 +677,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/phaser/phaser.dex",
+      "sizeBytes": 3212,
       "className": "com.vocalmonitor.plugin.community.Phaser"
     },
     {
@@ -623,6 +696,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/rotary-speaker/rotary-speaker.dex",
+      "sizeBytes": 4224,
       "className": "com.vocalmonitor.plugin.community.RotarySpeaker"
     },
     {
@@ -641,6 +715,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/sample-hold-filter/sample-hold-filter.dex",
+      "sizeBytes": 4216,
       "className": "com.vocalmonitor.plugin.community.SampleHoldFilter"
     },
     {
@@ -659,6 +734,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/slicer/slicer.dex",
+      "sizeBytes": 3692,
       "className": "com.vocalmonitor.plugin.community.Slicer"
     },
     {
@@ -676,6 +752,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/trance-gate/trance-gate.dex",
+      "sizeBytes": 3800,
       "className": "com.vocalmonitor.plugin.community.TranceGate"
     },
     {
@@ -693,6 +770,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/tremolo/tremolo.dex",
+      "sizeBytes": 2100,
       "className": "com.vocalmonitor.plugin.community.Tremolo"
     },
     {
@@ -711,6 +789,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/uni-vibe/uni-vibe.dex",
+      "sizeBytes": 3432,
       "className": "com.vocalmonitor.plugin.community.UniVibe"
     },
     {
@@ -728,6 +807,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/modulation/vibrato/vibrato.dex",
+      "sizeBytes": 2316,
       "className": "com.vocalmonitor.plugin.community.Vibrato"
     },
     {
@@ -749,6 +829,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/pitch/auto-tune/auto-tune.dex",
+      "sizeBytes": 14012,
       "className": "com.vocalmonitor.plugin.community.AutoTune",
       "presets": [
         {
@@ -829,6 +910,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/pitch/detune-doubler/detune-doubler.dex",
+      "sizeBytes": 4044,
       "className": "com.vocalmonitor.plugin.community.DetuneDoubler"
     },
     {
@@ -846,6 +928,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/pitch/harmonizer/harmonizer.dex",
+      "sizeBytes": 3684,
       "className": "com.vocalmonitor.plugin.community.Harmonizer"
     },
     {
@@ -863,6 +946,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/pitch/pitch-shifter/pitch-shifter.dex",
+      "sizeBytes": 3316,
       "className": "com.vocalmonitor.plugin.community.PitchShifter"
     },
     {
@@ -881,6 +965,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/air-enhancer/air-enhancer.dex",
+      "sizeBytes": 3936,
       "className": "com.vocalmonitor.plugin.community.AirEnhancer"
     },
     {
@@ -898,6 +983,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/click-suite/click-suite.dex",
+      "sizeBytes": 5376,
       "className": "com.vocalmonitor.plugin.community.ClickSuite"
     },
     {
@@ -915,6 +1001,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/de-breath/de-breath.dex",
+      "sizeBytes": 4292,
       "className": "com.vocalmonitor.plugin.community.DeBreath"
     },
     {
@@ -932,6 +1019,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/de-clicker/de-clicker.dex",
+      "sizeBytes": 2720,
       "className": "com.vocalmonitor.plugin.community.DeClicker"
     },
     {
@@ -949,6 +1037,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/de-clipper/de-clipper.dex",
+      "sizeBytes": 2488,
       "className": "com.vocalmonitor.plugin.community.DeClipper"
     },
     {
@@ -966,6 +1055,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/de-hum/de-hum.dex",
+      "sizeBytes": 3560,
       "className": "com.vocalmonitor.plugin.community.DeHum"
     },
     {
@@ -983,6 +1073,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/de-mouth/de-mouth.dex",
+      "sizeBytes": 3452,
       "className": "com.vocalmonitor.plugin.community.DeMouth"
     },
     {
@@ -1001,6 +1092,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/de-plosive/de-plosive.dex",
+      "sizeBytes": 4472,
       "className": "com.vocalmonitor.plugin.community.DePlosive"
     },
     {
@@ -1018,6 +1110,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/de-rumble/de-rumble.dex",
+      "sizeBytes": 2628,
       "className": "com.vocalmonitor.plugin.community.DeRumble"
     },
     {
@@ -1035,6 +1128,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/de-rustle/de-rustle.dex",
+      "sizeBytes": 4448,
       "className": "com.vocalmonitor.plugin.community.DeRustle"
     },
     {
@@ -1052,6 +1146,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/de-wind/de-wind.dex",
+      "sizeBytes": 3724,
       "className": "com.vocalmonitor.plugin.community.DeWind"
     },
     {
@@ -1070,6 +1165,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/hum-finder/hum-finder.dex",
+      "sizeBytes": 3824,
       "className": "com.vocalmonitor.plugin.community.HumFinder"
     },
     {
@@ -1087,6 +1183,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/noise-reduction/noise-reduction.dex",
+      "sizeBytes": 4916,
       "className": "com.vocalmonitor.plugin.community.NoiseReduction"
     },
     {
@@ -1105,6 +1202,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/vocal-leveler/vocal-leveler.dex",
+      "sizeBytes": 3416,
       "className": "com.vocalmonitor.plugin.community.VocalLeveler"
     },
     {
@@ -1123,6 +1221,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/reverb/gated-reverb/gated-reverb.dex",
+      "sizeBytes": 4652,
       "className": "com.vocalmonitor.plugin.community.GatedReverb"
     },
     {
@@ -1141,6 +1240,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/reverb/plate-reverb/plate-reverb.dex",
+      "sizeBytes": 5208,
       "className": "com.vocalmonitor.plugin.community.PlateReverb"
     },
     {
@@ -1159,6 +1259,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/reverb/shimmer-reverb/shimmer-reverb.dex",
+      "sizeBytes": 4724,
       "className": "com.vocalmonitor.plugin.community.ShimmerReverb"
     },
     {
@@ -1177,6 +1278,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/reverb/spring-reverb/spring-reverb.dex",
+      "sizeBytes": 3764,
       "className": "com.vocalmonitor.plugin.community.SpringReverb"
     },
     {
@@ -1195,6 +1297,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/voice-fx/megaphone/megaphone.dex",
+      "sizeBytes": 4608,
       "className": "com.vocalmonitor.plugin.community.Megaphone"
     },
     {
@@ -1212,6 +1315,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/voice-fx/telephone/telephone.dex",
+      "sizeBytes": 3152,
       "className": "com.vocalmonitor.plugin.community.Telephone"
     }
   ]
