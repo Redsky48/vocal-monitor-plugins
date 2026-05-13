@@ -55,6 +55,9 @@ public final class AutoTune implements VocalMonitorNativePlugin {
     private static final int ANALYSIS_INTERVAL = 256;
     private static final float YIN_THRESHOLD = 0.15f;
 
+    // YIN sees the LATEST input (not the delayed one) so its detections
+    // are "ahead" of the audio currently being filtered through the
+    // processing chain. That's where the lookahead benefit comes from.
     private final float[] analysisBuf = new float[ANALYSIS_SIZE];
     private final float[] yinBuf = new float[ANALYSIS_SIZE];
     private final float[] yinD = new float[LAG_MAX + 2];
@@ -62,6 +65,26 @@ public final class AutoTune implements VocalMonitorNativePlugin {
     private int analysisWrite = 0;
     private int samplesSinceAnalysis = 0;
     private float voicingConfidence = 0f;
+
+    // ============================================================
+    //  Input lookahead
+    // ============================================================
+    //
+    // The processing chain (pre-emphasis → LPC inverse → PSOLA →
+    // LPC synthesis → de-emphasis) operates on a DELAYED copy of the
+    // input that lags the latest arrival by LOOKAHEAD_SAMPLES. YIN runs
+    // on the latest input, so by the time the audio reaches the output
+    // YIN has already had ~LOOKAHEAD samples to detect the upcoming
+    // pitch, update the target ratio, and let the smoothing IIR start
+    // moving toward the new target. Transitions arrive at the output
+    // with the correction already engaged instead of lagging it.
+    //
+    // 50 ms = 2205 samples at 44.1 kHz. Inaudible for non-realtime
+    // ("processing") use, and a meaningful quality gain on note edges.
+    private float[] inputDelayRing;
+    private int inputDelayRingLen;
+    private int inputDelayWrite = 0;
+    private int lookaheadSamples;
 
     // ============================================================
     //  Pitch state (with octave-error correction + vibrato preservation)
@@ -96,6 +119,13 @@ public final class AutoTune implements VocalMonitorNativePlugin {
     private static final int LPC_FRAME_SIZE = 512;
     private static final int LPC_UPDATE_INTERVAL = 256;
     private static final float PRE_EMPHASIS = 0.97f;
+
+    // LPC analyzes the SAME (delayed) signal that the inverse filter
+    // operates on, so the modelled formants are consistent with the
+    // input being whitened. Separate from YIN's buffer (which is on
+    // latest input).
+    private float[] lpcAnalysisBuf;
+    private int lpcAnalysisWrite = 0;
 
     private final float[] lpcFrame = new float[LPC_FRAME_SIZE];
     private final float[] lpcAuto = new float[LPC_ORDER + 1];
@@ -172,6 +202,15 @@ public final class AutoTune implements VocalMonitorNativePlugin {
         analysisWrite = 0;
         for (int i = 0; i < ANALYSIS_SIZE; i++) analysisBuf[i] = 0f;
         for (int i = 0; i < yinD.length; i++) { yinD[i] = 0f; yinCMND[i] = 0f; }
+
+        // Lookahead buffer (50 ms) + the LPC analysis buffer that holds
+        // the delayed input so LPC sees what the inverse filter sees.
+        lookaheadSamples = (int) (sr * 0.05);
+        inputDelayRingLen = lookaheadSamples + 64;  // small headroom
+        inputDelayRing = new float[inputDelayRingLen];
+        inputDelayWrite = 0;
+        lpcAnalysisBuf = new float[ANALYSIS_SIZE];
+        lpcAnalysisWrite = 0;
 
         residualBufLen = sr;
         residualBuf = new float[residualBufLen];
@@ -410,11 +449,11 @@ public final class AutoTune implements VocalMonitorNativePlugin {
     // synthesis filter to restore the original formant envelope at the
     // shifted pitch.
     private void computeLPCFrame() {
-        // 1. Pull the most recent LPC_FRAME_SIZE samples from the analysis
-        //    buffer into a contiguous frame, with Hamming window to reduce
-        //    spectral leakage at the autocorrelation step.
-        final float[] aBuf = analysisBuf;
-        final int aw = analysisWrite;
+        // Pull the most recent LPC_FRAME_SIZE samples from the DELAYED
+        // input buffer (which holds what the inverse filter is seeing).
+        // Hamming window to reduce spectral leakage in the autocorrelation.
+        final float[] aBuf = lpcAnalysisBuf;
+        final int aw = lpcAnalysisWrite;
         final int frameStart = ANALYSIS_SIZE - LPC_FRAME_SIZE;
         final float twoPiOverN = (float) (2.0 * Math.PI / (LPC_FRAME_SIZE - 1));
         for (int k = 0; k < LPC_FRAME_SIZE; k++) {
@@ -643,12 +682,37 @@ public final class AutoTune implements VocalMonitorNativePlugin {
         int vAoutLen = voiceA_outLen, vBoutLen = voiceB_outLen;
         float vAsrcLen = voiceA_srcLen, vBsrcLen = voiceB_srcLen;
 
-        for (int i = 0; i < n; i++) {
-            final float x = input[i];
+        final float[] idRing = inputDelayRing;
+        final int idRingLen = inputDelayRingLen;
+        final float[] lpcABuf = lpcAnalysisBuf;
+        int idWrite = inputDelayWrite;
+        int lpcAW = lpcAnalysisWrite;
+        final int lookSamples = lookaheadSamples;
 
-            // Fill analysis buffer (raw input — YIN and LPC both read this).
-            aBuf[aw] = x;
+        for (int i = 0; i < n; i++) {
+            // xLatest = the freshly-arrived input. YIN reads from this so
+            // its pitch detections are "ahead" of the audio that's actually
+            // flowing through the LPC/PSOLA pipeline.
+            final float xLatest = input[i];
+
+            // Push into the lookahead ring and pull out the corresponding
+            // sample from LOOKAHEAD samples ago. That's the sample the
+            // processing chain will operate on this iteration.
+            idRing[idWrite] = xLatest;
+            int idRead = idWrite - lookSamples;
+            if (idRead < 0) idRead += idRingLen;
+            final float xDelayed = idRing[idRead];
+            idWrite++; if (idWrite >= idRingLen) idWrite = 0;
+
+            // YIN's analysis buffer sees the latest input — that's the
+            // lookahead.
+            aBuf[aw] = xLatest;
             aw++; if (aw >= ANALYSIS_SIZE) aw = 0;
+
+            // LPC's analysis buffer sees the DELAYED input — so its
+            // formant estimate matches the input being inverse-filtered.
+            lpcABuf[lpcAW] = xDelayed;
+            lpcAW++; if (lpcAW >= ANALYSIS_SIZE) lpcAW = 0;
 
             // Trigger analyses periodically.
             ssa++;
@@ -711,9 +775,9 @@ public final class AutoTune implements VocalMonitorNativePlugin {
             // fully populated at least once — otherwise the half-zero
             // half-signal frame produces extreme coefficients that
             // destabilise the IIR even with the reflection-coef clamp.
-            if (ssl >= LPC_UPDATE_INTERVAL && totalSamplesProcessed >= ANALYSIS_SIZE) {
+            if (ssl >= LPC_UPDATE_INTERVAL && totalSamplesProcessed >= ANALYSIS_SIZE + lookSamples) {
                 ssl = 0;
-                analysisWrite = aw;
+                lpcAnalysisWrite = lpcAW;
                 for (int k = 0; k <= LPC_ORDER; k++) lpcAprev[k] = lpcA[k];
                 computeLPCFrame();
                 rampPos = 0f;
@@ -729,27 +793,31 @@ public final class AutoTune implements VocalMonitorNativePlugin {
                 for (int k = 0; k <= LPC_ORDER; k++) lpcA[k] = lpcAtarget[k];
             }
 
-            // --- Transient detection on raw input ---
-            float rect = x < 0 ? -x : x;
+            // --- Transient detection on the LATEST input ---
+            // Look-ahead transient detection: when a consonant lands at
+            // xLatest, the gate opens immediately. By the time that
+            // consonant reaches the OUTPUT (LOOKAHEAD samples later), the
+            // bypass is fully engaged. Smooth pass-through.
+            float rect = xLatest < 0 ? -xLatest : xLatest;
             fEnv = fEnv + fastEnvCoef * (rect - fEnv);
             sEnv = sEnv + slowEnvCoef * (rect - sEnv);
             if (sEnv < 1e-6f) sEnv = 1e-6f;
-            // Transient = fast envelope spikes well above slow.
             float transTarget = (fEnv > sEnv * 2.5f) ? 1f : 0f;
             float tCoef = transTarget > tGate ? transOpenCoef : transCloseCoef;
             tGate = tGate + tCoef * (transTarget - tGate);
 
-            // --- Pre-emphasis + LPC inverse (whiten) ---
-            float xPre = x - PRE_EMPHASIS * pePrev;
-            pePrev = x;
+            // --- Pre-emphasis + LPC inverse (whiten) on DELAYED input ---
+            // Processing chain operates on xDelayed; YIN's pitch and the
+            // transient detector are already "ahead" of this point, so the
+            // ratio and gates are already at their target by the time the
+            // audio reaches the output.
+            float xPre = xDelayed - PRE_EMPHASIS * pePrev;
+            pePrev = xDelayed;
             float residual;
             if (formantLocal > 0.001f) {
                 residual = lpcInverseStep(xPre);
             } else {
-                // Formant preservation disabled — pass raw input through as
-                // the "residual" so PSOLA runs on the source directly.
-                residual = x;
-                // Keep delay lines tracking so re-enabling is smooth.
+                residual = xDelayed;
                 final float[] z = invInputDelay;
                 for (int k = LPC_ORDER - 1; k > 0; k--) z[k] = z[k - 1];
                 z[0] = xPre;
@@ -837,14 +905,19 @@ public final class AutoTune implements VocalMonitorNativePlugin {
                 dePrev = yPre;
             }
 
-            // --- Voicing + transient blend with dry ---
+            // --- Voicing + transient blend with DELAYED dry ---
+            // Dry side must come from xDelayed so the dry/wet timeline
+            // stays coherent with the wet (which is the corrected delayed
+            // input).
             float gateMix = voiceG * (1f - tGate);
-            float wet = x * (1f - gateMix) + yPre * gateMix;
-            output[i] = x * dryMix + wet * mixLocal;
+            float wet = xDelayed * (1f - gateMix) + yPre * gateMix;
+            output[i] = xDelayed * dryMix + wet * mixLocal;
         }
 
         analysisWrite = aw;
         residualWrite = rw;
+        inputDelayWrite = idWrite;
+        lpcAnalysisWrite = lpcAW;
         samplesSinceAnalysis = ssa;
         samplesSinceLPC = ssl;
         currentRatio = currentR;
