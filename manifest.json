@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-13T18:44:35.176Z",
+  "generatedAt": "2026-05-13T19:08:01.778Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -328,7 +328,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/noise-gate/noise-gate.dex",
-      "sizeBytes": 9048,
+      "sizeBytes": 9248,
       "className": "com.vocalmonitor.plugin.community.NoiseGate"
     },
     {
