@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-13T21:05:52.894Z",
+  "generatedAt": "2026-05-13T23:32:34.567Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -1211,6 +1211,114 @@
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/vocal-leveler/vocal-leveler.dex",
       "sizeBytes": 3416,
       "className": "com.vocalmonitor.plugin.community.VocalLeveler"
+    },
+    {
+      "id": "crystal",
+      "name": "Crystal",
+      "author": "Vocal Monitor",
+      "category": "Reverb",
+      "description": "Next-generation algorithmic reverb built on the Dattorro allpass-loop topology (the lineage behind Lexicon / EMT / Crystalline). Modulated delays for a chorused tail, in-loop +12-semitone shimmer for angelic halos, dual-band damping for natural decay, sidechain ducker, freeze, gate, and a tilt EQ. Pass it a vocal and you get the synthetic-but-musical space pop / electronic production needs.",
+      "version": "1.0.0",
+      "tags": [
+        "reverb",
+        "algorithmic",
+        "shimmer",
+        "vocal",
+        "ambient",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/reverb/crystal/crystal.dex",
+      "sizeBytes": 16048,
+      "className": "com.vocalmonitor.plugin.community.Crystal",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 260
+      },
+      "presets": [
+        {
+          "name": "Vocal Plate",
+          "description": "Classic short bright plate for lead vocals",
+          "params": {
+            "size": 0.45,
+            "decay": 0.55,
+            "damping": 0.35,
+            "modulation": 0.3,
+            "shimmer": 0,
+            "width": 0.85,
+            "tone": 0.1,
+            "predelay": 0.08,
+            "duck": 0.55,
+            "mix": 0.28
+          }
+        },
+        {
+          "name": "Halo",
+          "description": "Ethereal shimmer cloud — ambient pads, electric guitar",
+          "params": {
+            "size": 0.75,
+            "decay": 0.85,
+            "damping": 0.45,
+            "modulation": 0.55,
+            "shimmer": 0.7,
+            "width": 1,
+            "tone": 0,
+            "predelay": 0,
+            "duck": 0,
+            "mix": 0.45
+          }
+        },
+        {
+          "name": "Hall",
+          "description": "Big lush hall, slow attack and decay",
+          "params": {
+            "size": 0.85,
+            "decay": 0.75,
+            "damping": 0.3,
+            "modulation": 0.4,
+            "shimmer": 0.15,
+            "width": 0.9,
+            "tone": -0.1,
+            "predelay": 0.3,
+            "duck": 0,
+            "mix": 0.35
+          }
+        },
+        {
+          "name": "Slap",
+          "description": "Short room, almost dry — adds depth without washing",
+          "params": {
+            "size": 0.2,
+            "decay": 0.2,
+            "damping": 0.5,
+            "modulation": 0.1,
+            "shimmer": 0,
+            "width": 0.6,
+            "tone": 0,
+            "predelay": 0.02,
+            "duck": 0.3,
+            "mix": 0.18
+          }
+        },
+        {
+          "name": "Gated 80s",
+          "description": "Phil Collins drums — slap of reverb that abruptly cuts",
+          "params": {
+            "size": 0.55,
+            "decay": 0.7,
+            "damping": 0.2,
+            "modulation": 0.15,
+            "shimmer": 0,
+            "width": 0.95,
+            "tone": 0.2,
+            "predelay": 0.05,
+            "duck": 0,
+            "gate": -28,
+            "mix": 0.45
+          }
+        }
+      ]
     },
     {
       "id": "gated-reverb",
