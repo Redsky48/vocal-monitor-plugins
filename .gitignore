@@ -7,3 +7,15 @@ node_modules/
 # Native plugin build artefacts (compile output is the .dex next to source).
 build/
 *.class
+
+# RunTest.java I/O. test-input.wav is gitignored too because it
+# typically contains the contributor's own voice — if you want to share
+# a sample recording for reproducible plugin testing, force-add it
+# manually (`git add -f tools/test-app/test-input.wav`).
+tools/test-app/test-input.wav
+tools/test-app/test-output.wav
+tools/test-app/test-original.png
+tools/test-app/test-processed.png
+tools/test-app/test-spec-original.png
+tools/test-app/test-spec-processed.png
+tools/test-app/test-stats.json

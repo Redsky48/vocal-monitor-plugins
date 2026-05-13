@@ -6,6 +6,11 @@ plugin's sliders, hear the original vs the processed audio, and
 optionally export the result back to a WAV. No need to push to the
 app or test through the phone.
 
+There's also a **headless CLI companion** (`RunTest.java`) that lets
+me (Claude) run plugins against your saved test recording from the
+command line and read back numeric stats + PNG waveforms / spectrograms.
+See "Saving a default test recording" below.
+
 ## Requirements
 
 - JDK 11 or newer (you already have one — it's what compiles the
@@ -88,3 +93,49 @@ default. There's no input-device selector in this minimal harness.
 **Audio sounds glitchy at start**
 Auto-Tune in particular needs ~20 ms of lookahead before the first
 real output sample emerges. Skip that bit when listening.
+
+## Saving a default test recording (for headless debugging)
+
+The GUI has a ⭐ **Save as default test input** button. Clicking it
+writes the currently-loaded (or just-recorded) audio to a fixed path:
+
+```
+tools/test-app/test-input.wav
+```
+
+That's the file `RunTest.java` picks up. Once it exists, anyone with
+a checkout — including AI assistants iterating on the plugin code —
+can run a one-line headless plugin sweep against the same recording:
+
+```bash
+java tools/test-app/RunTest.java                       # auto-tune, defaults
+java tools/test-app/RunTest.java --plugin compressor
+java tools/test-app/RunTest.java --params "preset=2,key=0,scale=1"
+java tools/test-app/RunTest.java --plugin auto-tune --params "retune=0,strength=1,formant=1"
+```
+
+Each run produces, alongside `test-input.wav`:
+
+| File | What it contains |
+|---|---|
+| `test-output.wav` | The processed audio. |
+| `test-original.png` / `test-processed.png` | Waveform PNGs (peak-tracked min/max-per-pixel rendering). |
+| `test-spec-original.png` / `test-spec-processed.png` | Spectrograms — 1024-pt Hann FFT, hop 256, 0–12 kHz, viridis. |
+| `test-stats.json` | Numeric stats: peak, RMS, DC bias, NaN / Inf / clipped counts, processing-time, **click locations** (3rd-order linear-predictor residual outliers — the sample-level spikes you saw in the GUI's processed waveform). |
+
+The click list is the most useful diagnostic when chasing audible
+artefacts. Each entry has the sample index, its time-offset in
+seconds, and how many times louder its residual was vs the median
+— so you can correlate a "tick" you hear at, say, 1.3 s with an
+actual reported spike at sample ≈ 57 300.
+
+## Iterating on Auto-Tune with the CLI
+
+Workflow Claude uses when chasing an artefact you reported:
+
+1. You record + ⭐-save → `test-input.wav`.
+2. Claude edits `plugins/pitch/auto-tune/AutoTune.java`.
+3. Claude runs `java tools/test-app/RunTest.java`, reads back
+   `test-stats.json` (counts of clicks / NaN / clipping) and inspects
+   `test-spec-processed.png` for spectral artefacts.
+4. Iterate until clicksTotal drops and the spectrogram looks clean.

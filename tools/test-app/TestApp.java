@@ -46,6 +46,7 @@ public class TestApp extends JFrame {
     private final JButton playProc = new JButton("Play processed");
     private final JButton stopBtn  = new JButton("Stop");
     private final JButton saveBtn  = new JButton("Save processed WAV…");
+    private final JButton saveDefBtn = new JButton("⭐ Save as default test input");
 
     // Visualisation panels.
     private final WaveformPanel waveOrig = new WaveformPanel(new Color(120, 220, 120));
@@ -225,7 +226,7 @@ public class TestApp extends JFrame {
         JPanel south = new JPanel(new BorderLayout());
         JPanel ctlRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         ctlRow.add(playOrig); ctlRow.add(process); ctlRow.add(playProc);
-        ctlRow.add(stopBtn); ctlRow.add(saveBtn);
+        ctlRow.add(stopBtn); ctlRow.add(saveBtn); ctlRow.add(saveDefBtn);
         south.add(ctlRow, BorderLayout.NORTH);
         south.add(statusLabel, BorderLayout.SOUTH);
         main.add(south, BorderLayout.SOUTH);
@@ -237,11 +238,13 @@ public class TestApp extends JFrame {
         playProc.addActionListener(e -> playAudio(processedAudio));
         stopBtn.addActionListener(e -> stopPlayback());
         saveBtn.addActionListener(e -> saveProcessed());
+        saveDefBtn.addActionListener(e -> saveAsDefault());
 
         playOrig.setEnabled(false);
         process.setEnabled(false);
         playProc.setEnabled(false);
         saveBtn.setEnabled(false);
+        saveDefBtn.setEnabled(false);
 
         setContentPane(main);
         setLocationRelativeTo(null);
@@ -321,6 +324,7 @@ public class TestApp extends JFrame {
             process.setEnabled(true);
             playProc.setEnabled(false);
             saveBtn.setEnabled(false);
+            saveDefBtn.setEnabled(true);
             waveOrig.setSamples(originalAudio);
             specOrig.setSamples(originalAudio, SR);
             waveProc.setSamples(null);
@@ -388,6 +392,7 @@ public class TestApp extends JFrame {
                     process.setEnabled(true);
                     playProc.setEnabled(false);
                     saveBtn.setEnabled(false);
+                    saveDefBtn.setEnabled(true);
                     waveOrig.setSamples(originalAudio);
                     specOrig.setSamples(originalAudio, SR);
                     waveProc.setSamples(null);
@@ -493,26 +498,46 @@ public class TestApp extends JFrame {
         JFileChooser fc = new JFileChooser();
         fc.setSelectedFile(new File("processed.wav"));
         if (fc.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return;
-        File out = fc.getSelectedFile();
         try {
-            AudioFormat fmt = new AudioFormat(SR, 16, 1, true, false);
-            byte[] bytes = new byte[processedAudio.length * 2];
-            for (int i = 0; i < processedAudio.length; i++) {
-                float s = processedAudio[i];
-                if (Float.isNaN(s) || Float.isInfinite(s)) s = 0f;
-                if (s > 1f) s = 1f; else if (s < -1f) s = -1f;
-                short v = (short) (s * 32767f);
-                bytes[2 * i] = (byte) (v & 0xff);
-                bytes[2 * i + 1] = (byte) ((v >> 8) & 0xff);
-            }
-            AudioInputStream ais = new AudioInputStream(
-                    new ByteArrayInputStream(bytes), fmt, processedAudio.length);
-            AudioSystem.write(ais, AudioFileFormat.Type.WAVE, out);
-            setStatus("Saved to " + out.getAbsolutePath());
+            writeWav(processedAudio, fc.getSelectedFile());
+            setStatus("Saved to " + fc.getSelectedFile().getAbsolutePath());
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(),
                     "Save error", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    private void saveAsDefault() {
+        if (originalAudio == null) return;
+        // Write to a fixed path inside the repo. The CLI test harness
+        // (tools/test-app/RunTest.java) reads from exactly this path,
+        // so anything saved here becomes the "test input" for headless
+        // plugin debugging runs.
+        File out = repoRoot.resolve("tools/test-app/test-input.wav").toFile();
+        try {
+            writeWav(originalAudio, out);
+            setStatus("Saved default test input → " + out.getName()
+                    + "  (run RunTest.java from CLI to debug)");
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(),
+                    "Save error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private static void writeWav(float[] samples, File out) throws IOException {
+        AudioFormat fmt = new AudioFormat(SR, 16, 1, true, false);
+        byte[] bytes = new byte[samples.length * 2];
+        for (int i = 0; i < samples.length; i++) {
+            float s = samples[i];
+            if (Float.isNaN(s) || Float.isInfinite(s)) s = 0f;
+            if (s > 1f) s = 1f; else if (s < -1f) s = -1f;
+            short v = (short) (s * 32767f);
+            bytes[2 * i] = (byte) (v & 0xff);
+            bytes[2 * i + 1] = (byte) ((v >> 8) & 0xff);
+        }
+        AudioInputStream ais = new AudioInputStream(
+                new ByteArrayInputStream(bytes), fmt, samples.length);
+        AudioSystem.write(ais, AudioFileFormat.Type.WAVE, out);
     }
 
     private void setStatus(String msg) { statusLabel.setText(msg); }
