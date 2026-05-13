@@ -4,26 +4,22 @@
 // in-process JavaCompiler API, loads it through a URLClassLoader, and
 // drives it from a small Swing GUI. Lets you load a WAV file or record
 // from the default microphone, dial the plugin's parameters, hear the
-// original vs the processed audio back-to-back, and optionally export
-// the result to a new WAV.
+// original vs the processed audio back-to-back, eyeball the
+// waveform / spectrogram / numerical stats of each, and optionally
+// export the processed result to a new WAV.
 //
 // Run from the repo root with JDK 11+:
 //
 //   java tools/test-app/TestApp.java
 //
 // (JEP 330 single-file source-code launch — no separate compile step.)
-//
-// The app scans plugins/ for any folder whose plugin.json declares
-// engine == "native" and adds it to the plugin dropdown. Switching
-// plugin recompiles the chosen .java source and rebuilds the slider
-// row from its parameterNames / parameterMin/Max/Default.
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.sound.sampled.*;
 import javax.tools.*;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.*;
 import java.nio.file.*;
@@ -51,6 +47,13 @@ public class TestApp extends JFrame {
     private final JButton stopBtn  = new JButton("Stop");
     private final JButton saveBtn  = new JButton("Save processed WAV…");
 
+    // Visualisation panels.
+    private final WaveformPanel waveOrig = new WaveformPanel(new Color(120, 220, 120));
+    private final WaveformPanel waveProc = new WaveformPanel(new Color(120, 180, 220));
+    private final SpectrogramPanel specOrig = new SpectrogramPanel();
+    private final SpectrogramPanel specProc = new SpectrogramPanel();
+    private final JTextArea statsArea = new JTextArea();
+
     private float[] originalAudio;
     private float[] processedAudio;
     private Object  plugin;
@@ -67,7 +70,7 @@ public class TestApp extends JFrame {
         repoRoot = findRepoRoot();
         stubSrc = repoRoot.resolve("scripts/native-stub/com/vocalmonitor/plugin/VocalMonitorNativePlugin.java");
         if (!Files.exists(stubSrc)) {
-            throw new IOException("Cannot find " + stubSrc + " — run this from the repo root.");
+            throw new IOException("Cannot find " + stubSrc + " — run from the repo root.");
         }
         scanPlugins();
         buildUI();
@@ -80,11 +83,8 @@ public class TestApp extends JFrame {
     //  Plugin discovery + compile
     // ---------------------------------------------------------------
     private static class PluginEntry {
-        final String id;
-        final String name;
-        final Path folder;
-        final Path javaSrc;
-        final String className;
+        final String id, name, className;
+        final Path folder, javaSrc;
         PluginEntry(String id, String name, Path folder, Path javaSrc, String className) {
             this.id = id; this.name = name; this.folder = folder;
             this.javaSrc = javaSrc; this.className = className;
@@ -107,7 +107,6 @@ public class TestApp extends JFrame {
                         String name = extractJsonString(meta, "name");
                         String className = extractJsonString(meta, "className");
                         if (id == null || className == null) continue;
-                        // Find the .java file: same folder, name = last segment of className.
                         String simple = className.substring(className.lastIndexOf('.') + 1);
                         Path javaSrc = plugDir.resolve(simple + ".java");
                         if (!Files.exists(javaSrc)) continue;
@@ -121,7 +120,6 @@ public class TestApp extends JFrame {
     }
 
     private static String extractJsonString(String json, String key) {
-        // Cheap regex-ish extract — fine for the simple plugin.json schemas.
         String pattern = "\"" + key + "\"";
         int kIdx = json.indexOf(pattern);
         if (kIdx < 0) return null;
@@ -170,11 +168,12 @@ public class TestApp extends JFrame {
     // ---------------------------------------------------------------
     private void buildUI() {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setSize(620, 540);
+        setSize(1280, 760);
 
         JPanel main = new JPanel(new BorderLayout(8, 8));
         main.setBorder(new EmptyBorder(10, 10, 10, 10));
 
+        // --- North: plugin selector + top buttons ---
         JPanel north = new JPanel(new GridLayout(2, 1, 4, 4));
         JPanel pluginRow = new JPanel(new BorderLayout(6, 0));
         pluginRow.add(new JLabel("Plugin:"), BorderLayout.WEST);
@@ -193,10 +192,36 @@ public class TestApp extends JFrame {
         north.add(topButtons);
         main.add(north, BorderLayout.NORTH);
 
+        // --- West: parameter sliders (in a scroll pane) ---
         sliderPanel.setLayout(new BoxLayout(sliderPanel, BoxLayout.Y_AXIS));
         sliderPanel.setBorder(BorderFactory.createTitledBorder("Parameters"));
-        main.add(new JScrollPane(sliderPanel), BorderLayout.CENTER);
+        JScrollPane sliderScroll = new JScrollPane(sliderPanel);
+        sliderScroll.setPreferredSize(new Dimension(380, 0));
 
+        // --- Center: tabbed visualisations ---
+        JTabbedPane tabs = new JTabbedPane();
+        // Waveform tab: stacked original + processed.
+        JPanel wavePane = new JPanel(new GridLayout(2, 1, 6, 6));
+        wavePane.add(framed("Original — waveform", waveOrig));
+        wavePane.add(framed("Processed — waveform", waveProc));
+        tabs.addTab("Waveform", wavePane);
+        // Spectrogram tab: stacked original + processed.
+        JPanel specPane = new JPanel(new GridLayout(2, 1, 6, 6));
+        specPane.add(framed("Original — spectrogram (0-12 kHz, log mag, -80 dB floor)", specOrig));
+        specPane.add(framed("Processed — spectrogram", specProc));
+        tabs.addTab("Spectrogram", specPane);
+        // Stats tab.
+        statsArea.setEditable(false);
+        statsArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 13));
+        statsArea.setText("(load audio + Process to see stats)");
+        tabs.addTab("Stats", new JScrollPane(statsArea));
+
+        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, sliderScroll, tabs);
+        split.setDividerLocation(380);
+        split.setResizeWeight(0.0);
+        main.add(split, BorderLayout.CENTER);
+
+        // --- South: action buttons + status ---
         JPanel south = new JPanel(new BorderLayout());
         JPanel ctlRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         ctlRow.add(playOrig); ctlRow.add(process); ctlRow.add(playProc);
@@ -220,6 +245,13 @@ public class TestApp extends JFrame {
 
         setContentPane(main);
         setLocationRelativeTo(null);
+    }
+
+    private static JComponent framed(String title, JComponent inner) {
+        JPanel p = new JPanel(new BorderLayout());
+        p.setBorder(BorderFactory.createTitledBorder(title));
+        p.add(inner, BorderLayout.CENTER);
+        return p;
     }
 
     private void selectPlugin(PluginEntry entry) throws Exception {
@@ -254,10 +286,9 @@ public class TestApp extends JFrame {
             JLabel nameLabel = new JLabel(label + "  ");
             nameLabel.setPreferredSize(new Dimension(140, 22));
             row.add(nameLabel, BorderLayout.WEST);
-            int slMin = 0, slMax = 1000;
+            int slMax = 1000;
             int slVal = Math.round((def - min) / (max - min) * slMax);
-            JSlider slider = new JSlider(slMin, slMax, slVal);
-            slider.setMajorTickSpacing(250);
+            JSlider slider = new JSlider(0, slMax, slVal);
             slider.addChangeListener(ev -> {
                 float v = min + (max - min) * slider.getValue() / (float) slMax;
                 valueLabel.setText(String.format("%.3f", v));
@@ -270,7 +301,6 @@ public class TestApp extends JFrame {
             sliderPanel.add(row);
             sliders.put(name, slider);
             sliderLabels.put(name, valueLabel);
-            // Apply the default so the plugin's runtime state matches the slider.
             pSet.invoke(plugin, name, def);
         }
         sliderPanel.revalidate();
@@ -291,6 +321,11 @@ public class TestApp extends JFrame {
             process.setEnabled(true);
             playProc.setEnabled(false);
             saveBtn.setEnabled(false);
+            waveOrig.setSamples(originalAudio);
+            specOrig.setSamples(originalAudio, SR);
+            waveProc.setSamples(null);
+            specProc.setSamples(null, SR);
+            refreshStats();
             setStatus(String.format("Loaded %.2f s of audio (%d samples).",
                     originalAudio.length / (float) SR, originalAudio.length));
         } catch (Exception ex) {
@@ -299,23 +334,14 @@ public class TestApp extends JFrame {
         }
     }
 
-    // Decodes anything javax.sound can read into mono 44.1 kHz float samples.
     private static float[] decodeToMono44k(AudioInputStream in) throws Exception {
         AudioFormat src = in.getFormat();
-        // First, force PCM_SIGNED 16-bit mono at original rate.
         AudioFormat mono = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED,
                 src.getSampleRate(), 16, 1, 2, src.getSampleRate(), false);
-        AudioInputStream monoStream;
-        if (src.getChannels() > 1) {
-            monoStream = AudioSystem.getAudioInputStream(mono, in);
-        } else {
-            monoStream = AudioSystem.getAudioInputStream(mono, in);
-        }
-        // Then resample to 44.1 kHz.
+        AudioInputStream monoStream = AudioSystem.getAudioInputStream(mono, in);
         AudioFormat target = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED,
                 SR, 16, 1, 2, SR, false);
         AudioInputStream resampled = AudioSystem.getAudioInputStream(target, monoStream);
-        // Read all bytes.
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         byte[] buf = new byte[8192];
         int n;
@@ -362,6 +388,11 @@ public class TestApp extends JFrame {
                     process.setEnabled(true);
                     playProc.setEnabled(false);
                     saveBtn.setEnabled(false);
+                    waveOrig.setSamples(originalAudio);
+                    specOrig.setSamples(originalAudio, SR);
+                    waveProc.setSamples(null);
+                    specProc.setSamples(null, SR);
+                    refreshStats();
                     setStatus(String.format("Recorded %.2f s.", samples.length / (float) SR));
                 });
             }, "mic-recorder").start();
@@ -374,15 +405,13 @@ public class TestApp extends JFrame {
     private void processAudio() {
         if (originalAudio == null || plugin == null) return;
         try {
-            // Re-init so each render starts from a known state.
             plugin.getClass().getMethod("init", int.class).invoke(plugin, SR);
-            // Re-apply every slider's current value so init defaults don't bury them.
             Method pSet = plugin.getClass().getMethod("setParameter", String.class, float.class);
+            Method pMin = plugin.getClass().getMethod("parameterMin", String.class);
+            Method pMax = plugin.getClass().getMethod("parameterMax", String.class);
             for (Map.Entry<String, JSlider> en : sliders.entrySet()) {
                 String name = en.getKey();
                 JSlider s = en.getValue();
-                Method pMin = plugin.getClass().getMethod("parameterMin", String.class);
-                Method pMax = plugin.getClass().getMethod("parameterMax", String.class);
                 float min = (float) pMin.invoke(plugin, name);
                 float max = (float) pMax.invoke(plugin, name);
                 float v = min + (max - min) * s.getValue() / 1000f;
@@ -407,6 +436,9 @@ public class TestApp extends JFrame {
             processedAudio = result;
             playProc.setEnabled(true);
             saveBtn.setEnabled(true);
+            waveProc.setSamples(processedAudio);
+            specProc.setSamples(processedAudio, SR);
+            refreshStats();
             setStatus("Processed.");
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -430,6 +462,7 @@ public class TestApp extends JFrame {
                     int len = Math.min(BLOCK, samples.length - i);
                     for (int j = 0; j < len; j++) {
                         float s = samples[i + j];
+                        if (Float.isNaN(s) || Float.isInfinite(s)) s = 0f;
                         if (s > 1f) s = 1f; else if (s < -1f) s = -1f;
                         short v = (short) (s * 32767f);
                         buf[2 * j] = (byte) (v & 0xff);
@@ -466,6 +499,7 @@ public class TestApp extends JFrame {
             byte[] bytes = new byte[processedAudio.length * 2];
             for (int i = 0; i < processedAudio.length; i++) {
                 float s = processedAudio[i];
+                if (Float.isNaN(s) || Float.isInfinite(s)) s = 0f;
                 if (s > 1f) s = 1f; else if (s < -1f) s = -1f;
                 short v = (short) (s * 32767f);
                 bytes[2 * i] = (byte) (v & 0xff);
@@ -482,6 +516,71 @@ public class TestApp extends JFrame {
     }
 
     private void setStatus(String msg) { statusLabel.setText(msg); }
+
+    // ---------------------------------------------------------------
+    //  Stats
+    // ---------------------------------------------------------------
+    private void refreshStats() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== ORIGINAL ===\n").append(statsFor(originalAudio)).append('\n');
+        sb.append("=== PROCESSED ===\n").append(statsFor(processedAudio)).append('\n');
+        if (originalAudio != null && processedAudio != null
+                && originalAudio.length == processedAudio.length) {
+            sb.append("=== DIFFERENCE (processed − original) ===\n");
+            float maxDiff = 0f;
+            double sumSq = 0;
+            int n = originalAudio.length;
+            for (int i = 0; i < n; i++) {
+                float d = processedAudio[i] - originalAudio[i];
+                float a = d < 0 ? -d : d;
+                if (a > maxDiff) maxDiff = a;
+                sumSq += d * d;
+            }
+            float rmsDiff = (float) Math.sqrt(sumSq / n);
+            sb.append(String.format("Max abs diff : %.4f  (%+.1f dB)%n", maxDiff,
+                    20 * Math.log10(Math.max(1e-9, maxDiff))));
+            sb.append(String.format("RMS diff     : %.4f  (%+.1f dB)%n", rmsDiff,
+                    20 * Math.log10(Math.max(1e-9, rmsDiff))));
+        }
+        statsArea.setText(sb.toString());
+        statsArea.setCaretPosition(0);
+    }
+
+    private static String statsFor(float[] s) {
+        if (s == null) return "(no audio)\n";
+        int n = s.length;
+        float peak = 0f;
+        double sumSq = 0;
+        double sum = 0;
+        int nan = 0, inf = 0, clip = 0, zeros = 0;
+        for (int i = 0; i < n; i++) {
+            float v = s[i];
+            if (Float.isNaN(v)) { nan++; continue; }
+            if (Float.isInfinite(v)) { inf++; continue; }
+            float a = v < 0 ? -v : v;
+            if (a > peak) peak = a;
+            if (a >= 0.99f) clip++;
+            if (a < 1e-5f) zeros++;
+            sumSq += v * v;
+            sum += v;
+        }
+        int valid = n - nan - inf;
+        float rms = valid > 0 ? (float) Math.sqrt(sumSq / valid) : 0;
+        float dc  = valid > 0 ? (float) (sum / valid) : 0;
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("Samples      : %d%n", n));
+        sb.append(String.format("Duration     : %.3f s%n", n / (double) SR));
+        sb.append(String.format("Peak         : %.4f  (%+.1f dBFS)%n", peak,
+                20 * Math.log10(Math.max(1e-9, peak))));
+        sb.append(String.format("RMS          : %.4f  (%+.1f dBFS)%n", rms,
+                20 * Math.log10(Math.max(1e-9, rms))));
+        sb.append(String.format("DC bias      : %+.5f%n", dc));
+        sb.append(String.format("Near-silent  : %d samples (%.1f%%)%n", zeros, 100.0 * zeros / n));
+        sb.append(String.format("Clipped (≥0.99): %d samples%n", clip));
+        sb.append(String.format("NaN          : %d  %s%n", nan, nan > 0 ? "  ← BAD" : ""));
+        sb.append(String.format("Inf          : %d  %s%n", inf, inf > 0 ? "  ← BAD" : ""));
+        return sb.toString();
+    }
 
     private static Path findRepoRoot() throws IOException {
         Path cur = Paths.get("").toAbsolutePath();
@@ -505,5 +604,181 @@ public class TestApp extends JFrame {
                         "Startup error", JOptionPane.ERROR_MESSAGE);
             }
         });
+    }
+
+    // ===============================================================
+    //  Visualisation primitives — waveform / spectrogram / FFT
+    // ===============================================================
+
+    /** Min/max-per-pixel waveform renderer. */
+    static class WaveformPanel extends JPanel {
+        private float[] samples;
+        private final Color colour;
+        WaveformPanel(Color colour) {
+            this.colour = colour;
+            setBackground(new Color(20, 20, 24));
+            setPreferredSize(new Dimension(800, 140));
+        }
+        void setSamples(float[] s) { this.samples = s; repaint(); }
+        @Override protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            int w = getWidth(), h = getHeight();
+            g.setColor(new Color(60, 60, 70));
+            g.drawLine(0, h / 2, w, h / 2);
+            if (samples == null || samples.length == 0) {
+                g.setColor(Color.GRAY);
+                g.drawString("(no audio)", 8, 16);
+                return;
+            }
+            // Find peak for vertical scale.
+            float peak = 0.001f;
+            for (float v : samples) { float a = v < 0 ? -v : v; if (a > peak) peak = a; }
+            // Plot min/max per column.
+            int spp = Math.max(1, samples.length / w);
+            g.setColor(colour);
+            for (int x = 0; x < w; x++) {
+                int start = x * spp;
+                int end = Math.min(samples.length, start + spp);
+                float lo = 0, hi = 0;
+                for (int i = start; i < end; i++) {
+                    float v = samples[i];
+                    if (Float.isNaN(v) || Float.isInfinite(v)) continue;
+                    if (v < lo) lo = v;
+                    if (v > hi) hi = v;
+                }
+                int yHi = (int) ((1 - hi / peak) * h / 2);
+                int yLo = (int) ((1 - lo / peak) * h / 2);
+                g.drawLine(x, yHi, x, yLo);
+            }
+            // Peak text.
+            g.setColor(new Color(180, 180, 200));
+            g.drawString(String.format("peak %.3f", peak), 6, 14);
+        }
+    }
+
+    /** Time-x-Frequency spectrogram via overlapping Hann-windowed FFTs. */
+    static class SpectrogramPanel extends JPanel {
+        private BufferedImage image;
+        private static final int FFT_SIZE = 1024;
+        private static final int HOP = 256;
+        private static final int MAX_BIN = 280;  // ~12 kHz at 44.1k
+        SpectrogramPanel() {
+            setBackground(new Color(10, 10, 14));
+            setPreferredSize(new Dimension(800, 200));
+        }
+        void setSamples(float[] s, int sr) {
+            if (s == null || s.length < FFT_SIZE) { image = null; repaint(); return; }
+            int frames = (s.length - FFT_SIZE) / HOP + 1;
+            int bins = MAX_BIN;
+            BufferedImage img = new BufferedImage(frames, bins, BufferedImage.TYPE_INT_RGB);
+            Fft fft = new Fft(FFT_SIZE);
+            double[] re = new double[FFT_SIZE];
+            double[] im = new double[FFT_SIZE];
+            double[] window = new double[FFT_SIZE];
+            for (int i = 0; i < FFT_SIZE; i++) {
+                window[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (FFT_SIZE - 1));
+            }
+            double invN = 1.0 / FFT_SIZE;
+            for (int f = 0; f < frames; f++) {
+                int start = f * HOP;
+                for (int i = 0; i < FFT_SIZE; i++) {
+                    int idx = start + i;
+                    re[i] = idx < s.length ? s[idx] * window[i] : 0;
+                    im[i] = 0;
+                }
+                fft.transform(re, im);
+                for (int b = 0; b < bins; b++) {
+                    double mag = Math.sqrt(re[b] * re[b] + im[b] * im[b]) * invN * 2;
+                    double dB = 20 * Math.log10(Math.max(1e-9, mag));
+                    double t = (dB + 80) / 80.0;
+                    if (t < 0) t = 0; else if (t > 1) t = 1;
+                    img.setRGB(f, bins - 1 - b, viridis(t));
+                }
+            }
+            image = img;
+            repaint();
+        }
+        @Override protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            int w = getWidth(), h = getHeight();
+            if (image == null) {
+                g.setColor(Color.GRAY);
+                g.drawString("(no audio)", 8, 16);
+                return;
+            }
+            ((Graphics2D) g).drawImage(image, 0, 0, w, h, null);
+            // Axis hints.
+            g.setColor(new Color(200, 200, 220, 160));
+            g.drawString("0 Hz", 4, h - 4);
+            g.drawString("12 kHz", 4, 14);
+        }
+        // Viridis-ish colormap: dark purple → green → yellow.
+        private static int viridis(double t) {
+            // Two-stop palette: 0=#440154, 0.5=#21918c, 1=#fde725
+            double r, g, b;
+            if (t < 0.5) {
+                double u = t / 0.5;
+                r = lerp(0x44, 0x21, u);
+                g = lerp(0x01, 0x91, u);
+                b = lerp(0x54, 0x8c, u);
+            } else {
+                double u = (t - 0.5) / 0.5;
+                r = lerp(0x21, 0xfd, u);
+                g = lerp(0x91, 0xe7, u);
+                b = lerp(0x8c, 0x25, u);
+            }
+            return (((int) r) << 16) | (((int) g) << 8) | ((int) b);
+        }
+        private static double lerp(double a, double b, double t) { return a + (b - a) * t; }
+    }
+
+    /** Tiny radix-2 Cooley-Tukey FFT with pre-computed twiddle + bit-reverse tables. */
+    static class Fft {
+        final int n, log2n;
+        final double[] cosT, sinT;
+        final int[] rev;
+        Fft(int n) {
+            this.n = n;
+            log2n = (int) Math.round(Math.log(n) / Math.log(2));
+            cosT = new double[n / 2];
+            sinT = new double[n / 2];
+            for (int i = 0; i < n / 2; i++) {
+                cosT[i] = Math.cos(-2 * Math.PI * i / n);
+                sinT[i] = Math.sin(-2 * Math.PI * i / n);
+            }
+            rev = new int[n];
+            for (int i = 0; i < n; i++) {
+                int j = 0;
+                for (int k = 0; k < log2n; k++) j |= ((i >> k) & 1) << (log2n - 1 - k);
+                rev[i] = j;
+            }
+        }
+        void transform(double[] re, double[] im) {
+            for (int i = 0; i < n; i++) {
+                int j = rev[i];
+                if (i < j) {
+                    double t = re[i]; re[i] = re[j]; re[j] = t;
+                    t = im[i]; im[i] = im[j]; im[j] = t;
+                }
+            }
+            for (int size = 2; size <= n; size *= 2) {
+                int half = size / 2;
+                int step = n / size;
+                for (int i = 0; i < n; i += size) {
+                    int idx = 0;
+                    for (int j = i; j < i + half; j++) {
+                        double c = cosT[idx];
+                        double s = sinT[idx];
+                        double tre = re[j + half] * c - im[j + half] * s;
+                        double tim = re[j + half] * s + im[j + half] * c;
+                        re[j + half] = re[j] - tre;
+                        im[j + half] = im[j] - tim;
+                        re[j] += tre;
+                        im[j] += tim;
+                        idx += step;
+                    }
+                }
+            }
+        }
     }
 }
