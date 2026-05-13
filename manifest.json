@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-13T01:33:10.547Z",
+  "generatedAt": "2026-05-13T01:42:45.939Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -735,7 +735,7 @@
       "name": "Auto-Tune",
       "author": "Vocal Monitor",
       "category": "Pitch",
-      "description": "Pro-grade vocal pitch correction. YIN pitch detector (the algorithm Antares/Melodyne use for monophonic) tracks fundamental every ~6 ms with cents-accurate parabolic interpolation. Detected pitch is snapped to the nearest note in the chosen scale (chromatic / major / minor / harmonic / pentatonic), and a Hann-windowed granular shifter applies the correction with a smoothed retune time — instant 'Cher' snap at retune=0, natural pitch correction at higher settings. Voicing gate avoids destroying sibilants and breath; humanize adds ±cents random drift for natural feel.",
+      "description": "Pro-grade vocal pitch correction. YIN pitch detector + TD-PSOLA shifter + 16th-order LPC formant preservation with bandwidth expansion + Lanczos-3 windowed-sinc interpolation + 100 ms input lookahead + GCI grain snapping + vibrato preservation + adaptive retune + transient bypass. Preset slider (0=Custom · 1=Natural · 2=Pop · 3=Hard/Snap · 4=Cher · 5=Country · 6=Subtle) selects voicings; when 1-6, it overrides Retune/Humanize/Strength/Formant — Key, Scale and Mix stay user-set. Designed for offline / batch vocal processing; ~100 ms latency in exchange for quality.",
       "version": "1.0.0",
       "tags": [
         "pitch",
@@ -743,6 +743,8 @@
         "vocal",
         "correction",
         "yin",
+        "psola",
+        "lpc",
         "native"
       ],
       "engine": "native",

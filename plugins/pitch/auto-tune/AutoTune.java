@@ -206,6 +206,7 @@ public final class AutoTune implements VocalMonitorNativePlugin {
     // ============================================================
     //  Parameters
     // ============================================================
+    private float preset = 0f;    // 0 = Custom, 1..6 = built-in voicings
     private float key = 0f;
     private float scaleMode = 0f;
     private float retune = 0.3f;
@@ -213,6 +214,28 @@ public final class AutoTune implements VocalMonitorNativePlugin {
     private float strength = 1f;
     private float formant = 1f;   // 0 = off (chipmunk shifts), 1 = full preservation
     private float mix = 1f;
+
+    // Built-in preset values for retune / humanize / strength / formant.
+    // When `preset` parameter is set non-zero, these override the four
+    // individual sliders. Key, scale and mix stay user-controlled because
+    // they're project- / mixing-specific, not voicing choices.
+    //
+    //                       retune humanize strength formant
+    //   1. Natural          0.45   0.30     0.70     1.00   gentle pop, preserves performance
+    //   2. Pop              0.20   0.15     0.95     1.00   modern pop correction
+    //   3. Hard / Snap      0.00   0.00     1.00     0.80   T-Pain instant pitch snap
+    //   4. Cher             0.00   0.00     1.00     0.00   the original "Believe" chipmunk
+    //   5. Country          0.60   0.35     0.60     1.00   slow drift preserved, gentle
+    //   6. Subtle           0.70   0.40     0.40     1.00   barely there ride correction
+    private static final float[][] PRESETS = {
+        {  0,    0,    0,    0   }, // 0: Custom (unused, sentinel)
+        { 0.45f, 0.30f, 0.70f, 1.00f }, // Natural
+        { 0.20f, 0.15f, 0.95f, 1.00f }, // Pop
+        { 0.00f, 0.00f, 1.00f, 0.80f }, // Hard
+        { 0.00f, 0.00f, 1.00f, 0.00f }, // Cher
+        { 0.60f, 0.35f, 0.60f, 1.00f }, // Country
+        { 0.70f, 0.40f, 0.40f, 1.00f }, // Subtle
+    };
 
     private static final int[] SCALE_CHROMATIC = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
     private static final int[] SCALE_MAJOR     = { 0, 2, 4, 5, 7, 9, 11 };
@@ -313,18 +336,20 @@ public final class AutoTune implements VocalMonitorNativePlugin {
 
     @Override
     public String[] parameterNames() {
-        return new String[] { "key", "scale", "retune", "humanize", "strength", "formant", "mix" };
+        return new String[] { "preset", "key", "scale", "retune", "humanize", "strength", "formant", "mix" };
     }
     @Override public float parameterMin(String n) { return 0f; }
     @Override public float parameterMax(String n) {
         switch (n) {
-            case "key":   return 11f;
-            case "scale": return 5f;
-            default:      return 1f;
+            case "preset": return 6f;
+            case "key":    return 11f;
+            case "scale":  return 5f;
+            default:       return 1f;
         }
     }
     @Override public float parameterDefault(String n) {
         switch (n) {
+            case "preset":   return 0f;
             case "key":      return 0f;
             case "scale":    return 0f;
             case "retune":   return 0.3f;
@@ -337,6 +362,7 @@ public final class AutoTune implements VocalMonitorNativePlugin {
     }
     @Override public String parameterLabel(String n) {
         switch (n) {
+            case "preset":   return "Preset";
             case "key":      return "Key";
             case "scale":    return "Scale";
             case "retune":   return "Retune";
@@ -349,6 +375,7 @@ public final class AutoTune implements VocalMonitorNativePlugin {
     }
     @Override public void setParameter(String n, float v) {
         switch (n) {
+            case "preset":   preset = v; break;
             case "key":      key = v; break;
             case "scale":    scaleMode = v; break;
             case "retune":   retune = v; break;
@@ -702,13 +729,35 @@ public final class AutoTune implements VocalMonitorNativePlugin {
         final float[] rBuf = residualBuf;
         final int rBL = residualBufLen;
 
+        // --- Preset lookup ---
+        //
+        // If `preset` is non-zero (rounded to 1..6), override the
+        // user-set retune / humanize / strength / formant with the
+        // values baked into that preset. Key / scale / mix stay
+        // user-controlled because they depend on the song, not on
+        // the voicing choice.
+        final float effRetune, effHumanize, effStrength, effFormantParam;
+        int presetInt = (int) (preset + 0.5f);
+        if (presetInt >= 1 && presetInt < PRESETS.length) {
+            float[] p = PRESETS[presetInt];
+            effRetune       = p[0];
+            effHumanize     = p[1];
+            effStrength     = p[2];
+            effFormantParam = p[3];
+        } else {
+            effRetune       = retune;
+            effHumanize     = humanize;
+            effStrength     = strength;
+            effFormantParam = formant;
+        }
+
         // Smoothing time constants.
         // Adaptive retune: base time is `retune`-driven (1ms..400ms). When
         // pitch variance is high (singer mid-slide between notes), shrink
         // the time constant so the correction snaps on faster. When the
         // pitch is stable (sustained note), keep the base time so vibrato
         // and natural micro-variation aren't crushed.
-        final float retuneSec = 0.001f + retune * retune * 0.4f;
+        final float retuneSec = 0.001f + effRetune * effRetune * 0.4f;
         // Variance is in Hz²; for a typical 5 Hz / ±5 Hz vibrato it sits
         // around 12; for a note slide it can reach hundreds.
         final float varSpeedup = 1f / (1f + pitchVariance * 0.02f);
@@ -717,7 +766,7 @@ public final class AutoTune implements VocalMonitorNativePlugin {
         final float voiceOpen = 1f - (float) Math.exp(-1.0 / (sampleRate * 0.005));
         final float voiceClose = 1f - (float) Math.exp(-1.0 / (sampleRate * 0.060));
         final float humanCoef = 1f - (float) Math.exp(-1.0 / (sampleRate * 0.250));
-        final float humanMaxCents = humanize * 15f;
+        final float humanMaxCents = effHumanize * 15f;
         final float fastEnvCoef = 1f - (float) Math.exp(-1.0 / (sampleRate * 0.003));
         final float slowEnvCoef = 1f - (float) Math.exp(-1.0 / (sampleRate * 0.080));
         final float transOpenCoef = 1f - (float) Math.exp(-1.0 / (sampleRate * 0.001));
@@ -725,8 +774,8 @@ public final class AutoTune implements VocalMonitorNativePlugin {
         // Per-sample increment of LPC ramp position (so ramps complete
         // exactly in LPC_UPDATE_INTERVAL samples).
         final float lpcRampStep = 1f / LPC_UPDATE_INTERVAL;
-        final float formantLocal = formant;
-        final float strengthLocal = strength;
+        final float formantLocal = effFormantParam;
+        final float strengthLocal = effStrength;
         final float mixLocal = mix;
         final float dryMix = 1f - mixLocal;
 
