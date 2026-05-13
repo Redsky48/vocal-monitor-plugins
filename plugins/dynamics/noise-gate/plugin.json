@@ -12,5 +12,5 @@
   ],
   "engine": "native",
   "className": "com.vocalmonitor.plugin.community.NoiseGate",
-  "ui_kind": "canvas"
+  "icon": "🚪"
 }

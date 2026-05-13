@@ -6,5 +6,6 @@
   "description": "Restores hard-clipped peaks by detecting flat-top runs above threshold and bowing them outward via Hermite extrapolation from the neighbouring slopes. Recovers some of what the converter rail flattened. iZotope RX De-clip family.",
   "tags": ["restoration", "clipping", "repair", "native"],
   "engine": "native",
-  "className": "com.vocalmonitor.plugin.community.DeClipper"
+  "className": "com.vocalmonitor.plugin.community.DeClipper",
+  "icon": "🪚"
 }

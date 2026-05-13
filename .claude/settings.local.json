@@ -14,7 +14,12 @@
       "Bash(git add *)",
       "Bash(node scripts/test-autotune.mjs)",
       "Bash(git commit -m ' *)",
-      "Bash(node scripts/build-native.mjs auto-tune)"
+      "Bash(node scripts/build-native.mjs auto-tune)",
+      "Bash(java tools/test-app/RunTest.java --plugin auto-tune --params \"strength=0,formant=1,mix=1\")",
+      "Bash(java tools/test-app/RunTest.java)",
+      "Bash(xargs grep *)",
+      "Bash(javac -d /tmp/testapp-check -encoding utf-8 tools/test-app/TestApp.java)",
+      "Bash(git push *)"
     ]
   }
 }

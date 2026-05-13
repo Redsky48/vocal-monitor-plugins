@@ -2,10 +2,11 @@
   "id": "glow-meter",
   "name": "Glow Meter",
   "author": "Vocal Monitor",
-  "version": "1.0.0",
-  "description": "Reference example of a canvas-mode visual plugin. Pass-through audio (no DSP) plus a pulsing glow ring whose intensity tracks the input level. Use the source as a template for your own custom-drawn plugins.",
-  "tags": ["visual", "example", "native"],
+  "version": "1.1.0",
+  "description": "Circular spectrum visualiser. 48 Goertzel filters analyse the live mic input and paint a glowing aurora ring around a pulsing centre disc. Audio is pass-through; the visual always shows the mic regardless of where the plugin sits in the chain. Reference example of a canvas-mode plugin.",
+  "tags": ["visual", "spectrum", "example", "native"],
   "engine": "native",
   "className": "com.vocalmonitor.plugin.community.GlowMeter",
-  "ui_kind": "canvas"
+  "ui_kind": "canvas",
+  "streams": ["waveform"]
 }

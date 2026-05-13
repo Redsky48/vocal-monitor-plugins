@@ -6,5 +6,6 @@
   "description": "Dynamic high shelf that only kicks in above a configurable envelope threshold. Lifts vocal air (8–15 kHz) without amplifying the noise floor between phrases — same trick as iZotope Vocal Enhancer's presence band.",
   "tags": ["restoration", "vocal", "air", "shelf", "native"],
   "engine": "native",
-  "className": "com.vocalmonitor.plugin.community.AirEnhancer"
+  "className": "com.vocalmonitor.plugin.community.AirEnhancer",
+  "icon": "💨"
 }
