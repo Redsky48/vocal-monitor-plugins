@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-13T17:23:50.605Z",
+  "generatedAt": "2026-05-13T17:25:09.245Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -829,7 +829,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/pitch/auto-tune/auto-tune.dex",
-      "sizeBytes": 14296,
+      "sizeBytes": 14012,
       "className": "com.vocalmonitor.plugin.community.AutoTune",
       "presets": [
         {
