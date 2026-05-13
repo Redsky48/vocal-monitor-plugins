@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-13T11:28:59.758Z",
+  "generatedAt": "2026-05-13T14:02:01.210Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -967,24 +967,6 @@
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/air-enhancer/air-enhancer.dex",
       "sizeBytes": 3936,
       "className": "com.vocalmonitor.plugin.community.AirEnhancer"
-    },
-    {
-      "id": "click-suite",
-      "name": "Click Suite",
-      "author": "Vocal Monitor",
-      "category": "Restoration",
-      "description": "One-knob combo of De-clicker (linear predictor) + De-mouth (2.5 kHz BP ducker) + De-plosive (sidechain LF detector) in series. Drag intensity, get 80% of a manual three-plugin chain for one knob-turn.",
-      "version": "1.0.0",
-      "tags": [
-        "restoration",
-        "vocal",
-        "combo",
-        "native"
-      ],
-      "engine": "native",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/restoration/click-suite/click-suite.dex",
-      "sizeBytes": 5376,
-      "className": "com.vocalmonitor.plugin.community.ClickSuite"
     },
     {
       "id": "de-breath",

@@ -6,5 +6,6 @@
   "description": "One-knob combo of De-clicker (linear predictor) + De-mouth (2.5 kHz BP ducker) + De-plosive (sidechain LF detector) in series. Drag intensity, get 80% of a manual three-plugin chain for one knob-turn.",
   "tags": ["restoration", "vocal", "combo", "native"],
   "engine": "native",
-  "className": "com.vocalmonitor.plugin.community.ClickSuite"
+  "className": "com.vocalmonitor.plugin.community.ClickSuite",
+  "draft": true
 }

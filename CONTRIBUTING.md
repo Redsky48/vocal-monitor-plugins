@@ -47,6 +47,11 @@ copying that folder and substituting your id in the right places.
   "description": "What it sounds like and what it's good for.",
   "tags":        ["distortion", "fuzz"],  // optional, used for searching
 
+  // Optional: hide from the published manifest while iterating. Source
+  // stays in the repo and `npm run build:native` still compiles it, but
+  // the Android app won't see it. Remove (or set false) to publish.
+  "draft":       true,
+
   // Optional: factory presets — named bundles of param overrides shown
   // as chips in the app's edit-node card. See "Presets" section below.
   "presets": [

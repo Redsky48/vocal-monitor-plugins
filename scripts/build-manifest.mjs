@@ -58,6 +58,10 @@ async function readPlugin(categoryDir, pluginDir, cfg) {
   if (meta.id !== pluginDir) {
     throw new Error(`${categoryDir}/${pluginDir}/plugin.json: id "${meta.id}" must match folder name "${pluginDir}"`);
   }
+  // Drafts are work-in-progress: source stays in the repo so it can be
+  // iterated on, but the manifest hides them from the Android app.
+  // Flip `"draft": true` to publish.
+  if (meta.draft === true) return null;
   const engine = meta.engine ?? 'js';
   // File extension follows the engine: JS plugins ship a `.js` source,
   // native plugins ship a pre-compiled `.dex`. The app's installer
@@ -113,12 +117,15 @@ async function main() {
   const cfg = await repoConfig();
   const categories = (await listDir(PLUGINS_DIR)).sort();
   const plugins = [];
+  const drafts = [];
   let errors = 0;
   for (const cat of categories) {
     const names = (await listDir(join(PLUGINS_DIR, cat))).sort();
     for (const name of names) {
       try {
-        plugins.push(await readPlugin(cat, name, cfg));
+        const entry = await readPlugin(cat, name, cfg);
+        if (entry === null) drafts.push(`${cat}/${name}`);
+        else plugins.push(entry);
       } catch (e) {
         console.error(`  ✗ ${e.message}`);
         errors++;
@@ -137,6 +144,9 @@ async function main() {
   };
   await writeFile(join(ROOT, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
   console.log(`Wrote manifest.json with ${plugins.length} plugins from ${categories.length} categories.`);
+  if (drafts.length > 0) {
+    console.log(`Skipped ${drafts.length} draft(s): ${drafts.join(', ')}`);
+  }
   console.log(`Source base: https://raw.githubusercontent.com/${cfg.repository}/${cfg.branch}/`);
 }
 
