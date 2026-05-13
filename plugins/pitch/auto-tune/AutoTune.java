@@ -6,76 +6,92 @@ import com.vocalmonitor.plugin.VocalMonitorNativePlugin;
 // wired in series:
 //
 //   1. YIN pitch detector  — the published de Cheveigné/Kawahara
-//      algorithm that Antares Auto-Tune and Melodyne use for the
-//      monophonic case. Operates on a 1024-sample sliding window;
-//      cumulative-mean-normalized difference function makes it
-//      octave-robust where plain autocorrelation fails. Parabolic
-//      interpolation around the minimum gives cents-accurate sub-sample
-//      period estimates. Runs every 256 samples → ~170 Hz update rate
-//      at 44.1 kHz, fast enough to track vibrato.
+//      cumulative-mean-normalised-difference algorithm. Operates on a
+//      sliding 1024-sample window, runs every 256 samples (~170 Hz
+//      update rate at 44.1 kHz), with parabolic interpolation around
+//      the CMND minimum for cents-accurate sub-sample period estimates.
 //
 //   2. Scale quantiser     — converts detected freq to MIDI cents,
 //      finds the nearest pitch in the chosen scale (chromatic, major,
-//      minor, harmonic minor, pentatonic), returns target freq.
+//      minor, harmonic minor, pentatonic), returns target ratio.
 //
-//   3. Granular pitch shift — two crossfaded Hann-windowed grains read
-//      at the (smoothed) correction ratio. Same family of pitch shift
-//      as our PitchShifter plugin, but with a tight grain (~40 ms) and
-//      a one-pole retune-time IIR on the ratio so the correction can be
-//      anywhere from "Cher robotic instant snap" (retune=0) to "natural
-//      sub-percent drift correction" (retune=1).
+//   3. TD-PSOLA pitch shift — Time-Domain Pitch-Synchronous Overlap-Add.
+//      Unlike fixed-size granular shifters (which average out the pitch
+//      shift over long times because grain wraps undo it), PSOLA uses
+//      grains exactly ONE PITCH PERIOD long. Adjacent pitch periods of
+//      a voiced signal are nearly identical, so when a grain wraps and
+//      "repeats" a previous source period, the wrap is inaudible. The
+//      shift is preserved over long time and shows up correctly in
+//      spectral analysis — exactly the technique Antares Auto-Tune and
+//      Melodyne use for the monophonic case.
 //
 // Voicing gate: when YIN's CMND minimum exceeds the threshold the input
-// is treated as unpitched (consonant, breath, transient) and we
-// crossfade smoothly back to dry. Without this gate, sibilants come out
-// as eerie pitched artefacts.
+// is unpitched (consonant, breath, transient) — we fall back to dry so
+// sibilants and breath don't become eerie pitched artefacts.
 //
-// Humanize: a slow random walk adds ±cents drift to prevent the dead-
-// flat sound that pure pitch quantisation produces. At humanize=0 the
-// correction is mathematically exact; at humanize=1 you get natural
-// micro-variation around the target.
+// Humanize: a slow random walk adds ±cents drift so corrected pitches
+// don't sit dead-flat. At humanize=0 the correction is mathematically
+// exact; at humanize=1 micro-variation matches a natural performance.
 
 public final class AutoTune implements VocalMonitorNativePlugin {
 
     // --- Analysis (YIN) ---
-    private static final int ANALYSIS_SIZE = 1024;   // 23 ms at 44.1k
-    private static final int LAG_MIN = 32;           // 1378 Hz at 44.1k
-    private static final int LAG_MAX = 512;          // 86 Hz at 44.1k
+    private static final int ANALYSIS_SIZE = 1024;
+    private static final int LAG_MIN = 32;
+    private static final int LAG_MAX = 512;
     private static final int ANALYSIS_INTERVAL = 256;
     private static final float YIN_THRESHOLD = 0.15f;
 
     private final float[] analysisBuf = new float[ANALYSIS_SIZE];
-    private final float[] yinBuf = new float[ANALYSIS_SIZE];     // chronological copy
+    private final float[] yinBuf = new float[ANALYSIS_SIZE];
     private final float[] yinD = new float[LAG_MAX + 2];
     private final float[] yinCMND = new float[LAG_MAX + 2];
     private int analysisWrite = 0;
 
     // --- Pitch state ---
     private float detectedFreq = 220f;
-    private float voicingConfidence = 0f;   // 0..1 — high means confidently pitched
+    private float detectedPeriod = 200f;
+    private float voicingConfidence = 0f;
     private float targetRatio = 1f;
     private float currentRatio = 1f;
-    private float voicingGate = 0f;         // smoothed dry/wet for the correction path
-    private float humanizeState = 0f;       // random walk
+    private float voicingGate = 0f;
+    private float humanizeState = 0f;
 
-    // --- Granular pitch shift ---
-    private float[] grainBuf;
-    private int grainBufLen;
-    private int grainWrite = 0;
-    private int grainSize;
-    private int grainPhase = 0;
-    private float[] hann;
+    // --- PSOLA grain state ---
+    // Two voices, each emitting Hann-windowed source pitch periods at
+    // staggered times. Each voice has its OWN current source-period
+    // anchor and output-period-phase counter.
+    private float[] srcBuf;
+    private int srcBufLen;
+    private int srcWrite = 0;
+    // Floating-point source position trackers. Per output sample they
+    // advance by the current `ratio`. When they get within one period
+    // of the write head, they snap back by one source period (the only
+    // place wraps happen — pitch-synchronous, so inaudible for voiced
+    // material).
+    private float voiceA_srcPos;
+    private float voiceB_srcPos;
+    // Output-phase counters: 0..outputPeriodLen, reset on wrap.
+    private int voiceA_phase;
+    private int voiceB_phase;
+    // Output period length captured at start of each grain (so we don't
+    // mid-period drift the envelope).
+    private int voiceA_outLen;
+    private int voiceB_outLen;
+    // Source period captured at start of each grain (for fractional read).
+    private float voiceA_srcLen;
+    private float voiceB_srcLen;
 
     private int sampleRate = 44100;
     private int samplesSinceAnalysis = 0;
     private long noiseSeed = 1;
 
     // --- Parameters ---
-    private float key = 0f;        // 0=C..11=B
-    private float scaleMode = 0f;  // 0=Chromatic 1=Major 2=Minor 3=Harm Minor 4=Pent Maj 5=Pent Min
-    private float retune = 0.3f;   // 0=instant 1=natural
+    private float key = 0f;
+    private float scaleMode = 0f;
+    private float retune = 0.3f;
     private float humanize = 0.15f;
-    private float strength = 1f;   // 0=dry only 1=full correction
+    private float strength = 1f;
     private float mix = 1f;
 
     private static final int[] SCALE_CHROMATIC = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
@@ -92,20 +108,24 @@ public final class AutoTune implements VocalMonitorNativePlugin {
         for (int i = 0; i < ANALYSIS_SIZE; i++) analysisBuf[i] = 0f;
         for (int i = 0; i < yinD.length; i++) { yinD[i] = 0f; yinCMND[i] = 0f; }
 
-        // 40 ms grain — short enough that pitch shifts stay snappy, long
-        // enough that low fundamentals get represented faithfully.
-        grainSize = Math.max(64, (int) (sr * 0.04));
-        // 3× headroom — covers ratios up to ~2.5 (about a tenth) safely.
-        grainBufLen = grainSize * 3;
-        grainBuf = new float[grainBufLen];
-        grainWrite = 0;
-        grainPhase = 0;
-        hann = new float[grainSize];
-        for (int i = 0; i < grainSize; i++) {
-            hann[i] = (float) (0.5 - 0.5 * Math.cos(2.0 * Math.PI * i / grainSize));
-        }
+        // ~1 sec of buffer holds plenty of past pitch periods for any
+        // adult vocal range (50–1200 Hz).
+        srcBufLen = sr;
+        srcBuf = new float[srcBufLen];
+        srcWrite = 0;
+        // Stagger the two voices by ~half a default period so their
+        // envelopes are complementary at startup.
+        voiceA_srcPos = srcBufLen - 200f;   // 200 samples behind write
+        voiceB_srcPos = srcBufLen - 300f;
+        voiceA_phase = 0;
+        voiceB_phase = 100;
+        voiceA_outLen = 200;
+        voiceB_outLen = 200;
+        voiceA_srcLen = 200f;
+        voiceB_srcLen = 200f;
 
         detectedFreq = 220f;
+        detectedPeriod = sr / 220f;
         voicingConfidence = 0f;
         targetRatio = 1f;
         currentRatio = 1f;
@@ -163,15 +183,7 @@ public final class AutoTune implements VocalMonitorNativePlugin {
     // ---------------------------------------------------------------
     // YIN pitch detection
     // ---------------------------------------------------------------
-    //
-    // Returns detected fundamental frequency in Hz, or -1 if unvoiced.
-    // Side effect: writes voicingConfidence in [0,1].
     private float yinDetect() {
-        // 1. Materialise the most recent ANALYSIS_SIZE samples in
-        //    chronological order. The ring buffer's `analysisWrite`
-        //    points at the slot for the NEXT write, so the oldest sample
-        //    is at index `analysisWrite` and the newest at
-        //    `(analysisWrite - 1 + N) % N`.
         final float[] aBuf = analysisBuf;
         final float[] yBuf = yinBuf;
         final int aw = analysisWrite;
@@ -180,10 +192,6 @@ public final class AutoTune implements VocalMonitorNativePlugin {
             if (idx >= ANALYSIS_SIZE) idx -= ANALYSIS_SIZE;
             yBuf[k] = aBuf[idx];
         }
-
-        // 2. Difference function d(τ) = Σ (x[n] - x[n+τ])² over the
-        //    first half of the window. Half-window so the lag plus the
-        //    index stays inside the buffer.
         final int halfSize = ANALYSIS_SIZE / 2;
         final int maxLag = Math.min(halfSize, LAG_MAX);
         final float[] d = yinD;
@@ -195,29 +203,14 @@ public final class AutoTune implements VocalMonitorNativePlugin {
             }
             d[tau] = sum;
         }
-
-        // 3. Cumulative mean normalised difference. This is the trick
-        //    that makes YIN octave-robust: at the true period, d(τ) is
-        //    small AND the running average up to that point is large,
-        //    so d'(τ) dips well below 1. At octave multiples it's still
-        //    small but the running average is even smaller, so d'(τ)
-        //    stays close to 1 — no spurious lock to harmonics.
         final float[] cmnd = yinCMND;
         cmnd[0] = 1f;
         float runningSum = 0f;
         for (int tau = 1; tau <= maxLag; tau++) {
             runningSum += d[tau];
-            if (runningSum > 1e-12f) {
-                cmnd[tau] = d[tau] * tau / runningSum;
-            } else {
-                cmnd[tau] = 1f;
-            }
+            if (runningSum > 1e-12f) cmnd[tau] = d[tau] * tau / runningSum;
+            else                      cmnd[tau] = 1f;
         }
-
-        // 4. Absolute-threshold step: scan for the first τ ≥ LAG_MIN
-        //    where CMND drops below the threshold, then walk forward as
-        //    long as the value keeps decreasing — that locates the true
-        //    local minimum (not just the threshold crossing).
         int chosenTau = -1;
         for (int tau = LAG_MIN; tau < maxLag - 1; tau++) {
             if (cmnd[tau] < YIN_THRESHOLD) {
@@ -226,9 +219,6 @@ public final class AutoTune implements VocalMonitorNativePlugin {
                 break;
             }
         }
-
-        // If no τ broke the threshold, pick the global minimum's depth
-        // as a confidence number and report unvoiced.
         if (chosenTau < 0) {
             float minVal = 1f;
             for (int tau = LAG_MIN; tau < maxLag; tau++) {
@@ -238,10 +228,6 @@ public final class AutoTune implements VocalMonitorNativePlugin {
             if (voicingConfidence < 0f) voicingConfidence = 0f;
             return -1f;
         }
-
-        // 5. Parabolic interpolation around chosenTau to refine the
-        //    period to fractional samples. Without this, detection
-        //    quantises to ±50 cents around 220 Hz at 44.1 kHz — audible.
         float refined = chosenTau;
         if (chosenTau > 0 && chosenTau < maxLag) {
             float y1 = cmnd[chosenTau - 1];
@@ -253,20 +239,15 @@ public final class AutoTune implements VocalMonitorNativePlugin {
                 if (adj > -1f && adj < 1f) refined += adj;
             }
         }
-
-        // Confidence: how deep the minimum dropped. 0 = no dip, 1 = total.
         voicingConfidence = 1f - cmnd[chosenTau];
         if (voicingConfidence < 0f) voicingConfidence = 0f;
-
+        detectedPeriod = refined;
         return sampleRate / refined;
     }
 
     // ---------------------------------------------------------------
     // Scale quantiser
     // ---------------------------------------------------------------
-    //
-    // Given a detected frequency, find the nearest pitch in the
-    // configured scale and return the corresponding target frequency.
     private float snapToScale(float freq) {
         if (freq <= 0f) return freq;
         int[] scaleTable;
@@ -281,15 +262,10 @@ public final class AutoTune implements VocalMonitorNativePlugin {
         }
         int rootKey = ((int) Math.floor(key)) % 12;
         if (rootKey < 0) rootKey += 12;
-
-        // Convert to MIDI semis (A4 = 69 = 440 Hz).
         double semis = 12.0 * Math.log(freq / 440.0) / Math.log(2.0) + 69.0;
-        // Find nearest scale degree to the fractional MIDI value.
         int nearestSemi = (int) Math.round(semis);
         double bestDist = 1e9;
         int bestSemi = nearestSemi;
-        // Search nearest-3-semitones in each direction so we catch
-        // diatonic gaps (e.g. between B and C in major, only a semi apart).
         for (int trySemi = nearestSemi - 3; trySemi <= nearestSemi + 3; trySemi++) {
             int relToKey = ((trySemi - rootKey) % 12 + 12) % 12;
             boolean inScale = false;
@@ -304,10 +280,37 @@ public final class AutoTune implements VocalMonitorNativePlugin {
     }
 
     private float nextRandom() {
-        // LCG noise — deterministic, fast.
         noiseSeed = noiseSeed * 1664525L + 1013904223L;
         long u = noiseSeed & 0xFFFFFFFFL;
         return ((float) u / 2147483648f) - 1f;
+    }
+
+    // Read source buffer at a fractional position (with linear interp + wrap).
+    private float srcRead(float pos) {
+        while (pos < 0) pos += srcBufLen;
+        while (pos >= srcBufLen) pos -= srcBufLen;
+        int i0 = (int) pos;
+        float f = pos - i0;
+        int i1 = i0 + 1; if (i1 >= srcBufLen) i1 = 0;
+        return srcBuf[i0] * (1f - f) + srcBuf[i1] * f;
+    }
+
+    // Snap source pointer back if it's within `safeMargin` of the live
+    // write head — that's the pitch-synchronous wrap.
+    private float wrapIfClose(float srcPos, float srcLen) {
+        // Compute "distance from srcPos forward to srcWrite" in the
+        // circular sense, ≤ srcBufLen.
+        float dist = srcWrite - srcPos;
+        while (dist < 0) dist += srcBufLen;
+        while (dist >= srcBufLen) dist -= srcBufLen;
+        // We want the pointer to stay at least one period behind the
+        // write head. If it has caught up to within `srcLen` samples,
+        // jump back by exactly one source period.
+        if (dist < srcLen) {
+            srcPos -= srcLen;
+            while (srcPos < 0) srcPos += srcBufLen;
+        }
+        return srcPos;
     }
 
     // ---------------------------------------------------------------
@@ -317,118 +320,144 @@ public final class AutoTune implements VocalMonitorNativePlugin {
     public void process(float[] input, float[] output) {
         final int n = input.length;
         final float[] aBuf = analysisBuf;
-        final float[] gBuf = grainBuf;
-        final float[] hLut = hann;
-        final int gs = grainSize;
-        final int halfGs = gs / 2;
-        final int gBL = grainBufLen;
+        final float[] sBuf = srcBuf;
+        final int sBL = srcBufLen;
 
-        // Smoothing time constants.
-        // Retune 0..1 → 1 ms..400 ms exponential ratio chase time.
         final float retuneSec = 0.001f + retune * retune * 0.4f;
         final float ratioCoef = 1f - (float) Math.exp(-1.0 / Math.max(1, sampleRate * retuneSec));
-        // Voicing gate: 5 ms attack to open, 60 ms release to close —
-        // bias toward opening (start correcting fast) and closing slowly
-        // (don't snap dry on a brief unvoiced moment mid-syllable).
         final float voiceOpen = 1f - (float) Math.exp(-1.0 / (sampleRate * 0.005));
         final float voiceClose = 1f - (float) Math.exp(-1.0 / (sampleRate * 0.060));
-        // Humanize: slow random walk drifting ±N cents.
         final float humanCoef = 1f - (float) Math.exp(-1.0 / (sampleRate * 0.250));
-        // Max drift in cents → ratio. ±15 cents at humanize=1.
         final float humanMaxCents = humanize * 15f;
         final float strengthLocal = strength;
         final float mixLocal = mix;
         final float dryMix = 1f - mixLocal;
 
         int aw = analysisWrite;
-        int gw = grainWrite;
-        int gp = grainPhase;
+        int sw = srcWrite;
         int ssa = samplesSinceAnalysis;
         float currentR = currentRatio;
         float targetR = targetRatio;
         float voiceG = voicingGate;
         float humState = humanizeState;
+        float vAsrc = voiceA_srcPos, vBsrc = voiceB_srcPos;
+        int vAphase = voiceA_phase, vBphase = voiceB_phase;
+        int vAoutLen = voiceA_outLen, vBoutLen = voiceB_outLen;
+        float vAsrcLen = voiceA_srcLen, vBsrcLen = voiceB_srcLen;
 
         for (int i = 0; i < n; i++) {
             float x = input[i];
 
-            // Fill both buffers in lock-step.
             aBuf[aw] = x;
             aw++; if (aw >= ANALYSIS_SIZE) aw = 0;
-            gBuf[gw] = x;
-            gw++; if (gw >= gBL) gw = 0;
+            sBuf[sw] = x;
+            sw++; if (sw >= sBL) sw = 0;
 
             ssa++;
             if (ssa >= ANALYSIS_INTERVAL) {
                 ssa = 0;
-                // Sync the ring-buffer pointer into the field so yinDetect()
-                // can read it; restore the local copy after.
                 analysisWrite = aw;
+                srcWrite = sw;
                 float f0 = yinDetect();
                 if (f0 > 50f && f0 < 2000f) {
                     detectedFreq = f0;
                     float tgt = snapToScale(f0);
                     targetR = tgt / f0;
                 } else {
-                    // Unvoiced — keep targetR ramping back toward 1.0
-                    // so when voicing returns the correction starts from
-                    // unity rather than a stale aggressive ratio.
                     targetR = targetR + 0.5f * (1f - targetR);
                 }
             }
 
-            // Voicing gate target — confidence-driven. 0.3 is a safe
-            // floor; below that, sibilants and breath would otherwise
-            // be "corrected" with audible weirdness.
+            // Voicing gate. Below confidence threshold (sibilants/breath)
+            // we crossfade back to dry to avoid eerie pitched artefacts.
             float voiceTarget = voicingConfidence > 0.3f ? 1f : 0f;
             float vCoef = voiceTarget > voiceG ? voiceOpen : voiceClose;
             voiceG = voiceG + vCoef * (voiceTarget - voiceG);
 
-            // Humanize: random walk in cents, smoothed.
+            // Humanize: smoothed random walk in cents → ratio multiplier.
             float humTargetCents = nextRandom() * humanMaxCents;
             humState = humState + humanCoef * (humTargetCents - humState);
             float humanFactor = (float) Math.pow(2.0, humState / 1200.0);
 
-            // Smooth current ratio toward target, weighted by strength.
-            // Strength = 0 → no correction (ratio always 1); strength = 1
-            // → full snap to target.
+            // Smooth current correction ratio toward target, scaled by
+            // strength (0=bypass, 1=full snap).
             float effectiveTarget = 1f + (targetR - 1f) * strengthLocal;
             currentR = currentR + ratioCoef * (effectiveTarget - currentR);
             float playRatio = currentR * humanFactor;
+            if (playRatio < 0.5f) playRatio = 0.5f;
+            if (playRatio > 2.0f) playRatio = 2.0f;
 
-            // Granular pitch shift with two crossfaded Hann grains.
-            int pA = gp;
-            int pB = pA + halfGs;
-            if (pB >= gs) pB -= gs;
-            float rA = gw - gs * playRatio + pA * playRatio;
-            float rB = gw - gs * playRatio + pB * playRatio;
-            while (rA < 0) rA += gBL;
-            while (rA >= gBL) rA -= gBL;
-            while (rB < 0) rB += gBL;
-            while (rB >= gBL) rB -= gBL;
-            int iA = (int) rA; float fA = rA - iA;
-            int jA = iA + 1; if (jA >= gBL) jA = 0;
-            int iB = (int) rB; float fB = rB - iB;
-            int jB = iB + 1; if (jB >= gBL) jB = 0;
-            float sA = gBuf[iA] * (1f - fA) + gBuf[jA] * fA;
-            float sB = gBuf[iB] * (1f - fB) + gBuf[jB] * fB;
-            float corrected = sA * hLut[pA] + sB * hLut[pB];
+            // --- TD-PSOLA grain emission ---
+            //
+            // Each voice emits a Hann-windowed source pitch period over
+            // its output-period worth of samples. At end of period it
+            // resets and grabs the NEXT source pitch period (advance
+            // source pointer by T_in).
+            //
+            // Source period T_in is the YIN-detected period; output
+            // period T_out = T_in / ratio. The within-grain source-time
+            // advance rate = T_in / T_out = ratio, so the listener hears
+            // the shifted pitch. Across grain wraps, source pointer
+            // advances by EXACTLY ONE PERIOD — invisible for periodic
+            // material.
+            float T_in = detectedPeriod;
+            if (T_in < 16f) T_in = 16f;
+            if (T_in > 1000f) T_in = 1000f;
 
-            gp++; if (gp >= gs) gp = 0;
+            // --- Voice A ---
+            if (vAphase >= vAoutLen) {
+                vAphase = 0;
+                vAsrcLen = T_in;
+                vAoutLen = (int) Math.max(8, Math.round(T_in / playRatio));
+                // Source pointer advances by one PERIOD per output period.
+                // Net: source advances `T_in` over `T_out = T_in/ratio`
+                // output samples → average source rate = ratio.
+                vAsrc = vAsrc + vAsrcLen;
+                while (vAsrc >= sBL) vAsrc -= sBL;
+                while (vAsrc < 0) vAsrc += sBL;
+                vAsrc = wrapIfClose(vAsrc, vAsrcLen);
+            }
+            // Read from source at fractional offset into the period.
+            float fracA = (float) vAphase / (float) vAoutLen;
+            float srcOffsetA = fracA * vAsrcLen;
+            float sA = srcRead(vAsrc + srcOffsetA);
+            float envA = 0.5f - 0.5f * (float) Math.cos(2.0 * Math.PI * fracA);
+            vAphase++;
 
-            // Crossfade between dry and corrected by voicing gate so that
-            // unvoiced regions (sibilants, breath) pass through as-is.
+            // --- Voice B ---
+            if (vBphase >= vBoutLen) {
+                vBphase = 0;
+                vBsrcLen = T_in;
+                vBoutLen = (int) Math.max(8, Math.round(T_in / playRatio));
+                vBsrc = vBsrc + vBsrcLen;
+                while (vBsrc >= sBL) vBsrc -= sBL;
+                while (vBsrc < 0) vBsrc += sBL;
+                vBsrc = wrapIfClose(vBsrc, vBsrcLen);
+            }
+            float fracB = (float) vBphase / (float) vBoutLen;
+            float srcOffsetB = fracB * vBsrcLen;
+            float sB = srcRead(vBsrc + srcOffsetB);
+            float envB = 0.5f - 0.5f * (float) Math.cos(2.0 * Math.PI * fracB);
+            vBphase++;
+
+            // Sum the two voices (Hann envelopes sum near 1 when staggered
+            // by half a period).
+            float corrected = sA * envA + sB * envB;
+
             float wet = x * (1f - voiceG) + corrected * voiceG;
             output[i] = x * dryMix + wet * mixLocal;
         }
 
         analysisWrite = aw;
-        grainWrite = gw;
-        grainPhase = gp;
+        srcWrite = sw;
         samplesSinceAnalysis = ssa;
         currentRatio = currentR;
         targetRatio = targetR;
         voicingGate = voiceG;
         humanizeState = humState;
+        voiceA_srcPos = vAsrc; voiceB_srcPos = vBsrc;
+        voiceA_phase = vAphase; voiceB_phase = vBphase;
+        voiceA_outLen = vAoutLen; voiceB_outLen = vBoutLen;
+        voiceA_srcLen = vAsrcLen; voiceB_srcLen = vBsrcLen;
     }
 }

@@ -1,9 +1,9 @@
-// Smoke-test AutoTune.java by compiling it against the stub interface,
-// loading it via the JVM (running through the `java` CLI with a tiny
-// driver program written next to it), feeding it a known sine, and
-// asserting that the YIN pitch detector finds the correct frequency and
-// the output stays bounded.
-import { writeFile, readFile, mkdir, rm } from 'node:fs/promises';
+// Smoke-test AutoTune.java by compiling against the stub interface,
+// running it through the JVM (via a small Java driver), feeding it a
+// known sine, and verifying that the OUTPUT pitch matches the expected
+// snap target via a DFT peak sweep — the only test that catches the
+// kind of formula bugs that level-only tests would silently pass.
+import { writeFile, mkdir, rm } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -20,96 +20,162 @@ await rm(BUILD, { recursive: true, force: true });
 await mkdir(BUILD, { recursive: true });
 
 const driver = `
-import com.vocalmonitor.plugin.VocalMonitorNativePlugin;
 import com.vocalmonitor.plugin.community.AutoTune;
 
 public class TestDriver {
-  public static void main(String[] args) {
-    AutoTune at = new AutoTune();
-    int sr = 44100;
-    at.init(sr);
-    at.setParameter("key", 0);
-    at.setParameter("scale", 0);   // chromatic
-    at.setParameter("retune", 0.1f);
-    at.setParameter("humanize", 0f);
-    at.setParameter("strength", 1f);
-    at.setParameter("mix", 1f);
+  static final int SR = 44100;
+  static final int BLOCK = 1024;
 
-    // Generate 0.6 s of 442 Hz (just-flat-of-A) and run it block-by-block.
-    int totalSamples = (int)(sr * 0.6);
-    int blockSize = 1024;
-    float maxAbs = 0;
-    boolean hasNaN = false;
-    float[] block = new float[blockSize];
-    float[] out = new float[blockSize];
+  // Single-frequency DFT bin power: |Σ x[n] · e^(-2πi·f·n/sr)|². Sweep
+  // frequencies, return the one with the highest power. Robust against
+  // amplitude modulation that confuses time-domain autocorrelation.
+  static float dftPeakFreq(float[] data, int len, float fMin, float fMax) {
+    float bestPower = -1, bestF = fMin;
+    float step = 0.25f;
+    for (float f = fMin; f <= fMax; f += step) {
+      float re = 0, im = 0;
+      float w = (float)(2 * Math.PI * f / SR);
+      for (int i = 0; i < len; i++) {
+        re += data[i] * (float)Math.cos(w * i);
+        im -= data[i] * (float)Math.sin(w * i);
+      }
+      float power = re*re + im*im;
+      if (power > bestPower) { bestPower = power; bestF = f; }
+    }
+    return bestF;
+  }
+
+  static float[] render(float inputFreq, float key, float scale, float retune,
+                        float strength, float mix, float humanize) {
+    AutoTune at = new AutoTune();
+    at.init(SR);
+    at.setParameter("key", key);
+    at.setParameter("scale", scale);
+    at.setParameter("retune", retune);
+    at.setParameter("strength", strength);
+    at.setParameter("mix", mix);
+    at.setParameter("humanize", humanize);
+    int totalBlocks = 100;
+    float[] block = new float[BLOCK];
+    float[] out = new float[BLOCK];
+    float[] tail = new float[BLOCK * 16];
+    int tailWrite = 0;
     int sampleCount = 0;
-    for (int b = 0; sampleCount < totalSamples; b++) {
-      for (int i = 0; i < blockSize; i++) {
-        block[i] = (float)(0.3 * Math.sin(2 * Math.PI * 442.0 * (sampleCount + i) / sr));
-        out[i] = 0;
+    for (int b = 0; b < totalBlocks; b++) {
+      for (int i = 0; i < BLOCK; i++) {
+        block[i] = (float)(0.4 * Math.sin(2 * Math.PI * inputFreq * (sampleCount + i) / SR));
       }
       at.process(block, out);
-      sampleCount += blockSize;
-      for (int i = 0; i < blockSize; i++) {
-        float v = out[i];
-        if (Float.isNaN(v) || Float.isInfinite(v)) hasNaN = true;
-        float a = v < 0 ? -v : v;
-        if (a > maxAbs) maxAbs = a;
+      sampleCount += BLOCK;
+      for (int i = 0; i < BLOCK; i++) {
+        tail[tailWrite] = out[i];
+        tailWrite = (tailWrite + 1) % tail.length;
+        if (Float.isNaN(out[i]) || Float.isInfinite(out[i])) {
+          throw new RuntimeException("NaN/Inf at sample " + sampleCount);
+        }
       }
     }
-    System.out.printf("442 Hz in, chromatic snap → output max=%.3f, NaN=%s%n", maxAbs, hasNaN);
-    if (hasNaN) System.exit(1);
-    if (maxAbs > 5.0f) { System.out.println("Output too hot — likely runaway"); System.exit(1); }
-    if (maxAbs < 0.05f) { System.out.println("Output suspiciously quiet"); System.exit(1); }
+    float[] ordered = new float[tail.length];
+    for (int i = 0; i < tail.length; i++) ordered[i] = tail[(tailWrite + i) % tail.length];
+    return ordered;
+  }
 
-    // Test 2: 220 Hz with chromatic snap should produce nearly unity ratio
-    // (A3 is already on the chromatic grid).
-    AutoTune at2 = new AutoTune();
-    at2.init(sr);
-    at2.setParameter("strength", 1f);
-    at2.setParameter("retune", 0.0f);
-    at2.setParameter("mix", 1f);
-    float maxAbs2 = 0;
-    for (int b = 0; b < 30; b++) {
-      for (int i = 0; i < blockSize; i++) {
-        block[i] = (float)(0.3 * Math.sin(2 * Math.PI * 220.0 * (b*blockSize + i) / sr));
-      }
-      at2.process(block, out);
-      for (int i = 0; i < blockSize; i++) {
-        float a = out[i] < 0 ? -out[i] : out[i];
-        if (a > maxAbs2) maxAbs2 = a;
-      }
+  public static void main(String[] args) {
+    int passed = 0, failed = 0;
+
+    // ---- Test 1: 220 Hz in, chromatic snap. A3 on grid → expect 220.
+    {
+      float[] tail = render(220f, 0, 0, 0.0f, 1, 1, 0);
+      float f = dftPeakFreq(tail, tail.length, 180f, 280f);
+      double cents = 1200 * Math.log(f / 220.0) / Math.log(2);
+      boolean ok = Math.abs(cents) < 30;
+      System.out.printf("%s 220 Hz → chromatic snap → %.2f Hz (%+.0f cents)%n",
+          ok ? "PASS" : "FAIL", f, cents);
+      if (ok) passed++; else failed++;
     }
-    System.out.printf("220 Hz in (A3 = on-grid) → output max=%.3f%n", maxAbs2);
 
-    // Test 3: silence in should yield silence out (mostly).
-    AutoTune at3 = new AutoTune();
-    at3.init(sr);
-    at3.setParameter("strength", 1f);
-    at3.setParameter("mix", 1f);
-    float maxAbs3 = 0;
-    for (int b = 0; b < 20; b++) {
-      for (int i = 0; i < blockSize; i++) block[i] = 0f;
-      at3.process(block, out);
-      for (int i = 0; i < blockSize; i++) {
-        float a = out[i] < 0 ? -out[i] : out[i];
-        if (a > maxAbs3) maxAbs3 = a;
-      }
+    // ---- Test 2: 442 Hz in, chromatic snap → expect 440 (A4 on grid).
+    {
+      float[] tail = render(442f, 0, 0, 0.0f, 1, 1, 0);
+      float f = dftPeakFreq(tail, tail.length, 380f, 480f);
+      double cents = 1200 * Math.log(f / 440.0) / Math.log(2);
+      boolean ok = Math.abs(cents) < 30;
+      System.out.printf("%s 442 Hz → chromatic snap → %.2f Hz (%+.0f cents from 440)%n",
+          ok ? "PASS" : "FAIL", f, cents);
+      if (ok) passed++; else failed++;
     }
-    System.out.printf("silence in → output max=%.6f%n", maxAbs3);
-    if (maxAbs3 > 0.01f) { System.out.println("Silence input produced non-silence — bug"); System.exit(1); }
 
-    System.out.println("All smoke tests passed.");
+    // ---- Test 3: 240 Hz → C-major snap → expect B3 (246.94).
+    {
+      float[] tail = render(240f, 0, 1, 0.0f, 1, 1, 0);
+      float f = dftPeakFreq(tail, tail.length, 200f, 290f);
+      double cents = 1200 * Math.log(f / 246.94) / Math.log(2);
+      boolean ok = Math.abs(cents) < 50;
+      System.out.printf("%s 240 Hz → C-major snap → %.2f Hz (%+.0f cents from B3)%n",
+          ok ? "PASS" : "FAIL", f, cents);
+      if (ok) passed++; else failed++;
+    }
+
+    // ---- Test 4: silence in → silence out.
+    {
+      AutoTune at = new AutoTune();
+      at.init(SR);
+      at.setParameter("strength", 1f);
+      at.setParameter("mix", 1f);
+      float[] block = new float[BLOCK];
+      float[] out = new float[BLOCK];
+      float maxOut = 0;
+      for (int b = 0; b < 30; b++) {
+        for (int i = 0; i < BLOCK; i++) block[i] = 0;
+        at.process(block, out);
+        for (int i = 0; i < BLOCK; i++) {
+          float a = out[i] < 0 ? -out[i] : out[i];
+          if (a > maxOut) maxOut = a;
+        }
+      }
+      boolean ok = maxOut < 0.01f;
+      System.out.printf("%s silence in → max out %.6f%n", ok ? "PASS" : "FAIL", maxOut);
+      if (ok) passed++; else failed++;
+    }
+
+    // ---- Test 5: bypass (strength=0) → input pitch passthrough.
+    {
+      float[] tail = render(442f, 0, 0, 0.0f, 0, 1, 0);
+      float f = dftPeakFreq(tail, tail.length, 380f, 480f);
+      double cents = 1200 * Math.log(f / 442.0) / Math.log(2);
+      boolean ok = Math.abs(cents) < 30;
+      System.out.printf("%s 442 Hz strength=0 → %.2f Hz (%+.0f cents from input)%n",
+          ok ? "PASS" : "FAIL", f, cents);
+      if (ok) passed++; else failed++;
+    }
+
+    // ---- Test 6: 260 Hz → C-major snap → expect C4 (261.63 Hz).
+    // Clearly closer to C than B; sharp test of small-shift accuracy.
+    {
+      float[] tail = render(260f, 0, 1, 0.0f, 1, 1, 0);
+      float f = dftPeakFreq(tail, tail.length, 220f, 290f);
+      double cents = 1200 * Math.log(f / 261.63) / Math.log(2);
+      boolean ok = Math.abs(cents) < 30;
+      System.out.printf("%s 260 Hz → C-major snap → %.2f Hz (%+.0f cents from C4)%n",
+          ok ? "PASS" : "FAIL", f, cents);
+      if (ok) passed++; else failed++;
+    }
+
+    System.out.printf("%n%d passed, %d failed%n", passed, failed);
+    System.exit(failed == 0 ? 0 : 1);
   }
 }
 `;
 
 await writeFile(join(BUILD, 'TestDriver.java'), driver);
 
-// Compile stub + AutoTune + driver into one classpath.
 function run(cmd, args) {
   const r = spawnSync(cmd, args, { stdio: 'pipe', shell: process.platform === 'win32' });
-  return { code: r.status, out: r.stdout.toString('utf8'), err: r.stderr.toString('utf8') };
+  return {
+    code: r.status,
+    out: r.stdout.toString('utf8'),
+    err: r.stderr.toString('utf8'),
+  };
 }
 
 console.log('Compiling stub + AutoTune + driver...');
@@ -126,8 +192,8 @@ if (c.code !== 0) {
   process.exit(1);
 }
 
-console.log('Running smoke tests...');
+console.log('Running pitch-verifying smoke tests...\n');
 const r = run(JAVA, ['-cp', BUILD, 'TestDriver']);
-if (r.out) console.log(r.out.trim());
-if (r.err) console.error(r.err.trim());
-if (r.code !== 0) process.exit(r.code);
+if (r.out) process.stdout.write(r.out);
+if (r.err) process.stderr.write(r.err);
+process.exit(r.code ?? 0);
