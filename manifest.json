@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-13T19:08:01.778Z",
+  "generatedAt": "2026-05-13T21:03:39.761Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -255,8 +255,13 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/compressor/compressor.dex",
-      "sizeBytes": 4048,
-      "className": "com.vocalmonitor.plugin.community.Compressor"
+      "sizeBytes": 10380,
+      "className": "com.vocalmonitor.plugin.community.Compressor",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 240
+      }
     },
     {
       "id": "de-esser",
@@ -274,8 +279,13 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/de-esser/de-esser.dex",
-      "sizeBytes": 4580,
-      "className": "com.vocalmonitor.plugin.community.DeEsser"
+      "sizeBytes": 9080,
+      "className": "com.vocalmonitor.plugin.community.DeEsser",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 220
+      }
     },
     {
       "id": "limiter",
@@ -292,8 +302,13 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/limiter/limiter.dex",
-      "sizeBytes": 2560,
-      "className": "com.vocalmonitor.plugin.community.Limiter"
+      "sizeBytes": 7884,
+      "className": "com.vocalmonitor.plugin.community.Limiter",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 220
+      }
     },
     {
       "id": "multiband-compressor",
@@ -402,8 +417,13 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/eq/parametric-eq/parametric-eq.dex",
-      "sizeBytes": 5088,
-      "className": "com.vocalmonitor.plugin.community.ParametricEq"
+      "sizeBytes": 10736,
+      "className": "com.vocalmonitor.plugin.community.ParametricEq",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 220
+      }
     },
     {
       "id": "auto-wah",
@@ -829,8 +849,13 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/pitch/auto-tune/auto-tune.dex",
-      "sizeBytes": 14296,
+      "sizeBytes": 18848,
       "className": "com.vocalmonitor.plugin.community.AutoTune",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 240
+      },
       "presets": [
         {
           "name": "Natural",
