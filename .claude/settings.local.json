@@ -13,7 +13,8 @@
       "Bash(node scripts/build-native.mjs)",
       "Bash(git add *)",
       "Bash(node scripts/test-autotune.mjs)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(node scripts/build-native.mjs auto-tune)"
     ]
   }
 }
