@@ -81,6 +81,25 @@ async function readPlugin(categoryDir, pluginDir, cfg) {
     source: `https://raw.githubusercontent.com/${cfg.repository}/${cfg.branch}/plugins/${categoryDir}/${pluginDir}/${filename}`,
   };
   if (engine === 'native') entry.className = meta.className;
+  // Forward author-shipped presets verbatim. The Android app's
+  // JsPluginLibrary parses the same shape: `[{name, description?, params}]`.
+  // Validate lightly so a malformed presets block doesn't fail the build
+  // — bad presets are filtered, valid ones included.
+  if (Array.isArray(meta.presets)) {
+    const cleanPresets = meta.presets
+      .filter(p => p && typeof p.name === 'string' && p.name.length > 0)
+      .filter(p => p.params && typeof p.params === 'object' && !Array.isArray(p.params))
+      .map(p => ({
+        name: p.name,
+        ...(p.description ? { description: p.description } : {}),
+        params: Object.fromEntries(
+          Object.entries(p.params)
+            .filter(([_, v]) => typeof v === 'number' && Number.isFinite(v)),
+        ),
+      }))
+      .filter(p => Object.keys(p.params).length > 0);
+    if (cleanPresets.length > 0) entry.presets = cleanPresets;
+  }
   return entry;
 }
 
