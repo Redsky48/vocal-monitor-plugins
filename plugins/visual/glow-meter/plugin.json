@@ -1,0 +1,11 @@
+{
+  "id": "glow-meter",
+  "name": "Glow Meter",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Reference example of a canvas-mode visual plugin. Pass-through audio (no DSP) plus a pulsing glow ring whose intensity tracks the input level. Use the source as a template for your own custom-drawn plugins.",
+  "tags": ["visual", "example", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.GlowMeter",
+  "ui_kind": "canvas"
+}

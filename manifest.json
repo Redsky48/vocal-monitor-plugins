@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-13T14:46:48.449Z",
+  "generatedAt": "2026-05-13T17:23:50.605Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -829,7 +829,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/pitch/auto-tune/auto-tune.dex",
-      "sizeBytes": 14012,
+      "sizeBytes": 14296,
       "className": "com.vocalmonitor.plugin.community.AutoTune",
       "presets": [
         {
@@ -1262,6 +1262,23 @@
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/reverb/spring-reverb/spring-reverb.dex",
       "sizeBytes": 3764,
       "className": "com.vocalmonitor.plugin.community.SpringReverb"
+    },
+    {
+      "id": "glow-meter",
+      "name": "Glow Meter",
+      "author": "Vocal Monitor",
+      "category": "Visual",
+      "description": "Reference example of a canvas-mode visual plugin. Pass-through audio (no DSP) plus a pulsing glow ring whose intensity tracks the input level. Use the source as a template for your own custom-drawn plugins.",
+      "version": "1.0.0",
+      "tags": [
+        "visual",
+        "example",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/visual/glow-meter/glow-meter.dex",
+      "sizeBytes": 3984,
+      "className": "com.vocalmonitor.plugin.community.GlowMeter"
     },
     {
       "id": "megaphone",

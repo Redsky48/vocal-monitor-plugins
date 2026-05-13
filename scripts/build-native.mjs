@@ -54,13 +54,34 @@ function run(cmd, args, opts = {}) {
 }
 
 async function compileStub() {
-  // Compile the interface stub once per build so the plugin .java files
-  // have something to import against. The class never ships — only the
-  // host's runtime version is loaded.
-  const stubSrc = join(STUB_DIR, 'com', 'vocalmonitor', 'plugin', 'VocalMonitorNativePlugin.java');
+  // Compile every interface stub under scripts/native-stub once per
+  // build so plugin .java files have something to import against. The
+  // classes never ship — only the host's runtime versions are loaded.
+  //
+  // Walks the stub tree so adding new contracts (PluginCanvas,
+  // PluginPaint, etc. for visual plugins) is just dropping the .java
+  // next to the existing one; the script picks them up automatically.
+  const stubRoot = join(STUB_DIR, 'com');
+  const javaFiles = [];
+  async function walk(dir) {
+    const ents = await readdir(dir, { withFileTypes: true });
+    for (const e of ents) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) await walk(p);
+      else if (e.name.endsWith('.java')) javaFiles.push(p);
+    }
+  }
+  await walk(stubRoot);
+  if (javaFiles.length === 0) throw new Error('no stub .java files found');
+
   const out = join(BUILD_DIR, 'stub');
   await mkdir(out, { recursive: true });
-  const r = run(JAVAC, ['--release', '8', '-encoding', 'utf-8', '-d', out, stubSrc]);
+  const r = run(JAVAC, [
+    '--release', '8',
+    '-encoding', 'utf-8',
+    '-d', out,
+    ...javaFiles,
+  ]);
   if (r.code !== 0) throw new Error(`stub compile failed:\n${r.err || r.out}`);
 }
 
