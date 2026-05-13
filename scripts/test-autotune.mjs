@@ -161,6 +161,46 @@ public class TestDriver {
       if (ok) passed++; else failed++;
     }
 
+    // ---- Presets 1..6 — verify each produces non-silent output
+    // when fed a 260 Hz input. Each preset should produce SOME audio,
+    // not all-silence (which would indicate a broken signal path).
+    String[] presetNames = { "(Custom)", "Natural", "Pop", "Hard", "Cher", "Country", "Subtle" };
+    for (int presetIdx = 1; presetIdx <= 6; presetIdx++) {
+      AutoTune at = new AutoTune();
+      at.init(SR);
+      at.setParameter("preset", presetIdx);
+      at.setParameter("key", 0);
+      at.setParameter("scale", 1);  // major
+      at.setParameter("mix", 1);
+      float[] block = new float[BLOCK];
+      float[] out = new float[BLOCK];
+      int totalBlocks = 200;  // ~4.6 s
+      float[] tail = new float[BLOCK * 16];
+      int tailWrite = 0;
+      for (int b = 0; b < totalBlocks; b++) {
+        for (int i = 0; i < BLOCK; i++) {
+          block[i] = (float)(0.4 * Math.sin(2 * Math.PI * 260.0 * (b*BLOCK + i) / SR));
+        }
+        at.process(block, out);
+        for (int i = 0; i < BLOCK; i++) {
+          tail[tailWrite] = out[i];
+          tailWrite = (tailWrite + 1) % tail.length;
+        }
+      }
+      float[] ordered = new float[tail.length];
+      for (int i = 0; i < tail.length; i++) ordered[i] = tail[(tailWrite + i) % tail.length];
+      // Compute RMS of last 8 blocks (steady-state output).
+      float rms = 0;
+      for (int i = 0; i < ordered.length; i++) rms += ordered[i] * ordered[i];
+      rms = (float) Math.sqrt(rms / ordered.length);
+      // Find the dominant frequency.
+      float fDominant = dftPeakFreq(ordered, ordered.length, 200f, 300f);
+      boolean nonSilent = rms > 0.05f;
+      System.out.printf("%s preset=%d (%s): RMS=%.3f, peak=%.1f Hz%n",
+          nonSilent ? "PASS" : "FAIL", presetIdx, presetNames[presetIdx], rms, fDominant);
+      if (nonSilent) passed++; else failed++;
+    }
+
     System.out.printf("%n%d passed, %d failed%n", passed, failed);
     System.exit(failed == 0 ? 0 : 1);
   }

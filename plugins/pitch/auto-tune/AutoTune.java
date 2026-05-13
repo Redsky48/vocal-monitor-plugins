@@ -277,11 +277,13 @@ public final class AutoTune implements VocalMonitorNativePlugin {
             }
         }
 
-        // Lookahead buffer (100 ms) + the LPC analysis buffer that holds
-        // the delayed input so LPC sees what the inverse filter sees.
-        // 100 ms gives plenty of head-start for the ratio IIR to converge
-        // toward each new note before that note arrives at the output.
-        lookaheadSamples = (int) (sr * 0.1);
+        // Lookahead buffer (20 ms) — enough head-start for the ratio
+        // IIR to start moving before each new note arrives at the
+        // output, without eating the first 100 ms of short audio
+        // files. Previously was 100 ms which felt great on long takes
+        // but produced "silence then crackle" on clips under ~250 ms
+        // because the lookahead delay consumed most of the input.
+        lookaheadSamples = (int) (sr * 0.02);
         inputDelayRingLen = lookaheadSamples + 64;  // small headroom
         inputDelayRing = new float[inputDelayRingLen];
         inputDelayWrite = 0;
