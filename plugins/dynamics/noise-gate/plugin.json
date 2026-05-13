@@ -11,5 +11,6 @@
     "native"
   ],
   "engine": "native",
-  "className": "com.vocalmonitor.plugin.community.NoiseGate"
+  "className": "com.vocalmonitor.plugin.community.NoiseGate",
+  "ui_kind": "canvas"
 }

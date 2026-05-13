@@ -91,6 +91,13 @@ async function readPlugin(categoryDir, pluginDir, cfg) {
     sizeBytes,
   };
   if (engine === 'native') entry.className = meta.className;
+  // Forward custom-UI fields verbatim. ui_kind tells the host whether
+  // to host the plugin's canvas-mode render() (VocalMonitorVisualPlugin)
+  // or render its declarative spec block. The ui object is the spec
+  // payload for ui_kind == "spec" plugins.
+  if (typeof meta.ui_kind === 'string') entry.ui_kind = meta.ui_kind;
+  if (meta.ui && typeof meta.ui === 'object') entry.ui = meta.ui;
+  if (Array.isArray(meta.streams)) entry.streams = meta.streams;
   // Forward author-shipped presets verbatim. The Android app's
   // JsPluginLibrary parses the same shape: `[{name, description?, params}]`.
   // Validate lightly so a malformed presets block doesn't fail the build

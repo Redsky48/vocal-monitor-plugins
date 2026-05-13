@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-13T17:25:09.245Z",
+  "generatedAt": "2026-05-13T17:46:59.498Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -328,8 +328,9 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/noise-gate/noise-gate.dex",
-      "sizeBytes": 3840,
-      "className": "com.vocalmonitor.plugin.community.NoiseGate"
+      "sizeBytes": 9048,
+      "className": "com.vocalmonitor.plugin.community.NoiseGate",
+      "ui_kind": "canvas"
     },
     {
       "id": "transient-shaper",
@@ -829,7 +830,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/pitch/auto-tune/auto-tune.dex",
-      "sizeBytes": 14012,
+      "sizeBytes": 14296,
       "className": "com.vocalmonitor.plugin.community.AutoTune",
       "presets": [
         {
@@ -1268,17 +1269,22 @@
       "name": "Glow Meter",
       "author": "Vocal Monitor",
       "category": "Visual",
-      "description": "Reference example of a canvas-mode visual plugin. Pass-through audio (no DSP) plus a pulsing glow ring whose intensity tracks the input level. Use the source as a template for your own custom-drawn plugins.",
-      "version": "1.0.0",
+      "description": "Circular spectrum visualiser. 48 Goertzel filters analyse the live mic input and paint a glowing aurora ring around a pulsing centre disc. Audio is pass-through; the visual always shows the mic regardless of where the plugin sits in the chain. Reference example of a canvas-mode plugin.",
+      "version": "1.1.0",
       "tags": [
         "visual",
+        "spectrum",
         "example",
         "native"
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/visual/glow-meter/glow-meter.dex",
-      "sizeBytes": 3984,
-      "className": "com.vocalmonitor.plugin.community.GlowMeter"
+      "sizeBytes": 6132,
+      "className": "com.vocalmonitor.plugin.community.GlowMeter",
+      "ui_kind": "canvas",
+      "streams": [
+        "waveform"
+      ]
     },
     {
       "id": "megaphone",
