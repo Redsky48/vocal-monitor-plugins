@@ -19,3 +19,12 @@ tools/test-app/test-processed.png
 tools/test-app/test-spec-original.png
 tools/test-app/test-spec-processed.png
 tools/test-app/test-stats.json
+
+# One-off render snapshots produced while iterating on canvas-mode
+# plugin visuals — Glow Meter / Spectrum / Vocal Tuner / NoiseGate /
+# Compressor / Limiter / Auto-Tune / De-esser screenshots etc. The
+# source PNGs aren't checked in; force-add specific ones for docs
+# (`git add -f tools/test-app/<name>.png`).
+tools/test-app/*.png
+!tools/test-app/test-original.png
+!tools/test-app/test-processed.png
