@@ -23,7 +23,13 @@
       "Bash(git restore *)",
       "Bash(git checkout *)",
       "Bash(git stash *)",
-      "Bash(java \"C:/Users/edza/AppData/Local/Temp/Viz3.java\")"
+      "Bash(java \"C:/Users/edza/AppData/Local/Temp/Viz3.java\")",
+      "WebSearch",
+      "WebFetch(domain:babyaud.io)",
+      "WebFetch(domain:valhalladsp.com)",
+      "WebFetch(domain:www.spinsemi.com)",
+      "WebFetch(domain:www.soundonsound.com)",
+      "Bash(java \"C:/Users/edza/AppData/Local/Temp/VizCrystal.java\")"
     ]
   }
 }
