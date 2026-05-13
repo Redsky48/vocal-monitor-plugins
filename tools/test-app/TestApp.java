@@ -73,6 +73,7 @@ public class TestApp extends JFrame {
     private Object  plugin;
     private ClassLoader pluginLoader;     // for Proxy adapter construction
     private boolean isVisualPlugin;
+    private String controlsMode = "host"; // "host" (default) or "canvas"
     private String[] paramNames;
     private final Map<String, JSlider> sliders = new LinkedHashMap<>();
     private final Map<String, JLabel> sliderLabels = new LinkedHashMap<>();
@@ -362,6 +363,20 @@ public class TestApp extends JFrame {
         } catch (ClassNotFoundException e) {
             isVisualPlugin = false;
         }
+        // Read ui.controls from plugin.json — "canvas" means the plugin
+        // owns its UI entirely and the host should suppress the auto-
+        // slider footer in the popup window. Default is "host".
+        controlsMode = "host";
+        try {
+            String meta = Files.readString(entry.folder.resolve("plugin.json"));
+            if (meta.contains("\"controls\"") && meta.contains("\"canvas\"")) {
+                // Cheap parse: the only legal value of `controls` today
+                // is "host" or "canvas", so a contains-check is enough.
+                int ki = meta.indexOf("\"controls\"");
+                int vq = meta.indexOf("\"canvas\"", ki);
+                if (vq > 0 && vq - ki < 60) controlsMode = "canvas";
+            }
+        } catch (Exception ignored) {}
         openUiBtn.setEnabled(isVisualPlugin);
         rebuildSliders();
         setStatus("Loaded " + entry.id + " (" + paramNames.length + " parameters"
@@ -403,6 +418,10 @@ public class TestApp extends JFrame {
                 float v = min + (max - min) * slider.getValue() / (float) slMax;
                 valueLabel.setText(String.format("%.3f", v));
                 try { pSet.invoke(plugin, name, v); } catch (Exception ignored) {}
+                // Mirror into the popup window's slider too so its
+                // displayed value + paintSnapshot stay in sync with
+                // the user's drag on the main sidebar.
+                if (pluginWindow != null) pluginWindow.syncMainToPopup(name, slider.getValue());
             });
             valueLabel.setText(String.format("%.3f", def));
             valueLabel.setPreferredSize(new Dimension(70, 22));
@@ -660,7 +679,7 @@ public class TestApp extends JFrame {
         }
         try {
             pluginWindow = new PluginWindow(this, plugin, pluginLoader,
-                    paramNames, sliders, originalAudio, SR);
+                    paramNames, sliders, originalAudio, SR, controlsMode);
             pluginWindow.setVisible(true);
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -960,9 +979,10 @@ public class TestApp extends JFrame {
         private final Object plugin;
         private final ClassLoader loader;
         private final String[] paramNames;
-        private final Map<String, JSlider> mainSliders;  // mirror back into main
+        private final Map<String, JSlider> mainSliders;  // source of truth
         private final float[] sourceAudio;
         private final int sampleRate;
+        private final String controlsMode;
 
         private final Class<?> visualIface;
         private final Class<?> canvasIface;
@@ -975,6 +995,12 @@ public class TestApp extends JFrame {
         private final Method setParamM;
         private final Method getParamMinM;
         private final Method getParamMaxM;
+        // Optional touch / setHost methods — plugins may override the
+        // VocalMonitorVisualPlugin defaults. Cached if present, null
+        // if the plugin keeps the no-op defaults. Reflection-resolved
+        // so display-only plugins compile + load unchanged.
+        private Method touchDownM, touchMoveM, touchUpM, setHostM;
+        private boolean mirroringFromMain = false;  // re-entrancy guard
 
         private final long startMs = System.currentTimeMillis();
         private final DrawPanel draw;
@@ -991,7 +1017,7 @@ public class TestApp extends JFrame {
 
         PluginWindow(JFrame owner, Object plugin, ClassLoader loader,
                      String[] paramNames, Map<String, JSlider> mainSliders,
-                     float[] sourceAudio, int sampleRate) throws Exception {
+                     float[] sourceAudio, int sampleRate, String controlsMode) throws Exception {
             super("Plugin UI");
             setUndecorated(true);
             this.plugin = plugin;
@@ -1000,6 +1026,7 @@ public class TestApp extends JFrame {
             this.mainSliders = mainSliders;
             this.sourceAudio = sourceAudio;
             this.sampleRate = sampleRate;
+            this.controlsMode = controlsMode != null ? controlsMode : "host";
 
             visualIface = loader.loadClass("com.vocalmonitor.plugin.VocalMonitorVisualPlugin");
             canvasIface = loader.loadClass("com.vocalmonitor.plugin.PluginCanvas");
@@ -1013,6 +1040,32 @@ public class TestApp extends JFrame {
             setParamM   = plugin.getClass().getMethod("setParameter", String.class, float.class);
             getParamMinM = plugin.getClass().getMethod("parameterMin", String.class);
             getParamMaxM = plugin.getClass().getMethod("parameterMax", String.class);
+            // Optional callbacks — present only if the plugin overrides
+            // the VocalMonitorVisualPlugin defaults. Resolve via the
+            // visual-interface declared method then check it's not the
+            // default impl by walking back to plugin's own class.
+            touchDownM = findOverride(plugin, "onTouchDown", float.class, float.class);
+            touchMoveM = findOverride(plugin, "onTouchMove", float.class, float.class);
+            touchUpM   = findOverride(plugin, "onTouchUp",   float.class, float.class);
+            try {
+                Class<?> hostIface = loader.loadClass("com.vocalmonitor.plugin.PluginHost");
+                setHostM = findOverride(plugin, "setHost", hostIface);
+                if (setHostM != null) {
+                    Object hostProxy = java.lang.reflect.Proxy.newProxyInstance(loader,
+                            new Class<?>[] { hostIface }, (px, m, args) -> {
+                                if ("setParameter".equals(m.getName())) {
+                                    String name = (String) args[0];
+                                    float val = (float) args[1];
+                                    setParamM.invoke(plugin, name, val);
+                                    syncHostCallbackToSliders(name, val);
+                                }
+                                return null;
+                            });
+                    setHostM.invoke(plugin, hostProxy);
+                }
+            } catch (ClassNotFoundException e) {
+                // Older stubs without PluginHost — skip silently.
+            }
 
             // --- Build UI ---
             JPanel root = new JPanel(new BorderLayout());
@@ -1026,10 +1079,14 @@ public class TestApp extends JFrame {
             // Centre: canvas.
             draw = new DrawPanel();
             draw.setPreferredSize(new Dimension(560, 320));
+            wireCanvasTouch(draw);
             root.add(draw, BorderLayout.CENTER);
 
-            // Footer: parameter sliders (if any).
-            if (paramNames != null && paramNames.length > 0) {
+            // Footer: parameter sliders — only when the plugin lets the
+            // host show them. controls:"canvas" means the plugin draws
+            // its own controls inside the canvas.
+            if (!"canvas".equals(this.controlsMode)
+                    && paramNames != null && paramNames.length > 0) {
                 JPanel footer = buildSliderFooter();
                 root.add(footer, BorderLayout.SOUTH);
             }
@@ -1050,6 +1107,73 @@ public class TestApp extends JFrame {
             driver = new Thread(this::driveAudio, "plugin-driver-" + getPluginDisplayName(plugin));
             driver.setDaemon(true);
             driver.start();
+        }
+
+        // Returns the Method if the plugin overrides this default-method
+        // from VocalMonitorVisualPlugin; null if it inherits the no-op.
+        // Avoids needlessly invoking interface defaults on plugins that
+        // don't care about touch / setHost.
+        private Method findOverride(Object pl, String name, Class<?>... params) {
+            try {
+                Method m = pl.getClass().getMethod(name, params);
+                return m.getDeclaringClass().isInterface() ? null : m;
+            } catch (NoSuchMethodException e) {
+                return null;
+            }
+        }
+
+        // Called from main app's sidebar slider change listener: keep
+        // the popup's UI value in sync so its displayed value matches
+        // what's actually being sent to the plugin.
+        public void syncMainToPopup(String name, int sliderValue) {
+            JSlider popup = popupSliders.get(name);
+            if (popup == null) return;
+            if (popup.getValue() == sliderValue) return;
+            mirroringFromMain = true;
+            try { popup.setValue(sliderValue); }
+            finally { mirroringFromMain = false; }
+        }
+
+        // PluginHost.setParameter callback pushed values straight into
+        // the plugin — also reflect them into the visible sliders so
+        // the user sees the canvas-driven change in both places.
+        private void syncHostCallbackToSliders(String name, float v) {
+            try {
+                float min = (float) getParamMinM.invoke(plugin, name);
+                float max = (float) getParamMaxM.invoke(plugin, name);
+                int sv = Math.round((v - min) / (max - min) * 1000f);
+                JSlider main = mainSliders.get(name);
+                if (main != null && main.getValue() != sv) main.setValue(sv);
+                JSlider pop = popupSliders.get(name);
+                if (pop != null && pop.getValue() != sv) {
+                    mirroringFromMain = true;
+                    try { pop.setValue(sv); } finally { mirroringFromMain = false; }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // Wire mouse → plugin.onTouchDown/Move/Up. Coordinates pass
+        // through unchanged (plugin draws in panel-local dp-equivalent
+        // pixels, the Swing mouse coords are the same).
+        private void wireCanvasTouch(JPanel panel) {
+            if (touchDownM == null && touchMoveM == null && touchUpM == null) return;
+            MouseAdapter ma = new MouseAdapter() {
+                @Override public void mousePressed(MouseEvent e) {
+                    invokeTouch(touchDownM, e.getX(), e.getY());
+                }
+                @Override public void mouseDragged(MouseEvent e) {
+                    invokeTouch(touchMoveM, e.getX(), e.getY());
+                }
+                @Override public void mouseReleased(MouseEvent e) {
+                    invokeTouch(touchUpM, e.getX(), e.getY());
+                }
+            };
+            panel.addMouseListener(ma);
+            panel.addMouseMotionListener(ma);
+        }
+        private void invokeTouch(Method m, float x, float y) {
+            if (m == null) return;
+            try { m.invoke(plugin, x, y); } catch (Exception ignored) {}
         }
 
         private static String getPluginDisplayName(Object plugin) {
@@ -1082,10 +1206,14 @@ public class TestApp extends JFrame {
                         float min = (float) getParamMinM.invoke(plugin, name);
                         float max = (float) getParamMaxM.invoke(plugin, name);
                         float v = min + (max - min) * s.getValue() / 1000f;
-                        setParamM.invoke(plugin, name, v);
                         val.setText(String.format(Locale.ROOT, "%.3f", v));
-                        // Mirror back into the main app's slider so
-                        // batch-Process picks it up too.
+                        // If we got here because the main slider was
+                        // moved (mirroring inbound), the main listener
+                        // already called setParameter — skip to avoid
+                        // double-fire and re-entrant mirror loops.
+                        if (mirroringFromMain) return;
+                        setParamM.invoke(plugin, name, v);
+                        // Mirror back into the main app's slider too.
                         if (main != null && main.getValue() != s.getValue()) {
                             main.setValue(s.getValue());
                         }
@@ -1199,14 +1327,33 @@ public class TestApp extends JFrame {
                 g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
                 try {
-                    // Snapshot params (plugin may have parameterNames but
-                    // no parameterValue getter — read via slider state).
+                    // Snapshot every declared parameter — the host MUST
+                    // always feed live values into render() so plugins
+                    // don't need to maintain their own field cache and
+                    // canvas-mode plugins read the same map regardless
+                    // of whether the host shows sliders or hides them
+                    // under controls:"canvas".  Prefer the main sidebar
+                    // slider (always present, source of truth for the
+                    // user's input); fall back to popup slider if any;
+                    // fall back to the plugin's declared default if
+                    // neither is wired.
                     paramSnapshot.clear();
-                    for (Map.Entry<String, JSlider> e : popupSliders.entrySet()) {
-                        float min = (float) getParamMinM.invoke(plugin, e.getKey());
-                        float max = (float) getParamMaxM.invoke(plugin, e.getKey());
-                        paramSnapshot.put(e.getKey(),
-                                min + (max - min) * e.getValue().getValue() / 1000f);
+                    if (paramNames != null) {
+                        for (String name : paramNames) {
+                            float v;
+                            JSlider src = mainSliders.get(name);
+                            if (src == null) src = popupSliders.get(name);
+                            if (src != null) {
+                                float min = (float) getParamMinM.invoke(plugin, name);
+                                float max = (float) getParamMaxM.invoke(plugin, name);
+                                v = min + (max - min) * src.getValue() / 1000f;
+                            } else {
+                                v = (float) plugin.getClass()
+                                        .getMethod("parameterDefault", String.class)
+                                        .invoke(plugin, name);
+                            }
+                            paramSnapshot.put(name, v);
+                        }
                     }
                     Object canvasProxy = java.lang.reflect.Proxy.newProxyInstance(loader,
                             new Class<?>[] { canvasIface },

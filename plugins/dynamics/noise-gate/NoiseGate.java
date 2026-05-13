@@ -176,6 +176,16 @@ public final class NoiseGate
         if (bgPaint == null) initPaints(canvas);
         final float W = width, H = height;
 
+        // Read parameters from the host-provided params map so a slider
+        // moved anywhere in the app reflects in the visual on the next
+        // frame, regardless of whether setParameter() has yet propagated
+        // to the audio thread. Fall back to the plugin's own field for
+        // hosts that don't supply params yet.
+        float liveThreshold = params != null && params.containsKey("threshold")
+                ? params.get("threshold") : threshold;
+        float liveHyst = params != null && params.containsKey("hysteresis")
+                ? params.get("hysteresis") : hysteresis;
+
         // --- 1. Background ---
         bgPaint.setColor(COLOR_BG);
         canvas.drawRect(0, 0, W, H, bgPaint);
@@ -224,8 +234,8 @@ public final class NoiseGate
         }
 
         // --- 5. Hysteresis band (between threshold and close-threshold) ---
-        float thY = dbToY(threshold, plotY0, plotY1);
-        float clY = dbToY(threshold - hysteresis, plotY0, plotY1);
+        float thY = dbToY(liveThreshold, plotY0, plotY1);
+        float clY = dbToY(liveThreshold - liveHyst, plotY0, plotY1);
         hystFill.setColor(COLOR_YELLOW_DIM).setStyle(PluginStyle.FILL);
         canvas.drawRect(plotX0, thY, plotX1, clY, hystFill);
 
@@ -234,7 +244,7 @@ public final class NoiseGate
         canvas.drawLine(plotX0, thY, plotX1, thY, threshLine);
         // Threshold label tag
         textBright.setColor(COLOR_YELLOW).setTextSize(10f).setTextAlign(2);
-        canvas.drawText(String.format("%.0f dB", threshold), plotX1 - 4f, thY - 4f, textBright);
+        canvas.drawText(String.format("%.0f dB", liveThreshold), plotX1 - 4f, thY - 4f, textBright);
 
         // --- 7. Scrolling envelope trace ---
         // Build path from oldest (left) to newest (right) sample.
