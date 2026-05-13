@@ -44,6 +44,17 @@ public final class GlowMeter
     /** Slower-decaying trail for the aurora afterglow effect. */
     private final float[] bandTrail = new float[BANDS];
 
+    // Self-filled ring buffer of the most recent audio that passed
+    // through process(). render() falls back to this when the host
+    // doesn't supply streams["waveform"] — so the plugin animates on
+    // any signal flowing through the chain, in any host (test app,
+    // future PC DAWs, etc.), regardless of whether host-level streams
+    // are wired up.
+    private static final int LOCAL_WAV_LEN = 2048;
+    private final float[] localWave = new float[LOCAL_WAV_LEN];
+    private int localWaveWrite = 0;
+    private final float[] scratchWindow = new float[LOCAL_WAV_LEN];
+
     // ─── Audio interface ──────────────────────────────────────────────
 
     @Override public void init(int sampleRate) {
@@ -61,6 +72,8 @@ public final class GlowMeter
             bandLevel[b] = 0f;
             bandTrail[b] = 0f;
         }
+        java.util.Arrays.fill(localWave, 0f);
+        localWaveWrite = 0;
     }
 
     @Override public String[] parameterNames() { return new String[0]; }
@@ -71,12 +84,16 @@ public final class GlowMeter
     @Override public void setParameter(String name, float value) { }
 
     @Override public void process(float[] input, float[] output) {
-        // Pure pass-through. Visualisation is driven by `waveform`
-        // stream the host feeds into render(), not by the chain audio
-        // we see here — that way GlowMeter shows the same picture
-        // whether the user drops it at position 1 or position 8.
+        // Pass-through audio, but also tap into the chain so the visual
+        // can animate without relying on the host's streams API.
         int n = Math.min(input.length, output.length);
-        for (int i = 0; i < n; i++) output[i] = input[i];
+        for (int i = 0; i < n; i++) {
+            float s = input[i];
+            output[i] = s;
+            localWave[localWaveWrite] = s;
+            localWaveWrite++;
+            if (localWaveWrite >= LOCAL_WAV_LEN) localWaveWrite = 0;
+        }
     }
 
     // ─── Visual interface ─────────────────────────────────────────────
@@ -102,15 +119,30 @@ public final class GlowMeter
             scratchPath = canvas.newPath();
         }
 
-        // 1. Pull the latest mic window from the host. Empty array is a
-        //    perfectly valid state (no audio yet) — just skip the
-        //    analysis and let levels decay.
+        // 1. Pull the latest audio window. Prefer the host-supplied
+        //    waveform stream when available, otherwise fall back to the
+        //    ring of samples process() captured from the live chain.
+        //    Either way the plugin animates on real audio whenever the
+        //    chain is active.
         float[] wave = streams.get("waveform");
-        if (wave != null && wave.length >= 64) {
+        if (wave == null || wave.length < 64) {
+            // Linearise the ring into a contiguous window for analysis.
+            int w = localWaveWrite;
+            for (int i = 0; i < LOCAL_WAV_LEN; i++) {
+                scratchWindow[i] = localWave[(w + i) % LOCAL_WAV_LEN];
+            }
+            wave = scratchWindow;
+        }
+        // Detect silence in the chosen window; if the audio's flat,
+        // just let levels decay instead of analysing.
+        float peak = 0f;
+        for (int i = 0; i < wave.length; i++) {
+            float a = wave[i] < 0 ? -wave[i] : wave[i];
+            if (a > peak) peak = a;
+        }
+        if (peak > 1e-5f) {
             analyseBands(wave);
         } else {
-            // No fresh audio — decay everything so the visual eventually
-            // settles to silence instead of frozen bright bars.
             for (int b = 0; b < BANDS; b++) bandLevel[b] *= 0.9f;
         }
         // Trail decays slower than the active band envelope.
@@ -208,9 +240,10 @@ public final class GlowMeter
      */
     private void analyseBands(float[] wave) {
         int n = wave.length;
-        // Empirically scale so a healthy speaking level fills ~70% of
-        // the visual; quiet voice still produces visible motion.
-        float norm = 2.4f / n;
+        // Calibrated so a -20 dBFS speaking voice (≈ 0.1 peak) fills
+        // the aurora to ~70%; quieter still produces visible motion,
+        // hot signals settle into the tanh's soft knee at the top.
+        float norm = 18f / n;
         for (int b = 0; b < BANDS; b++) {
             float coeff = bandCoeff[b];
             float s0 = 0f, s1 = 0f, s2 = 0f;
@@ -221,10 +254,15 @@ public final class GlowMeter
             float mag = (float) Math.sqrt(
                 Math.max(0f, s1 * s1 + s2 * s2 - coeff * s1 * s2)
             );
-            float lvl = mag * norm;
+            // Pink-noise correction: boost lower bands so the aurora
+            // doesn't visually favour the high end (where spectral
+            // energy is naturally sparser in voice).
+            float pinkBoost = (float) Math.sqrt(bandFreq[b] / 800f);
+            if (pinkBoost < 0.35f) pinkBoost = 0.35f;
+            float lvl = mag * norm * pinkBoost;
             // Soft compress so the visual doesn't pin to max on loud
             // peaks — gives the aurora some headroom.
-            lvl = (float) Math.tanh(lvl * 1.3f);
+            lvl = (float) Math.tanh(lvl * 1.8f);
             // Attack fast, release slow → barbs jump on transients
             // then breathe out.
             float prev = bandLevel[b];

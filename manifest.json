@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-13T17:47:46.223Z",
+  "generatedAt": "2026-05-13T18:40:55.086Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -329,8 +329,7 @@
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/noise-gate/noise-gate.dex",
       "sizeBytes": 9048,
-      "className": "com.vocalmonitor.plugin.community.NoiseGate",
-      "ui_kind": "canvas"
+      "className": "com.vocalmonitor.plugin.community.NoiseGate"
     },
     {
       "id": "transient-shaper",
@@ -830,7 +829,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/pitch/auto-tune/auto-tune.dex",
-      "sizeBytes": 14012,
+      "sizeBytes": 14296,
       "className": "com.vocalmonitor.plugin.community.AutoTune",
       "presets": [
         {
@@ -1269,18 +1268,70 @@
       "name": "Glow Meter",
       "author": "Vocal Monitor",
       "category": "Visual",
-      "description": "Reference example of a canvas-mode visual plugin. Pass-through audio (no DSP) plus a pulsing glow ring whose intensity tracks the input level. Use the source as a template for your own custom-drawn plugins.",
-      "version": "1.0.0",
+      "description": "Circular spectrum visualiser. 48 Goertzel filters analyse the live mic input and paint a glowing aurora ring around a pulsing centre disc. Audio is pass-through; the visual always shows the mic regardless of where the plugin sits in the chain. Reference example of a canvas-mode plugin.",
+      "version": "1.1.0",
       "tags": [
         "visual",
+        "spectrum",
         "example",
         "native"
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/visual/glow-meter/glow-meter.dex",
-      "sizeBytes": 3984,
+      "sizeBytes": 6588,
       "className": "com.vocalmonitor.plugin.community.GlowMeter",
-      "ui_kind": "canvas"
+      "ui_kind": "canvas",
+      "streams": [
+        "waveform"
+      ]
+    },
+    {
+      "id": "spectrum",
+      "name": "Spectrum",
+      "author": "Vocal Monitor",
+      "category": "Visual",
+      "description": "Real-time 32-band log-spaced spectrum analyser. Pass-through audio + visual only. Peak-hold markers fall slowly back so you can see transients linger. Yellow-on-black DAW theme.",
+      "version": "1.0.0",
+      "tags": [
+        "visual",
+        "spectrum",
+        "analyser",
+        "metering",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/visual/spectrum/spectrum.dex",
+      "sizeBytes": 6220,
+      "className": "com.vocalmonitor.plugin.community.Spectrum",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "5:3",
+        "min_height_dp": 220
+      }
+    },
+    {
+      "id": "vocal-tuner",
+      "name": "Vocal Tuner",
+      "author": "Vocal Monitor",
+      "category": "Visual",
+      "description": "Real-time pitch readout. YIN-style autocorrelation pitch tracker + big note name, octave number, and a needle showing cents offset from the nearest semitone. Pass-through audio. Sing into it to see how flat or sharp you are landing on each note.",
+      "version": "1.0.0",
+      "tags": [
+        "visual",
+        "pitch",
+        "tuner",
+        "metering",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/visual/vocal-tuner/vocal-tuner.dex",
+      "sizeBytes": 7928,
+      "className": "com.vocalmonitor.plugin.community.VocalTuner",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "5:3",
+        "min_height_dp": 240
+      }
     },
     {
       "id": "megaphone",

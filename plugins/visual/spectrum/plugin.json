@@ -1,0 +1,15 @@
+{
+  "id": "spectrum",
+  "name": "Spectrum",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Real-time 32-band log-spaced spectrum analyser. Pass-through audio + visual only. Peak-hold markers fall slowly back so you can see transients linger. Yellow-on-black DAW theme.",
+  "tags": ["visual", "spectrum", "analyser", "metering", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.Spectrum",
+  "ui_kind": "canvas",
+  "ui": {
+    "aspect": "5:3",
+    "min_height_dp": 220
+  }
+}

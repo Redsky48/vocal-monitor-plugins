@@ -1,0 +1,15 @@
+{
+  "id": "vocal-tuner",
+  "name": "Vocal Tuner",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Real-time pitch readout. YIN-style autocorrelation pitch tracker + big note name, octave number, and a needle showing cents offset from the nearest semitone. Pass-through audio. Sing into it to see how flat or sharp you are landing on each note.",
+  "tags": ["visual", "pitch", "tuner", "metering", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.VocalTuner",
+  "ui_kind": "canvas",
+  "ui": {
+    "aspect": "5:3",
+    "min_height_dp": 240
+  }
+}
