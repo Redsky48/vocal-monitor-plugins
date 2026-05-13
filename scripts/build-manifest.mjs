@@ -5,7 +5,7 @@
 // $GITHUB_REPOSITORY (CI) or from repo.config.json (local). This means a
 // fork works automatically: clone, edit repo.config.json once, push, and
 // the GitHub Actions rebuild bakes in the new URLs.
-import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -64,6 +64,11 @@ async function readPlugin(categoryDir, pluginDir, cfg) {
   // routes to the matching engine based on this same field.
   const filename = engine === 'native' ? `${meta.id}.dex` : `${meta.id}.js`;
   await readFile(join(folder, filename));  // must exist
+  // Stat the payload so the app can show "Size X MB" in the Library
+  // listing without first downloading the plugin. Cached in the
+  // manifest because manifest builds are stable & published with the
+  // source — re-stat at runtime would mean an extra round-trip per row.
+  const sizeBytes = (await stat(join(folder, filename))).size;
   if (engine === 'native' && !meta.className) {
     throw new Error(`${categoryDir}/${pluginDir}/plugin.json: native plugins must declare \`className\``);
   }
@@ -79,6 +84,7 @@ async function readPlugin(categoryDir, pluginDir, cfg) {
     tags: Array.isArray(meta.tags) ? meta.tags : [],
     engine,
     source: `https://raw.githubusercontent.com/${cfg.repository}/${cfg.branch}/plugins/${categoryDir}/${pluginDir}/${filename}`,
+    sizeBytes,
   };
   if (engine === 'native') entry.className = meta.className;
   // Forward author-shipped presets verbatim. The Android app's

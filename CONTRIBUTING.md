@@ -45,11 +45,35 @@ copying that folder and substituting your id in the right places.
   "author":      "Your Name",         // free text — username, alias, real name
   "version":     "1.0.0",             // semver, bumped on every breaking change
   "description": "What it sounds like and what it's good for.",
-  "tags":        ["distortion", "fuzz"]   // optional, used for searching
+  "tags":        ["distortion", "fuzz"],  // optional, used for searching
+
+  // Optional: factory presets — named bundles of param overrides shown
+  // as chips in the app's edit-node card. See "Presets" section below.
+  "presets": [
+    {
+      "name":        "Subtle",
+      "description": "gentle, sits in a mix",      // optional
+      "params":      { "drive": 0.3, "tone": 0.5 } // only the params you want to change
+    },
+    { "name": "Wall", "params": { "drive": 0.95, "tone": 0.7 } }
+  ]
 }
 ```
 
 `category` is **not** in `plugin.json` — it's the folder it lives under.
+
+### Presets
+
+Ship 2–5 factory presets per plugin to give users a fast tour of what your effect can do. Best practices:
+
+- **Use short names** — they render as chips in a horizontally-scrollable row. "Subtle Width", not "Subtle Width Mode Used For Tight Background Vocals".
+- **Only list params the preset changes.** Un-listed params keep their current value, so a "Wider" preset that only changes `width` won't reset the user's carefully-dialled `feedback`.
+- **Name conventions help discovery:** "Off", "Subtle", "Default", "Strong", "Extreme" map onto an intuitive intensity axis. Or evoke a use case: "Doubler", "80s Pad", "Watery".
+- **Param ids must match what your plugin actually declares.** The app silently ignores unknown ids, so a typo just makes the preset partially work instead of throwing — verify against your `parameterDescriptors`.
+- **Values are clamped to each param's `min`/`max`.** No range validation in the manifest itself — keep them in-range.
+- **Optional `description`** is shown as a tiny subtitle under the chip name. Keep under ~30 chars.
+
+Presets are a static catalogue contract — they ship in `plugin.json` and update only when the user pulls a fresh catalogue from the registry (the app refreshes on launch). Plugins can't add presets at runtime.
 
 ## Constraints the Rhino interpreter imposes
 

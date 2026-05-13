@@ -11,5 +11,27 @@
     "native"
   ],
   "engine": "native",
-  "className": "com.vocalmonitor.plugin.community.Chorus"
+  "className": "com.vocalmonitor.plugin.community.Chorus",
+  "presets": [
+    {
+      "name": "Subtle Width",
+      "description": "barely-there ensemble, sits behind a lead vocal",
+      "params": { "depth": 0.2, "rate": 0.4, "mix": 0.2 }
+    },
+    {
+      "name": "80s Pad",
+      "description": "slow, deep, lush — classic shimmer",
+      "params": { "depth": 0.6, "rate": 0.5, "mix": 0.45 }
+    },
+    {
+      "name": "Watery",
+      "description": "fast modulation, swirl effect",
+      "params": { "depth": 0.5, "rate": 4.5, "mix": 0.5 }
+    },
+    {
+      "name": "Doubler",
+      "description": "dry-mix-forward — sounds like one extra take",
+      "params": { "depth": 0.35, "rate": 0.3, "mix": 0.3 }
+    }
+  ]
 }
