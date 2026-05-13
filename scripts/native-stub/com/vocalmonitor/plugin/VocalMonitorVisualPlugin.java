@@ -20,6 +20,36 @@ import java.util.Map;
 public interface VocalMonitorVisualPlugin extends VocalMonitorNativePlugin {
 
     /**
+     * Called once by the host before the first {@link #render} call,
+     * handing the plugin a {@link PluginHost} it can use to push
+     * parameter updates back (e.g. from a knob drawn inside the
+     * canvas and dragged by the user). Default impl ignores it — a
+     * plugin that only displays state and doesn't render its own
+     * controls can leave this alone.
+     */
+    default void setHost(PluginHost host) { /* opt-in */ }
+
+    /**
+     * Touch went down inside the panel. Coordinates are in the same
+     * dp-equivalent units that {@link #render} draws in, with the
+     * origin at the panel's top-left. Default impl ignores it. Pair
+     * with {@link #onTouchMove} and {@link #onTouchUp} to implement
+     * interactive controls.
+     *
+     * The host commits parameter changes for undo on touch-up, so
+     * everything between down → up is bundled as one gesture even
+     * if the plugin called {@link PluginHost#setParameter} on every
+     * move event.
+     */
+    default void onTouchDown(float x, float y) { /* opt-in */ }
+
+    /** Touch moved while down. See {@link #onTouchDown}. */
+    default void onTouchMove(float x, float y) { /* opt-in */ }
+
+    /** Touch released. See {@link #onTouchDown}. */
+    default void onTouchUp(float x, float y) { /* opt-in */ }
+
+    /**
      * Called by the host once per UI frame (typically 60 Hz) on the UI
      * thread. Aim for under 4 ms per call; anything over 16 ms drops a
      * frame; over 50 ms triggers the host's watchdog, which replaces

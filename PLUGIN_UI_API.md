@@ -290,6 +290,162 @@ Plugin manifest:
 
 ---
 
+## Panel sizing (mobile-friendly)
+
+Phone screens are narrow. A 16:9 envelope plot that reads fine in a desktop
+DAW becomes ~80 dp tall at typical mobile widths, which is too short for a
+dB-axis with grid lines to register as anything but noise. To avoid that
+without hard-coding sizes per platform, the host lets you declare what
+shape your canvas wants:
+
+```jsonc
+{
+  "id": "noise-gate",
+  "ui_kind": "canvas",
+  "ui": {
+    "aspect": "5:3",         // optional, "W:H" string or float
+    "min_height_dp": 240     // optional, hard floor in dp
+  }
+}
+```
+
+| Field           | Meaning                                                                                                                                  |
+|-----------------|------------------------------------------------------------------------------------------------------------------------------------------|
+| `aspect`        | Width/height ratio. `"5:3"`, `"16:9"`, `"1:1"`, or a raw number. Host derives panel height from the available width using this.          |
+| `min_height_dp` | Don't go below this height in dp, regardless of aspect. Use this when your plot has labels or axis ticks that don't read below a certain size. |
+
+The host takes `max(min_height_dp, width / aspect, 220 dp)` and caps at
+320 dp. **220 dp is the mobile floor** — anything below collapses
+typical dB-axis renderings. **320 dp is the cap** — you can't take over
+the screen, the panel sits in a scrollable card.
+
+**Best-practice rules for `render()`:**
+
+1. **Derive all coordinates from `width` and `height`.** Both come in as
+   dp-equivalent units; the host's adapter handles dp → device-pixel
+   scaling for every draw call. So your code is screen-density-agnostic
+   already — but it must not assume a specific *size*. A fixed
+   `pad = 14f` is fine; a fixed `plotY1 = height - 100` is not.
+2. **Scale text and stroke widths relative to `height`** when the panel
+   can be tall or short. A 13 dp title is right at 240 dp; the same
+   13 dp looks lost at 320 dp. `textSize = height * 0.06f` reads
+   consistently across both.
+3. **Guard the trivial case.** If `width < 40 || height < 40` (the
+   host briefly hits these during gesture animations), draw nothing
+   and return — anything you draw at that size is invisible anyway
+   and just burns frame budget.
+4. **Don't allocate per-frame.** Cache `PluginPaint` / `PluginPath`
+   in `init()` and reuse. Allocations show up as jank on weaker
+   phones first.
+
+---
+
+## Custom controls (hide the auto-sliders)
+
+By default the host renders a slider per parameter underneath your
+canvas panel. That's the right move when your canvas only *displays*
+state — a spectrum, a waveform, a gain-reduction history. But when the
+canvas *is* the UI (you're drawing knobs the user grabs and drags), the
+auto-sliders are duplicated controls in the user's face.
+
+Two coordinated changes opt out of them:
+
+**1. Tell the host you own the controls.** In your manifest:
+
+```jsonc
+{
+  "ui_kind": "canvas",
+  "ui": {
+    "controls": "canvas"     // default: "host" — host shows sliders below
+  }
+}
+```
+
+When `controls: "canvas"`, the host suppresses the auto-slider stack
+entirely. Your canvas is the only UI for that plugin.
+
+**2. Implement touch + parameter pass-back.** The plugin gets the
+following hooks (all `default void` no-ops, override only what you
+need):
+
+```java
+public interface VocalMonitorVisualPlugin extends VocalMonitorNativePlugin {
+    default void setHost(PluginHost host) { /* opt-in */ }
+
+    default void onTouchDown(float x, float y) { /* opt-in */ }
+    default void onTouchMove(float x, float y) { /* opt-in */ }
+    default void onTouchUp(float x, float y)   { /* opt-in */ }
+
+    void render(...);
+}
+```
+
+Coordinates are in the same dp-equivalent units `render()` draws in —
+origin at the panel's top-left. The host invokes `setHost` once before
+the first `render()` so you can stash the callback:
+
+```java
+public interface PluginHost {
+    void setParameter(String name, float value);
+}
+```
+
+### Worked example — a draggable gain knob
+
+```java
+public final class MyKnob implements VocalMonitorVisualPlugin {
+    private PluginHost host;
+    private float gain = 0.7f;           // [0..1]
+    private boolean dragging = false;
+    private float dragStartY;
+    private float gainAtDragStart;
+
+    @Override public void setHost(PluginHost host) { this.host = host; }
+
+    @Override public void onTouchDown(float x, float y) {
+        // Hit-test the knob you drew at (cx, cy, radius)
+        if (insideKnob(x, y)) {
+            dragging = true;
+            dragStartY = y;
+            gainAtDragStart = gain;
+        }
+    }
+
+    @Override public void onTouchMove(float x, float y) {
+        if (!dragging) return;
+        // Vertical drag of 100 dp = full sweep — feels right on phones
+        float delta = (dragStartY - y) / 100f;
+        gain = clamp01(gainAtDragStart + delta);
+        // Pushes value into the host's state. Audio engine sees the
+        // change on the next process() block; host bundles all
+        // pre-touchUp updates into one undo entry.
+        host.setParameter("gain", gain);
+    }
+
+    @Override public void onTouchUp(float x, float y) {
+        dragging = false;
+    }
+
+    @Override public void render(PluginCanvas canvas, int w, int h, ...) {
+        // ... draw the knob using `gain` to set its rotation ...
+    }
+}
+```
+
+**Notes:**
+- `host.setParameter` is cheap to call — spam it every move event.
+  The host does its own commit-on-touch-up bundling, so each gesture
+  becomes one undo entry.
+- The plugin still receives `params` in every `render()` call. When
+  the user loads a preset or undo restores a state, `params.get("gain")`
+  is the source of truth; you'll need to sync your internal `gain`
+  field to it at the top of `render()` if you've drifted.
+- Tap-on-canvas (no movement between down and up) won't get
+  consumed by the host, so a tap that turns out to be a list scroll
+  still works.
+
+---
+
 ## Streams
 
 A "stream" is a named per-frame data value the host computes from the
