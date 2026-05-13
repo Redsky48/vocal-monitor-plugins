@@ -10,4 +10,4 @@ if ! command -v java >/dev/null 2>&1; then
     exit 1
 fi
 
-exec java tools/test-app/TestApp.java
+exec java -Dfile.encoding=UTF-8 tools/test-app/TestApp.java

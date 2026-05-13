@@ -54,7 +54,9 @@ exit /b 1
 
 :run
 echo Using Java: %JAVA_EXE%
-"%JAVA_EXE%" tools\test-app\TestApp.java
+REM Force UTF-8 so non-ASCII characters in source files / button labels
+REM render correctly on Windows JREs that default to windows-1252.
+"%JAVA_EXE%" -Dfile.encoding=UTF-8 tools\test-app\TestApp.java
 if errorlevel 1 (
     echo.
     echo Test app exited with an error.

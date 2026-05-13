@@ -38,23 +38,30 @@ java tools/test-app/TestApp.java
 JEP 330 single-file source-code launch — compiles and runs in one step.
 
 The GUI scans the `plugins/` tree for every folder whose `plugin.json`
-declares `"engine": "native"` and lists them in the **Plugin** dropdown.
-Switching plugin recompiles its `.java` source on the fly via the
-in-process `JavaCompiler` API, so any local edit to a plugin source
-takes effect the next time you select it from the dropdown.
+declares `"engine": "native"` and shows them grouped by category in a
+searchable sidebar. Type in the **Filter** box to narrow by name, id,
+or category. Picking a plugin recompiles its `.java` source on the fly
+via the in-process `JavaCompiler` API, so any local edit to a plugin
+source takes effect the next time you select it from the tree.
+
+If the selected plugin implements `VocalMonitorVisualPlugin` (custom
+canvas-mode UI), its panel pops open automatically in a draggable
+window — drag the dark title bar to move, click **X** to close. The
+**Open Plugin UI** button at the bottom re-opens it after a close.
 
 ## What each button does
 
 | Button | What it does |
 |---|---|
-| **Plugin ▾** | Pick the plugin to test. Re-compiles its `.java` source on selection. |
-| **Load WAV…** | Open a WAV (any sample rate / mono or stereo). Decoded to mono 44.1 kHz internally. |
+| **Sidebar tree** | Browse by category, type in **Filter** to narrow. Click a plugin to load it. |
+| **Load WAV...** | Open a WAV (any sample rate / mono or stereo). Decoded to mono 44.1 kHz internally. |
 | **Record 5 s from mic** | Captures 5 s of audio from the default microphone. |
 | **Play original** | Plays the loaded/recorded audio through the default output. |
 | **Process** | Runs the audio through the current plugin with the slider values. |
 | **Play processed** | Plays the processed audio. |
 | **Stop** | Stops whichever playback is active. |
-| **Save processed WAV…** | Exports the processed audio to a WAV. |
+| **Save processed WAV...** | Exports the processed audio to a WAV. |
+| **Open Plugin UI** | Re-open the visual plugin panel (enabled only for `VocalMonitorVisualPlugin` implementers). |
 
 The parameter sliders are auto-generated from each plugin's
 `parameterNames()` / `parameterMin/Max/Default()` so they match the
