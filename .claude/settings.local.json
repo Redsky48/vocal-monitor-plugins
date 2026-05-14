@@ -29,7 +29,12 @@
       "WebFetch(domain:valhalladsp.com)",
       "WebFetch(domain:www.spinsemi.com)",
       "WebFetch(domain:www.soundonsound.com)",
-      "Bash(java \"C:/Users/edza/AppData/Local/Temp/VizCrystal.java\")"
+      "Bash(java \"C:/Users/edza/AppData/Local/Temp/VizCrystal.java\")",
+      "Bash(java tools/test-app/MeasureIR.java --plugin crystal --seconds 3)",
+      "Bash(git pull *)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\edza\\AppData\\Local\\Temp"
     ]
   }
 }
