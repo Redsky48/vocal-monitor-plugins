@@ -48,17 +48,23 @@ public final class Crystal
     private float predelay   = 0.05f;   // = START
     private float decay      = 0.65f;   // = END
     private float duck       = 0.0f;
-    private float rev        = 0.0f;    // NEW: reverse reverb toggle
+    private float duckMode   = 0.0f;    // 0 = Gentle, 1 = Pumpy
+    private float rev        = 0.0f;
     private float freeze     = 0.0f;
     private float mix        = 0.30f;
+    private float wetLock    = 0.0f;    // 0/1 toggle (preset behaviour)
+    private float syncMode   = 0.0f;    // 0/1 cosmetic — flags BPM mode
+    private float shimmerOct = 0.0f;    // 0 = 2×, 0.5 = 4×, 1 = 6× (1/2/3 octaves)
+    private float shimmerCut = 0.0f;    // 0..1 → HP cutoff 0 Hz → 4 kHz on shimmer feed
 
     @Override public String[] parameterNames() {
         return new String[] {
             "size", "sparkle", "width",
-            "resolution", "modulation", "shimmer",
+            "resolution", "modulation", "shimmer", "shimmerOct", "shimmerCut",
             "damping", "sides", "gate",
             "tone", "smoothing", "warp",
-            "predelay", "decay", "duck", "rev", "freeze", "mix"
+            "predelay", "decay", "duck", "duckMode",
+            "rev", "freeze", "mix", "wetLock", "syncMode"
         };
     }
     @Override public float parameterMin(String n) {
@@ -87,6 +93,8 @@ public final class Crystal
             case "resolution": return 0.80f;
             case "modulation": return 0.30f;
             case "shimmer":    return 0.0f;
+            case "shimmerOct": return 0.0f;
+            case "shimmerCut": return 0.0f;
             case "damping":    return 0.30f;
             case "sides":      return 0.0f;
             case "gate":       return -80.0f;
@@ -96,9 +104,12 @@ public final class Crystal
             case "predelay":   return 0.05f;
             case "decay":      return 0.65f;
             case "duck":       return 0.0f;
+            case "duckMode":   return 0.0f;
             case "rev":        return 0.0f;
             case "freeze":     return 0.0f;
             case "mix":        return 0.30f;
+            case "wetLock":    return 0.0f;
+            case "syncMode":   return 0.0f;
             default:           return 0.0f;
         }
     }
@@ -110,6 +121,8 @@ public final class Crystal
             case "resolution": return "Resolution";
             case "modulation": return "Mod";
             case "shimmer":    return "Shimmer";
+            case "shimmerOct": return "Shim Oct";
+            case "shimmerCut": return "Shim Cut";
             case "damping":    return "Damp";
             case "sides":      return "Sides";
             case "gate":       return "Gate (dB)";
@@ -119,9 +132,12 @@ public final class Crystal
             case "predelay":   return "Pre (s)";
             case "decay":      return "Decay";
             case "duck":       return "Duck";
+            case "duckMode":   return "Duck Mode";
             case "rev":        return "Reverse";
             case "freeze":     return "Freeze";
             case "mix":        return "Mix";
+            case "wetLock":    return "Wet Lock";
+            case "syncMode":   return "Sync";
             default:           return n;
         }
     }
@@ -133,6 +149,8 @@ public final class Crystal
             case "resolution": resolution = v; break;
             case "modulation": modulation = v; break;
             case "shimmer":    shimmer = v; break;
+            case "shimmerOct": shimmerOct = v; break;
+            case "shimmerCut": shimmerCut = v; break;
             case "damping":    damping = v; break;
             case "sides":      sides = v; break;
             case "gate":       gateDb = v; break;
@@ -142,9 +160,12 @@ public final class Crystal
             case "predelay":   predelay = v; break;
             case "decay":      decay = v; break;
             case "duck":       duck = v; break;
+            case "duckMode":   duckMode = v; break;
             case "rev":        rev = v; break;
             case "freeze":     freeze = v; break;
             case "mix":        mix = v; break;
+            case "wetLock":    wetLock = v; break;
+            case "syncMode":   syncMode = v; break;
         }
     }
 
@@ -156,6 +177,8 @@ public final class Crystal
             case "resolution": return resolution;
             case "modulation": return modulation;
             case "shimmer":    return shimmer;
+            case "shimmerOct": return shimmerOct;
+            case "shimmerCut": return shimmerCut;
             case "damping":    return damping;
             case "sides":      return sides;
             case "gate":       return gateDb;
@@ -165,9 +188,12 @@ public final class Crystal
             case "predelay":   return predelay;
             case "decay":      return decay;
             case "duck":       return duck;
+            case "duckMode":   return duckMode;
             case "rev":        return rev;
             case "freeze":     return freeze;
             case "mix":        return mix;
+            case "wetLock":    return wetLock;
+            case "syncMode":   return syncMode;
             default:           return 0f;
         }
     }
@@ -192,6 +218,10 @@ public final class Crystal
     private int mAp_a_w = 0, d1_a_w = 0, ap_a_w = 0, d2_a_w = 0;
     private int mAp_b_w = 0, d1_b_w = 0, ap_b_w = 0, d2_b_w = 0;
     private float damp_a = 0f, damp_b = 0f;
+    // DAMPING dual filter — Crystalline runs BOTH a low-pass shelf
+    // (cuts highs over time) AND a high-pass shelf (cuts the low-end
+    // build-up). Separate state per tank.
+    private float dampHP_a = 0f, dampHP_b = 0f;
     private float fb_a = 0f, fb_b = 0f;
     private float lfoPhase = 0f;
     private float lfoNoiseA = 0f, lfoNoiseB = 0f;
@@ -204,8 +234,16 @@ public final class Crystal
     private int shimGrainPos = 0;
     private float toneLP = 0f, toneHP = 0f;
     private float duckEnv = 0f;
-    private static final float DUCK_RC_FAST = 0.005f;
-    private static final float DUCK_RC_SLOW = 0.150f;
+    // DUCKER mode envelope timings — Gentle = slow & smooth, Pumpy =
+    // fast & aggressive (the audible "pump").
+    private static final float DUCK_GENTLE_ATTACK  = 0.025f;   // 25 ms
+    private static final float DUCK_GENTLE_RELEASE = 0.300f;   // 300 ms
+    private static final float DUCK_PUMPY_ATTACK   = 0.003f;   // 3 ms
+    private static final float DUCK_PUMPY_RELEASE  = 0.060f;   // 60 ms
+    // Shimmer HP filter — applied to the wet sample before it goes
+    // into the pitch-shifter ring so only the HF gets shimmered (not
+    // the body of the vocal).
+    private float shimHP = 0f;
     private float gateEnv = 0f;
     private float gateGain = 0f;
 
@@ -245,11 +283,13 @@ public final class Crystal
         mAp_a_w = d1_a_w = ap_a_w = d2_a_w = 0;
         mAp_b_w = d1_b_w = ap_b_w = d2_b_w = 0;
         damp_a = damp_b = 0f;
+        dampHP_a = dampHP_b = 0f;
         fb_a = fb_b = 0f;
         bwLP = bwHP = 0f;
         toneLP = toneHP = 0f;
         duckEnv = 0f;
         gateEnv = 0f; gateGain = 0f;
+        shimHP = 0f;
         shimBufLen = Math.max(2048, sr / 20);
         shimBuf = new float[shimBufLen];
         shimW = 0;
@@ -288,9 +328,23 @@ public final class Crystal
         final float decayCoef  = 0.25f + 0.7f * decay;
         final float feedbackG  = freeze >= 0.5f ? 1.00f : decayCoef;
         final float dampCutoff = 0.10f + (1f - damping) * 0.80f;
+        // Dual-filter damping: same `damping` knob drives both ends.
+        // The HP coef is *much* smaller (≈ 30 Hz when damping == 1)
+        // so it only nibbles at sub-bass build-up in the feedback,
+        // matching how Crystalline's DAMPING is voiced.
+        final float dampHpCoef = 0.0015f + damping * 0.015f;
         final float modDepth   = modulation * 32f;
         final float lfoInc     = (float)(2.0 * Math.PI * 0.7f / sampleRate);
         final float shimAmt    = shimmer * 0.45f;
+        // SHIMMER multiplier — Crystalline lets you pick 2× / 4× / 6×
+        // which corresponds to +1 / +2 / +3 octaves.  shimmerOct is a
+        // 0..1 continuous knob, mapped to discrete octave buckets.
+        final float shimReadRate = shimmerOct < 0.33f ? 2.0f
+                                  : shimmerOct < 0.67f ? 4.0f : 6.0f;
+        // SHIMMER cutoff — HP filter coefficient on the shimmer feed,
+        // so only HF gets pitch-shifted.  At shimCut=1 the HP corner
+        // sits around ~4 kHz; at 0 it's effectively bypassed.
+        final float shimHpCoef = 0.0008f + shimmerCut * 0.45f;
         final float toneTilt   = tone;
         final float duckAmt    = duck;
         final float wetMix     = mix;
@@ -327,6 +381,7 @@ public final class Crystal
         final float[] _mAp_b = mAp_b, _d1_b = d1_b, _ap_b = ap_b, _d2_b = d2_b;
         float _bwLP = bwLP, _bwHP = bwHP;
         float _damp_a = damp_a, _damp_b = damp_b;
+        float _dampHP_a = dampHP_a, _dampHP_b = dampHP_b;
         float _fb_a = fb_a, _fb_b = fb_b;
         float _toneLP = toneLP;
         float _duckEnv = duckEnv;
@@ -361,7 +416,12 @@ public final class Crystal
             x *= warpGain;
 
             float dryAbs = dry < 0 ? -dry : dry;
-            float rcCoef = dryAbs > _duckEnv ? DUCK_RC_FAST : DUCK_RC_SLOW;
+            // DUCKER mode: pick envelope coefs based on Gentle vs Pumpy.
+            // Gentle = smooth, slow attack/release (sub-audible ducking).
+            // Pumpy  = fast attack, short release (audible "pump").
+            float attackRC  = duckMode < 0.5f ? DUCK_GENTLE_ATTACK  : DUCK_PUMPY_ATTACK;
+            float releaseRC = duckMode < 0.5f ? DUCK_GENTLE_RELEASE : DUCK_PUMPY_RELEASE;
+            float rcCoef = dryAbs > _duckEnv ? attackRC : releaseRC;
             float duckIIR = 1f - (float) Math.exp(-1.0 / (sampleRate * rcCoef));
             _duckEnv += duckIIR * (dryAbs - _duckEnv);
             preBuf[preW] = x;
@@ -371,13 +431,23 @@ public final class Crystal
             preW++; if (preW >= preBuf.length) preW = 0;
             float shimOut = shimRead(shimBuf, _shimReadA, _shimReadB, shimGrainLen, shimGrainPos);
             float tankIn = preOut + shimOut * shimAmt;
-            // ── RESOLUTION: scale the input-diffusion AP gains.  Low
-            // RES gives a more "colored / chunky" reverb (the diffusion
-            // is incomplete), high RES gives the full Dattorro density.
+            // ── RESOLUTION: actual TOPOLOGY change, not just gain.
+            // Low RES = 2 allpasses (basic, colored, lower CPU
+            //   equivalent of "I-don't-care" quality)
+            // Mid RES = 3 allpasses (decent diffusion)
+            // High RES = full 4 (pristine, dense Dattorro density)
+            // We still scale the gains slightly within each tier so
+            // the knob has continuous travel between buckets.
             tankIn = ap(tankIn, _ap1, _ap1L, _ap1w, AP_G[0] * resScale); _ap1w = (_ap1w + 1) % _ap1L;
             tankIn = ap(tankIn, _ap2, _ap2L, _ap2w, AP_G[1] * resScale); _ap2w = (_ap2w + 1) % _ap2L;
-            tankIn = ap(tankIn, _ap3, _ap3L, _ap3w, AP_G[2] * resScale); _ap3w = (_ap3w + 1) % _ap3L;
-            tankIn = ap(tankIn, _ap4, _ap4L, _ap4w, AP_G[3] * resScale); _ap4w = (_ap4w + 1) % _ap4L;
+            if (resolution > 0.33f) {
+                tankIn = ap(tankIn, _ap3, _ap3L, _ap3w, AP_G[2] * resScale);
+                _ap3w = (_ap3w + 1) % _ap3L;
+            }
+            if (resolution > 0.66f) {
+                tankIn = ap(tankIn, _ap4, _ap4L, _ap4w, AP_G[3] * resScale);
+                _ap4w = (_ap4w + 1) % _ap4L;
+            }
             _lfoPhase += lfoInc;
             if (_lfoPhase > 6.283185f) _lfoPhase -= 6.283185f;
             float lfoSinA = (float) Math.sin(_lfoPhase);
@@ -400,8 +470,11 @@ public final class Crystal
             if (d1arIdx < 0) d1arIdx += _d1_a.length;
             float aMid = _d1_a[d1arIdx];
             d1_a_w = (d1_a_w + 1) % _d1_a.length;
+            // DAMPING dual: 1-pole LP (cuts highs over time) AND a
+            // very gentle 1-pole HP (cuts low-frequency build-up).
             _damp_a += dampCutoff * (aMid - _damp_a);
-            float aDamped = _damp_a;
+            _dampHP_a += dampHpCoef * (_damp_a - _dampHP_a);
+            float aDamped = _damp_a - _dampHP_a * damping;
             aDamped = ap(aDamped, _ap_a, _ap_a.length, ap_a_w, 0.5f);
             ap_a_w = (ap_a_w + 1) % _ap_a.length;
             _d2_a[d2_a_w] = aDamped;
@@ -420,7 +493,8 @@ public final class Crystal
             float bMid = _d1_b[d1brIdx];
             d1_b_w = (d1_b_w + 1) % _d1_b.length;
             _damp_b += dampCutoff * (bMid - _damp_b);
-            float bDamped = _damp_b;
+            _dampHP_b += dampHpCoef * (_damp_b - _dampHP_b);
+            float bDamped = _damp_b - _dampHP_b * damping;
             bDamped = ap(bDamped, _ap_b, _ap_b.length, ap_b_w, 0.5f);
             ap_b_w = (ap_b_w + 1) % _ap_b.length;
             _d2_b[d2_b_w] = bDamped;
@@ -435,9 +509,17 @@ public final class Crystal
                        + readTap(_ap_b, ap_b_w, scaleLen(TANK_LENS[8], sampleRate) / 4)
                        - readTap(_d2_a, d2_a_w, scaleLen(TANK_LENS[3], sampleRate) / 2);
             wetL *= 0.18f; wetR *= 0.18f;
-            shimBuf[_shimW] = (wetL + wetR) * 0.5f;
+            // SHIMMER cutoff: HP filter on the sum before it goes into
+            // the pitch-shifter ring — so the +octave halo is built
+            // from high-frequency content only (Crystalline behaviour).
+            float wetMono = (wetL + wetR) * 0.5f;
+            shimHP += shimHpCoef * (wetMono - shimHP);
+            float shimIn = wetMono - shimHP * shimmerCut;
+            shimBuf[_shimW] = shimIn;
             _shimW = (_shimW + 1) % shimBufLen;
-            _shimReadA += 2.0f; _shimReadB += 2.0f;
+            // SHIMMER multiplier: read rate = 2× / 4× / 6× → +1 / +2 /
+            // +3 octaves shifted feedback.
+            _shimReadA += shimReadRate; _shimReadB += shimReadRate;
             if (_shimReadA >= shimBufLen) _shimReadA -= shimBufLen;
             if (_shimReadB >= shimBufLen) _shimReadB -= shimBufLen;
             shimGrainPos = (shimGrainPos + 1) % shimGrainLen;
@@ -499,6 +581,7 @@ public final class Crystal
         ap1w = _ap1w; ap2w = _ap2w; ap3w = _ap3w; ap4w = _ap4w;
         bwLP = _bwLP; bwHP = _bwHP;
         damp_a = _damp_a; damp_b = _damp_b;
+        dampHP_a = _dampHP_a; dampHP_b = _dampHP_b;
         fb_a = _fb_a; fb_b = _fb_b;
         toneLP = _toneLP;
         duckEnv = _duckEnv;
@@ -595,9 +678,21 @@ public final class Crystal
     private float startX0, startY0, startX1, startY1;
     private float endX0,   endY0,   endX1,   endY1;
     private float duckX0,  duckY0,  duckX1,  duckY1;
+    private float duckModeX0, duckModeY0, duckModeX1, duckModeY1;  // Gentle/Pumpy
     private float revX0,   revY0,   revX1,   revY1;
     private float frzX0,   frzY0,   frzX1,   frzY1;
     private float sliderX0, sliderY0, sliderX1, sliderY1;  // dry/wet
+    private float wetLockX0, wetLockY0, wetLockX1, wetLockY1;     // tiny "O" toggle
+    // SYNC + ZERO + 1 + SYNC mini buttons under START/END.
+    private float startSyncX0, startSyncY0, startSyncX1, startSyncY1;
+    private float startZeroX0, startZeroY0, startZeroX1, startZeroY1;
+    private float endOneX0,    endOneY0,    endOneX1,    endOneY1;
+    private float endSyncX0,   endSyncY0,   endSyncX1,   endSyncY1;
+    // SHIMMER octave selector (2× / 4× / 6×) as a row of three tiny
+    // pills inside the SHIMMER button area.
+    private float shimOct2X0, shimOct2Y0, shimOct2X1, shimOct2Y1;
+    private float shimOct4X0, shimOct4Y0, shimOct4X1, shimOct4Y1;
+    private float shimOct6X0, shimOct6Y0, shimOct6X1, shimOct6Y1;
 
     // ── Drag state ──
     private int  activeIdx = -1;       // index into `controls`, or -2 for slider, or -1 = idle
@@ -657,13 +752,37 @@ public final class Crystal
         layoutGrid(leftX, midTop, leftX + colW, midBot, 0, 6);
         layoutGrid(rightX, midTop, rightX + colW, midBot, 6, 12);
 
+        // SHIMMER octave selector — 3 tiny pills laid out below the
+        // SHIMMER knob (controls[5]), inside its cell so they read as
+        // "options for this control".
+        ControlRect sh = controls[5];
+        if (sh != null) {
+            float octRowY = sh.by1 - 2f;
+            float octPillW = (sh.bx1 - sh.bx0 - 4f) / 3f - 2f;
+            float octPillH = 9f;
+            shimOct2X0 = sh.bx0 + 2f;
+            shimOct2Y0 = octRowY;
+            shimOct2X1 = shimOct2X0 + octPillW;
+            shimOct2Y1 = octRowY + octPillH;
+            shimOct4X0 = shimOct2X1 + 2f;
+            shimOct4Y0 = octRowY;
+            shimOct4X1 = shimOct4X0 + octPillW;
+            shimOct4Y1 = octRowY + octPillH;
+            shimOct6X0 = shimOct4X1 + 2f;
+            shimOct6Y0 = octRowY;
+            shimOct6X1 = shimOct6X0 + octPillW;
+            shimOct6Y1 = octRowY + octPillH;
+        }
+
         // Centre column has 3 horizontal strips stacked vertically:
         //   - Gradient display (top, takes ~60% of the centre height)
         //   - START | END mini sliders row
         //   - OUTPUT row: DUCK · FRZ · DRY/WET
         float centerW = centerX1 - centerX0;
         float displayY0 = midTop;
-        displayBoxY1 = midTop + (midBot - midTop) * 0.62f;
+        // Display takes ~52 % of the centre column height so START/END +
+        // SYNC/ZERO row + OUTPUT row + DRY/WET all fit without colliding.
+        displayBoxY1 = midTop + (midBot - midTop) * 0.52f;
         // START / END row.
         float seY0 = displayBoxY1 + 14f;
         float seY1 = seY0 + 16f;
@@ -673,25 +792,49 @@ public final class Crystal
         startX1 = centerX0 + seW; startY1 = seY1;
         endX0 = startX1 + seGap;  endY0 = seY0;
         endX1 = centerX1;         endY1 = seY1;
-        // OUTPUT row: DUCK | REV | FRZ | DRY/WET.
-        float outY0 = seY1 + 22f;
+        // SYNC + ZERO buttons under START, 1 + SYNC under END.
+        float syncRowY0 = seY1 + 5f;
+        float syncRowY1 = syncRowY0 + 12f;
+        float syncBtnW = 28f;
+        startSyncX0 = startX0;
+        startSyncY0 = syncRowY0; startSyncY1 = syncRowY1;
+        startSyncX1 = startSyncX0 + syncBtnW;
+        startZeroX0 = startSyncX1 + 4f;
+        startZeroY0 = syncRowY0; startZeroY1 = syncRowY1;
+        startZeroX1 = startZeroX0 + syncBtnW;
+        endOneX0 = endX0;
+        endOneY0 = syncRowY0; endOneY1 = syncRowY1;
+        endOneX1 = endOneX0 + syncBtnW * 0.5f;
+        endSyncX0 = endOneX1 + 4f;
+        endSyncY0 = syncRowY0; endSyncY1 = syncRowY1;
+        endSyncX1 = endSyncX0 + syncBtnW;
+        // OUTPUT row: DUCK | mode dot | REV | FRZ | DRY/WET | wetLock dot.
+        float outY0 = syncRowY1 + 12f;
         float outY1 = outY0 + 16f;
-        float duckW = centerW * 0.26f;
-        float dotSize = 16f;
-        float dwGap = 8f;
+        float duckW = centerW * 0.22f;
+        float dotSize = 14f;
+        float dwGap = 6f;
         duckX0 = centerX0;        duckY0 = outY0;
         duckX1 = centerX0 + duckW; duckY1 = outY1;
-        revX0 = duckX1 + dwGap;
-        revY0 = (outY0 + outY1) * 0.5f - dotSize * 0.5f;
+        duckModeX0 = duckX1 + dwGap;
+        duckModeY0 = (outY0 + outY1) * 0.5f - dotSize * 0.5f;
+        duckModeX1 = duckModeX0 + dotSize;
+        duckModeY1 = duckModeY0 + dotSize;
+        revX0 = duckModeX1 + dwGap;
+        revY0 = duckModeY0;
         revX1 = revX0 + dotSize;
         revY1 = revY0 + dotSize;
         frzX0 = revX1 + dwGap;
         frzY0 = revY0;
         frzX1 = frzX0 + dotSize;
         frzY1 = frzY0 + dotSize;
+        wetLockX0 = centerX1 - dotSize;
+        wetLockY0 = revY0;
+        wetLockX1 = centerX1;
+        wetLockY1 = revY0 + dotSize;
         sliderX0 = frzX1 + dwGap;
         sliderY0 = outY0;
-        sliderX1 = centerX1;
+        sliderX1 = wetLockX0 - dwGap;
         sliderY1 = outY1;
     }
 
@@ -728,6 +871,15 @@ public final class Crystal
     private static final int SLIDER_DUCK   = -5;
     private static final int DOT_FRZ       = -6;
     private static final int DOT_REV       = -7;
+    private static final int DOT_DUCKMODE  = -8;
+    private static final int DOT_WETLOCK   = -9;
+    private static final int BTN_START_SYNC = -10;
+    private static final int BTN_START_ZERO = -11;
+    private static final int BTN_END_ONE    = -12;
+    private static final int BTN_END_SYNC   = -13;
+    private static final int PILL_SHIM_2X   = -14;
+    private static final int PILL_SHIM_4X   = -15;
+    private static final int PILL_SHIM_6X   = -16;
 
     // ── Touch handlers ──
     @Override public void onTouchDown(float x, float y) {
@@ -749,6 +901,11 @@ public final class Crystal
             commitSliderAt("duck", x, duckX0, duckX1, 0f, 1f);
             return;
         }
+        if (hits(x, y, duckModeX0 - 4f, duckModeY0 - 4f, duckModeX1 + 4f, duckModeY1 + 4f)) {
+            activeIdx = DOT_DUCKMODE;
+            commitParam("duckMode", duckMode >= 0.5f ? 0f : 1f);
+            return;
+        }
         if (hits(x, y, revX0 - 4f, revY0 - 4f, revX1 + 4f, revY1 + 4f)) {
             activeIdx = DOT_REV;
             commitParam("rev", rev >= 0.5f ? 0f : 1f);
@@ -757,6 +914,48 @@ public final class Crystal
         if (hits(x, y, frzX0 - 4f, frzY0 - 4f, frzX1 + 4f, frzY1 + 4f)) {
             activeIdx = DOT_FRZ;
             commitParam("freeze", freeze >= 0.5f ? 0f : 1f);
+            return;
+        }
+        if (hits(x, y, wetLockX0 - 4f, wetLockY0 - 4f, wetLockX1 + 4f, wetLockY1 + 4f)) {
+            activeIdx = DOT_WETLOCK;
+            commitParam("wetLock", wetLock >= 0.5f ? 0f : 1f);
+            return;
+        }
+        // SYNC / ZERO / 1 / SYNC mini buttons.
+        if (hits(x, y, startSyncX0, startSyncY0, startSyncX1, startSyncY1)) {
+            activeIdx = BTN_START_SYNC;
+            commitParam("syncMode", syncMode >= 0.5f ? 0f : 1f);
+            return;
+        }
+        if (hits(x, y, startZeroX0, startZeroY0, startZeroX1, startZeroY1)) {
+            activeIdx = BTN_START_ZERO;
+            commitParam("predelay", 0f);
+            return;
+        }
+        if (hits(x, y, endOneX0, endOneY0, endOneX1, endOneY1)) {
+            activeIdx = BTN_END_ONE;
+            commitParam("decay", 1f);
+            return;
+        }
+        if (hits(x, y, endSyncX0, endSyncY0, endSyncX1, endSyncY1)) {
+            activeIdx = BTN_END_SYNC;
+            commitParam("syncMode", syncMode >= 0.5f ? 0f : 1f);
+            return;
+        }
+        // SHIMMER octave pills.
+        if (hits(x, y, shimOct2X0, shimOct2Y0, shimOct2X1, shimOct2Y1)) {
+            activeIdx = PILL_SHIM_2X;
+            commitParam("shimmerOct", 0f);
+            return;
+        }
+        if (hits(x, y, shimOct4X0, shimOct4Y0, shimOct4X1, shimOct4Y1)) {
+            activeIdx = PILL_SHIM_4X;
+            commitParam("shimmerOct", 0.5f);
+            return;
+        }
+        if (hits(x, y, shimOct6X0, shimOct6Y0, shimOct6X1, shimOct6Y1)) {
+            activeIdx = PILL_SHIM_6X;
+            commitParam("shimmerOct", 1f);
             return;
         }
         if (hits(x, y, sliderX0, sliderY0, sliderX1, sliderY1)) {
@@ -783,7 +982,13 @@ public final class Crystal
     }
 
     @Override public void onTouchMove(float x, float y) {
-        if (activeIdx == -1 || activeIdx == DOT_FRZ || activeIdx == DOT_REV) return;
+        if (activeIdx == -1
+                || activeIdx == DOT_FRZ || activeIdx == DOT_REV
+                || activeIdx == DOT_DUCKMODE || activeIdx == DOT_WETLOCK
+                || activeIdx == BTN_START_SYNC || activeIdx == BTN_START_ZERO
+                || activeIdx == BTN_END_ONE   || activeIdx == BTN_END_SYNC
+                || activeIdx == PILL_SHIM_2X  || activeIdx == PILL_SHIM_4X
+                || activeIdx == PILL_SHIM_6X) return;
         switch (activeIdx) {
             case SLIDER_DRYWET:
                 commitSliderAt("mix", x, sliderX0, sliderX1, 0f, 1f); return;
@@ -915,11 +1120,12 @@ public final class Crystal
         bgPaint.setColor(COLOR_BG);
         canvas.drawRect(0, 0, W, H, bgPaint);
 
-        // ── Header (italic "crystal" wordmark + decay readout) ──
-        // Tiny faux-italic via a slight shear isn't supported by the
-        // abstract canvas, so use bold + larger size for emphasis.
-        headerPaint.setColor(COLOR_INK).setTextSize(22f).setTextAlign(1);
-        canvas.drawText("crystal", W * 0.5f, 24f, headerPaint);
+        // ── Header — bold "crystal" wordmark + decay readout.  Canvas
+        //    has no italic setter and the rotate-fake-italic trick made
+        //    the text disappear on some adapter paths, so we leave it
+        //    upright but use a serifey larger weight for emphasis.
+        headerPaint.setColor(COLOR_INK).setTextSize(24f).setTextAlign(1);
+        canvas.drawText("crystal", W * 0.5f, 26f, headerPaint);
         // Side-corner annotations: thin top labels left/right.
         headerPaint.setColor(COLOR_INK_DIM).setTextSize(9f).setTextAlign(0);
         canvas.drawText("VOCAL MONITOR.", 12f, 16f, headerPaint);
@@ -966,20 +1172,70 @@ public final class Crystal
                           predelay / parameterMax("predelay"));
         drawCenterSlider(canvas, "END",   endX0,   endY0,   endX1,   endY1,   decay);
 
+        // ── SYNC + ZERO + 1 + SYNC mini buttons (Crystalline cosmetic
+        //    row).  SYNC toggles syncMode (cosmetic — no host tempo
+        //    available); ZERO sets predelay to 0; "1" sets decay to
+        //    1.0; right SYNC also toggles syncMode.
+        drawMiniBtn(canvas, startSyncX0, startSyncY0, startSyncX1, startSyncY1,
+                "SYNC", syncMode >= 0.5f);
+        drawMiniBtn(canvas, startZeroX0, startZeroY0, startZeroX1, startZeroY1,
+                "ZERO", false);
+        drawMiniBtn(canvas, endOneX0, endOneY0, endOneX1, endOneY1,
+                "1", false);
+        drawMiniBtn(canvas, endSyncX0, endSyncY0, endSyncX1, endSyncY1,
+                "SYNC", syncMode >= 0.5f);
+
         // ── OUTPUT row: DUCK mini slider + FRZ toggle dot + DRY/WET ──
         // Single OUTPUT section label spans the full row above all
         // three controls, so individual slider labels don't fight it.
         labelPaint.setColor(COLOR_INK_DIM).setTextSize(8.5f).setTextAlign(0);
         canvas.drawText("OUTPUT", duckX0, duckY0 - 14f, labelPaint);
         drawCenterSlider(canvas, "DUCK", duckX0, duckY0, duckX1, duckY1, duck);
-        // REV and FRZ dots side-by-side — matches Crystalline's OUTPUT
-        // row exactly (REV = reverse reverb, FRZ = freeze).
+        // DUCK mode dot (•) — filled when Pumpy, hollow when Gentle.
+        drawDot(canvas, duckModeX0, duckModeY0, duckModeX1, duckModeY1,
+                duckMode >= 0.5f, COLOR_ACCENT);
+        labelPaint.setColor(COLOR_INK_DIM).setTextSize(7.5f).setTextAlign(1);
+        canvas.drawText(duckMode >= 0.5f ? "PUMPY" : "GENTLE",
+                (duckModeX0 + duckModeX1) * 0.5f, duckModeY0 - 4f, labelPaint);
+        // REV and FRZ dots side-by-side.
         drawDot(canvas, revX0, revY0, revX1, revY1, rev    >= 0.5f, 0xFFE36C9C);
         drawDot(canvas, frzX0, frzY0, frzX1, frzY1, freeze >= 0.5f, 0xFF6DD3E0);
-        labelPaint.setColor(COLOR_INK_DIM).setTextSize(7.5f).setTextAlign(1);
         canvas.drawText("REV", (revX0 + revX1) * 0.5f, revY0 - 4f, labelPaint);
         canvas.drawText("FRZ", (frzX0 + frzX1) * 0.5f, frzY0 - 4f, labelPaint);
         drawDryWetSlider(canvas, sliderX0, sliderY0, sliderX1, sliderY1, mix);
+        // WET LOCK tiny circle — preset-behaviour toggle (keeps the
+        // dry/wet ratio when stepping through presets).  Cosmetic.
+        // Label sits BELOW the dot to avoid colliding with the % text.
+        drawDot(canvas, wetLockX0, wetLockY0, wetLockX1, wetLockY1,
+                wetLock >= 0.5f, COLOR_ACCENT);
+        canvas.drawText("LOCK", (wetLockX0 + wetLockX1) * 0.5f, wetLockY1 + 9f, labelPaint);
+
+        // ── SHIMMER octave selector pills (2× / 4× / 6×) inside the
+        //    SHIMMER knob cell.
+        int octBucket = shimmerOct < 0.33f ? 0 : (shimmerOct < 0.67f ? 1 : 2);
+        drawOctPill(canvas, shimOct2X0, shimOct2Y0, shimOct2X1, shimOct2Y1, "2x", octBucket == 0);
+        drawOctPill(canvas, shimOct4X0, shimOct4Y0, shimOct4X1, shimOct4Y1, "4x", octBucket == 1);
+        drawOctPill(canvas, shimOct6X0, shimOct6Y0, shimOct6X1, shimOct6Y1, "6x", octBucket == 2);
+    }
+
+    private void drawMiniBtn(PluginCanvas canvas, float x0, float y0,
+                              float x1, float y1, String text, boolean active) {
+        buttonPaint.setColor(active ? COLOR_ACCENT : COLOR_BUTTON_BG).setStyle(PluginStyle.FILL);
+        canvas.drawRoundRect(x0, y0, x1, y1, 3f, buttonPaint);
+        buttonPaint.setColor(COLOR_INK_DIM).setStyle(PluginStyle.STROKE).setStrokeWidth(0.8f);
+        canvas.drawRoundRect(x0, y0, x1, y1, 3f, buttonPaint);
+        labelPaint.setColor(active ? 0xFF101010 : COLOR_INK_DIM)
+                .setTextSize(7.5f).setTextAlign(1);
+        canvas.drawText(text, (x0 + x1) * 0.5f, (y0 + y1) * 0.5f + 3f, labelPaint);
+    }
+
+    private void drawOctPill(PluginCanvas canvas, float x0, float y0,
+                              float x1, float y1, String text, boolean active) {
+        buttonPaint.setColor(active ? COLOR_DEPTH : 0xFFE9EAED).setStyle(PluginStyle.FILL);
+        canvas.drawRoundRect(x0, y0, x1, y1, 2f, buttonPaint);
+        labelPaint.setColor(active ? 0xFFFFFFFF : COLOR_INK_DIM)
+                .setTextSize(6.5f).setTextAlign(1);
+        canvas.drawText(text, (x0 + x1) * 0.5f, (y0 + y1) * 0.5f + 2.5f, labelPaint);
     }
 
     // Mini horizontal slider with name label above + value handle.
