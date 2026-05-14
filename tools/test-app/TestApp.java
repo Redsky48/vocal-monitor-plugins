@@ -51,6 +51,7 @@ public class TestApp extends JFrame {
     private final JLabel statusLabel = new JLabel("Pick a plugin on the left, then load a WAV or record from the mic.");
     private final JButton loadBtn  = new JButton("Load WAV...");
     private final JButton micBtn   = new JButton("Record 5 s from mic");
+    private final JToggleButton liveMicBtn = new JToggleButton("Live mic stream");
     private final JButton playOrig = new JButton("Play original");
     private final JButton process  = new JButton("Process");
     private final JButton playProc = new JButton("Play processed");
@@ -236,8 +237,24 @@ public class TestApp extends JFrame {
 
         // --- North: top action buttons only (Load / Record) ---
         JPanel topButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        topButtons.add(loadBtn); topButtons.add(micBtn);
+        topButtons.add(loadBtn); topButtons.add(micBtn); topButtons.add(liveMicBtn);
         main.add(topButtons, BorderLayout.NORTH);
+
+        liveMicBtn.addActionListener(e -> {
+            try {
+                if (liveMicBtn.isSelected()) {
+                    LiveMic.get().start();
+                    setStatus("Live mic streaming - every open plugin preview now reads from the PC microphone.");
+                } else {
+                    LiveMic.get().stop();
+                    setStatus("Live mic stopped.");
+                }
+            } catch (Exception ex) {
+                liveMicBtn.setSelected(false);
+                JOptionPane.showMessageDialog(this, ex.getMessage(),
+                        "Live mic error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
 
         // --- West sidebar: search + categorised plugin tree + sliders ---
         JPanel sidebar = new JPanel(new BorderLayout(0, 6));
@@ -971,6 +988,87 @@ public class TestApp extends JFrame {
     // classloader and creating java.lang.reflect.Proxy instances that
     // satisfy the plugin's interface types at runtime.
     //
+    // Shared live-microphone capture.  Opens a single TargetDataLine,
+    // reads it in a background thread into a circular buffer, and
+    // exposes the most-recent N samples to any consumer.  PluginWindow's
+    // driveAudio() pulls from here when live mode is enabled, so every
+    // open plugin preview animates from the real PC microphone instead
+    // of a looped WAV.  Process() still drives the plugin's analysis
+    // pipeline, and updateStreams() populates streams["waveform"] from
+    // the (pass-through) output — meaning render() also sees the live
+    // mic through the streams API, just like on Android.
+    static final class LiveMic {
+        private static LiveMic instance;
+        public static synchronized LiveMic get() {
+            if (instance == null) instance = new LiveMic();
+            return instance;
+        }
+
+        private final int sampleRate = SR;
+        private static final int RING_LEN = 8192;
+        private final float[] ring = new float[RING_LEN];
+        private volatile int ringW = 0;
+        private final AtomicBoolean active = new AtomicBoolean(false);
+        private TargetDataLine line;
+        private Thread reader;
+
+        public synchronized void start() throws LineUnavailableException {
+            if (active.get()) return;
+            AudioFormat fmt = new AudioFormat(sampleRate, 16, 1, true, false);
+            line = AudioSystem.getTargetDataLine(fmt);
+            line.open(fmt, 4096);
+            line.start();
+            active.set(true);
+            reader = new Thread(this::pump, "live-mic-reader");
+            reader.setDaemon(true);
+            reader.start();
+        }
+
+        public synchronized void stop() {
+            if (!active.get()) return;
+            active.set(false);
+            if (line != null) {
+                try { line.stop(); line.close(); } catch (Exception ignored) {}
+                line = null;
+            }
+            if (reader != null) { reader.interrupt(); reader = null; }
+        }
+
+        public boolean isActive() { return active.get(); }
+
+        private void pump() {
+            byte[] buf = new byte[2048];
+            while (active.get()) {
+                int n;
+                try { n = line.read(buf, 0, buf.length); }
+                catch (Exception e) { break; }
+                if (n <= 0) continue;
+                int samples = n / 2;
+                int w = ringW;
+                for (int i = 0; i < samples; i++) {
+                    int lo = buf[2 * i] & 0xff;
+                    int hi = buf[2 * i + 1];
+                    short s = (short) ((hi << 8) | lo);
+                    ring[w] = s / 32768f;
+                    w = (w + 1) % RING_LEN;
+                }
+                ringW = w;
+            }
+        }
+
+        /** Copy the most-recent {@code count} samples (chronological order)
+         *  into {@code dst}.  Always returns the freshest audio available;
+         *  consumers may see overlap between calls if they pull faster
+         *  than real-time, which is fine for visualisation. */
+        public void pullRecent(float[] dst, int count) {
+            int w = ringW;                       // snapshot
+            int start = ((w - count) % RING_LEN + RING_LEN) % RING_LEN;
+            for (int i = 0; i < count; i++) {
+                dst[i] = ring[(start + i) % RING_LEN];
+            }
+        }
+    }
+
     // A 60 Hz Swing Timer drives repaint. A background audio thread
     // keeps feeding the plugin's process() so any internal envelope /
     // analyser state stays live whether or not the user is playing
@@ -1249,7 +1347,13 @@ public class TestApp extends JFrame {
             long blockNs = 1_000_000_000L * block / sampleRate;
             while (driving.get()) {
                 long t0 = System.nanoTime();
-                if (srcLen > 0) {
+                // Live mic wins when the user toggled it on — every
+                // preview window then animates from the PC microphone.
+                // Falls back to looped sourceAudio, then to silence.
+                LiveMic mic = LiveMic.get();
+                if (mic.isActive()) {
+                    mic.pullRecent(in, block);
+                } else if (srcLen > 0) {
                     for (int i = 0; i < block; i++) {
                         in[i] = sourceAudio[(pos + i) % srcLen];
                     }

@@ -50,14 +50,28 @@ public final class FormantTracker
     @Override public void setParameter(String n, float v) { }
 
     // ── LPC analysis ──
+    //
+    // Pro formant trackers (Praat, Wavesurfer) downsample the audio to
+    // ≈ 2× the maximum formant frequency before fitting LPC, so the
+    // same handful of poles only has to model the formant band — at
+    // 44.1 kHz with order 12 the LPC under-fits and produces broad
+    // peaks (BW > 1 kHz) instead of real formants.  We anti-alias at
+    // 5 kHz with a 4-pole Butterworth then decimate by 4 → 11.025 kHz,
+    // and run order-12 LPC there.
     private static final int LPC_ORDER  = 12;
     private static final int FRAME_SIZE = 1024;
     private static final int HOP        = 512;
+    private static final int DEC_FACTOR = 4;
+    private static final int DEC_SIZE   = FRAME_SIZE / DEC_FACTOR;     // 256
     private final float[] audioRing = new float[FRAME_SIZE];
-    private final float[] frame = new float[FRAME_SIZE];
+    private final float[] frame     = new float[FRAME_SIZE];
+    private final float[] frameDec  = new float[DEC_SIZE];
     private final float[] lpcA = new float[LPC_ORDER + 1];
     private final float[] R = new float[LPC_ORDER + 1];
     private int ringW = 0, sampleAcc = 0;
+
+    // Anti-aliasing biquad — designed lazily once we know sampleRate.
+    private float[] aaCoefs;
 
     // LPC magnitude spectrum, sampled on SPEC_BINS points across the
     // formant band (0..5.5 kHz), for peak-picking.
@@ -100,23 +114,45 @@ public final class FormantTracker
     }
 
     private void analyseFrame() {
-        // Pre-emphasis + Hann window.
+        if (aaCoefs == null) aaCoefs = lowPassBiquad(5000f, 0.707f, sampleRate);
+        // 1. Pre-emphasis (HF +6 dB/oct, kills bass tilt that would
+        //    otherwise dominate the LPC fit).
         float prev = 0f;
         double energy = 0;
         for (int i = 0; i < FRAME_SIZE; i++) {
             int idx = (ringW + i) % FRAME_SIZE;
             float v = audioRing[idx] - 0.97f * prev;
             prev = audioRing[idx];
-            float w = (float)(0.5 - 0.5 * Math.cos(2 * Math.PI * i / (FRAME_SIZE - 1)));
-            frame[i] = v * w;
+            frame[i] = v;
             energy += v * v;
         }
         float rms = (float) Math.sqrt(energy / FRAME_SIZE);
-        if (rms < 0.003f) return;
-        // Autocorrelation.
+        if (rms < 0.001f) return;
+        // 2. Anti-aliasing low-pass at 5 kHz — 4-pole Butterworth
+        //    (cascade of two identical biquads).  Reset state per frame
+        //    so the IIR transient lives at the edges of the analysis
+        //    window where the Hann window will window it away.
+        float s1a = 0f, s1b = 0f, s1c = 0f, s1d = 0f;
+        float s2a = 0f, s2b = 0f, s2c = 0f, s2d = 0f;
+        for (int i = 0; i < FRAME_SIZE; i++) {
+            float x = frame[i];
+            float y1 = aaCoefs[0] * x + aaCoefs[1] * s1a + aaCoefs[2] * s1b
+                     - aaCoefs[3] * s1c - aaCoefs[4] * s1d;
+            s1b = s1a; s1a = x; s1d = s1c; s1c = y1;
+            float y2 = aaCoefs[0] * y1 + aaCoefs[1] * s2a + aaCoefs[2] * s2b
+                     - aaCoefs[3] * s2c - aaCoefs[4] * s2d;
+            s2b = s2a; s2a = y1; s2d = s2c; s2c = y2;
+            frame[i] = y2;
+        }
+        // 3. Decimate by 4 + Hann window over the decimated frame.
+        for (int i = 0; i < DEC_SIZE; i++) {
+            float w = (float)(0.5 - 0.5 * Math.cos(2 * Math.PI * i / (DEC_SIZE - 1)));
+            frameDec[i] = frame[i * DEC_FACTOR] * w;
+        }
+        // 4. Autocorrelation on the decimated frame.
         for (int k = 0; k <= LPC_ORDER; k++) {
             float sum = 0f;
-            for (int i = k; i < FRAME_SIZE; i++) sum += frame[i] * frame[i - k];
+            for (int i = k; i < DEC_SIZE; i++) sum += frameDec[i] * frameDec[i - k];
             R[k] = sum;
         }
         if (R[0] < 1e-9f) return;
@@ -139,15 +175,16 @@ public final class FormantTracker
         System.arraycopy(a, 0, lpcA, 0, LPC_ORDER + 1);
 
         // LPC magnitude spectrum |1 / A(e^jω)| sampled on SPEC_BINS
-        // points from 0..5.5 kHz, then pick local maxima.  Bandwidths
-        // are estimated from the −3 dB width around each peak.  This
-        // is robust on every platform (the previous Durand-Kerner
-        // root-finder converged inconsistently on Android), so we
-        // stick with the proven peak-picking approach.
+        // points across 0..5.5 kHz at the *decimated* sample rate
+        // (sampleRate / DEC_FACTOR).  Pick 2-bin local maxima, then
+        // estimate bandwidth from the −3 dB width.  Real formants come
+        // out narrow (50–200 Hz); we reject anything wider than 500 Hz
+        // as a non-formant spectral lump.
         float maxHz = 5500f;
+        float decSr = sampleRate / (float) DEC_FACTOR;
         for (int b = 0; b < SPEC_BINS; b++) {
             float freq = (b + 1) * maxHz / SPEC_BINS;
-            double w = 2.0 * Math.PI * freq / sampleRate;
+            double w = 2.0 * Math.PI * freq / decSr;
             double re = 0, im = 0;
             for (int k = 0; k <= LPC_ORDER; k++) {
                 re += lpcA[k] * Math.cos(-w * k);
@@ -164,14 +201,15 @@ public final class FormantTracker
             if (v > lpcSpec[b - 1] && v > lpcSpec[b + 1]
                     && v > lpcSpec[b - 2] && v > lpcSpec[b + 2]) {
                 float peakHz = (b + 1) * maxHz / SPEC_BINS;
-                if (peakHz < 200f || peakHz > 5000f) continue;
+                if (peakHz < 150f || peakHz > 5300f) continue;
                 // −3 dB bandwidth: walk left + right until magnitude
-                // drops 1/sqrt(2).
+                // drops 1/sqrt(2) below the peak.
                 float thresh = v * 0.7071f;
                 int bLo = b, bHi = b;
                 while (bLo > 0 && lpcSpec[bLo] > thresh) bLo--;
                 while (bHi < SPEC_BINS - 1 && lpcSpec[bHi] > thresh) bHi++;
                 float bwHz = (bHi - bLo) * maxHz / SPEC_BINS;
+                if (bwHz > 500f) continue;     // not a real formant
                 candF[nCand]  = peakHz;
                 candBw[nCand] = bwHz;
                 nCand++;
@@ -221,15 +259,17 @@ public final class FormantTracker
             }
         }
         // Fill any unassigned slots from the lowest remaining
-        // candidates, in ascending order.
+        // candidates, in ascending order.  Slot ranges overlap so a
+        // single peak can land in slot 0 OR slot 1 depending on the
+        // assignment order — that's intentional, it avoids dropping a
+        // perfectly good F1 when no candidate exists in F2's narrow
+        // range.
         for (int slot = 0; slot < 3; slot++) {
             if (newF[slot] > 0f) continue;
             for (int c = 0; c < nCand; c++) {
                 if (used[c]) continue;
-                // Heuristic per-slot range to prevent F2 grabbing F1
-                // territory when history is missing.
-                float lo = slot == 0 ? 200f : slot == 1 ? 700f : 1800f;
-                float hi = slot == 0 ? 1100f : slot == 1 ? 3000f : 4500f;
+                float lo = slot == 0 ? 150f : slot == 1 ? 600f  : 1700f;
+                float hi = slot == 0 ? 1200f : slot == 1 ? 3200f : 5000f;
                 if (candF[c] < lo || candF[c] > hi) continue;
                 newF[slot]  = candF[c];
                 newBw[slot] = candBw[c];
@@ -237,19 +277,37 @@ public final class FormantTracker
                 break;
             }
         }
-        // Smooth the three slots.
-        if (newF[0] > 0f && newF[1] > 0f) {
-            float coef = 0.3f;
-            f1 = f1 == 0f ? newF[0] : f1 + coef * (newF[0] - f1);
-            f2 = f2 == 0f ? newF[1] : f2 + coef * (newF[1] - f2);
-            if (newF[2] > 0f) f3 = f3 == 0f ? newF[2] : f3 + coef * (newF[2] - f3);
-            bw1 = bw1 == 0f ? newBw[0] : bw1 + coef * (newBw[0] - bw1);
-            bw2 = bw2 == 0f ? newBw[1] : bw2 + coef * (newBw[1] - bw2);
-            if (newBw[2] > 0f) bw3 = bw3 == 0f ? newBw[2] : bw3 + coef * (newBw[2] - bw3);
+        // Smooth EACH slot independently — partial results (only F1
+        // found, or only F2 found) still update the live display
+        // instead of being thrown away because the "and" gate failed.
+        float coef = 0.3f;
+        if (newF[0]  > 0f) f1  = f1  == 0f ? newF[0]  : f1  + coef * (newF[0]  - f1);
+        if (newF[1]  > 0f) f2  = f2  == 0f ? newF[1]  : f2  + coef * (newF[1]  - f2);
+        if (newF[2]  > 0f) f3  = f3  == 0f ? newF[2]  : f3  + coef * (newF[2]  - f3);
+        if (newBw[0] > 0f) bw1 = bw1 == 0f ? newBw[0] : bw1 + coef * (newBw[0] - bw1);
+        if (newBw[1] > 0f) bw2 = bw2 == 0f ? newBw[1] : bw2 + coef * (newBw[1] - bw2);
+        if (newBw[2] > 0f) bw3 = bw3 == 0f ? newBw[2] : bw3 + coef * (newBw[2] - bw3);
+        if (f1 > 0f && f2 > 0f) {
             trailF1[trailW] = f1;
             trailF2[trailW] = f2;
             trailW = (trailW + 1) % TRAIL_LEN;
         }
+    }
+
+    // RBJ-cookbook low-pass biquad, normalised to a0=1 form for the
+    // direct-form-1 difference equation used inline above.
+    private static float[] lowPassBiquad(float fc, float q, int sr) {
+        double w = 2.0 * Math.PI * fc / sr;
+        double cs = Math.cos(w), sn = Math.sin(w);
+        double alpha = sn / (2.0 * q);
+        double a0 = 1 + alpha;
+        return new float[] {
+            (float)((1 - cs) * 0.5 / a0),     // b0
+            (float)((1 - cs)        / a0),     // b1
+            (float)((1 - cs) * 0.5 / a0),     // b2
+            (float)(-2 * cs        / a0),     // a1
+            (float)((1 - alpha)    / a0),     // a2
+        };
     }
 
     // ── Visual ─────────────────────────────────────────────────
@@ -283,7 +341,7 @@ public final class FormantTracker
         textBright.setColor(COLOR_TEXT_BRIGHT).setTextSize(12f).setTextAlign(0);
         canvas.drawText("FORMANT TRACKER", 12f, 16f, textBright);
         textDim.setColor(COLOR_TEXT_DIM).setTextSize(9f).setTextAlign(2);
-        canvas.drawText("LPC roots (Durand-Kerner) + continuity", W - 12f, 16f, textDim);
+        canvas.drawText("LPC 12 @ 11 kHz + peak-pick", W - 12f, 16f, textDim);
 
         float pad = 12f, headerH = 24f, footerH = 26f;
         float plotX0 = pad + 40f;

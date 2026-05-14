@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-14T20:56:40.499Z",
+  "generatedAt": "2026-05-14T21:24:51.647Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -1539,7 +1539,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/formant-tracker/formant-tracker.dex",
-      "sizeBytes": 9588,
+      "sizeBytes": 10304,
       "className": "com.vocalmonitor.plugin.community.FormantTracker",
       "ui_kind": "canvas",
       "ui": {
@@ -1732,7 +1732,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/vocal-fatigue/vocal-fatigue.dex",
-      "sizeBytes": 12372,
+      "sizeBytes": 12396,
       "className": "com.vocalmonitor.plugin.community.VocalFatigue",
       "ui_kind": "canvas",
       "ui": {

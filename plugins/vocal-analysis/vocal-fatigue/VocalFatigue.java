@@ -89,8 +89,10 @@ public final class VocalFatigue
     private final float[] bandHiStateA = new float[4];
     private float loEnv = 0f, hiEnv = 0f;
 
-    // 30-second window accumulators.
-    private static final float WINDOW_SEC = 30f;
+    // 5-second window accumulators — short enough that the user sees
+    // the load number tick over every few seconds, long enough that
+    // each window has a stable average of jitter / shimmer / CPP.
+    private static final float WINDOW_SEC = 5f;
     private double winSumCentsAbs = 0;
     private double winSumLo = 0, winSumHi = 0;
     private double winSumHnr = 0;
@@ -276,14 +278,22 @@ public final class VocalFatigue
         winSumRms += rms;
         winSumRmsSq += rms * rms;
         winAccCount++;
-        // Window closes after WINDOW_SEC of analysis calls.  Analysis
-        // now runs once per render call (~60 fps), so the count of
-        // calls per second is approximately the render fps.
+        // Recompute deltas + currentLoad from the *current* window
+        // accumulators every frame — the big LOAD number ticks in
+        // real time instead of jumping once per 5 s.  Baseline locks
+        // after ~30 voiced frames (≈ 0.5 s).
+        updateLive();
         float windowFrames = WINDOW_SEC * 60f;
-        if (winAccCount >= windowFrames) closeWindow();
+        if (winAccCount >= windowFrames) {
+            // Snapshot the just-finished window into the trend history
+            // and start a fresh window — but KEEP the baseline.
+            loadHist[histW] = currentLoad;
+            histW = (histW + 1) % HIST;
+            resetWindow();
+        }
     }
 
-    private void closeWindow() {
+    private void updateLive() {
         if (winAccCount == 0) return;
         float avgCents  = (float)(winSumCentsAbs / winAccCount);
         float avgBright = (float)(winSumHi / Math.max(1, winSumLo));
@@ -292,7 +302,7 @@ public final class VocalFatigue
         float varRms    = (float)(winSumRmsSq / winAccCount - avgRms * avgRms);
         if (varRms < 0f) varRms = 0f;
         float dr = (float) Math.sqrt(varRms);
-        float jitter  = winJitterN > 0 && winAccCount > 0
+        float jitter  = winJitterN > 0
                 ? (float)((winSumJitter / winJitterN)
                           / (winSumPeriod / winAccCount) * 100.0)
                 : 0f;
@@ -300,10 +310,11 @@ public final class VocalFatigue
         float cpp     = winCppN > 0     ? (float)(winSumCpp / winCppN) : 0f;
 
         float[] vals = { avgCents, avgBright, avgHnr, dr, jitter, shimmer, cpp };
-        if (!baselineSet) {
+        if (!baselineSet && winAccCount >= 30) {
             System.arraycopy(vals, 0, baseline, 0, N_FEAT);
             baselineSet = true;
         }
+        if (!baselineSet) return;     // wait for baseline before scoring drift
         // Degradation direction per feature:
         //   pitch ↑, brightness ↓, HNR ↓, DR ↓,
         //   jitter ↑, shimmer ↑, CPP ↓
@@ -318,8 +329,6 @@ public final class VocalFatigue
             } else {
                 d = Math.max(0f, (b - vals[i]) / Math.max(floor[i], b));
             }
-            // Clamp single-feature delta to ~3× baseline to prevent
-            // one outlier dominating.
             if (d > 3f) d = 3f;
             lastDelta[i] = d;
             sum += d;
@@ -327,9 +336,6 @@ public final class VocalFatigue
         // Average per-feature normalised delta → 0..3 typically, map
         // to 0..100 with 1.5 = "very tired" being load 100.
         currentLoad = Math.min(100f, (sum / N_FEAT) / 1.5f * 100f);
-        loadHist[histW] = currentLoad;
-        histW = (histW + 1) % HIST;
-        resetWindow();
     }
 
     private void resetWindow() {
