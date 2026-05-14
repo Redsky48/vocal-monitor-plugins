@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-14T08:45:57.283Z",
+  "generatedAt": "2026-05-14T09:33:13.518Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -1464,6 +1464,301 @@
       "ui_kind": "canvas",
       "ui": {
         "aspect": "5:3",
+        "min_height_dp": 240
+      }
+    },
+    {
+      "id": "articulation",
+      "name": "Articulation Meter",
+      "author": "Vocal Monitor",
+      "category": "Vocal Analysis",
+      "description": "Tracks diction clarity through onset / transient detection and spectral flux. Marks consonant bursts on the timeline + reports the average burst intensity per phrase. If consonants get buried, the meter shows it before the listener notices.",
+      "version": "1.0.0",
+      "tags": [
+        "vocal-analysis",
+        "articulation",
+        "consonants",
+        "diction",
+        "metering",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/articulation/articulation.dex",
+      "sizeBytes": 7364,
+      "className": "com.vocalmonitor.plugin.community.Articulation",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 200
+      }
+    },
+    {
+      "id": "breathiness-meter",
+      "name": "Breathiness Meter",
+      "author": "Vocal Monitor",
+      "category": "Vocal Analysis",
+      "description": "Measures the harmonic-to-noise ratio (HNR) of the voice and classifies it on a 5-step scale: Clean / Airy / Breathy / Noisy / Pressed. Treats breathiness as a stylistic parameter, not a defect — useful for tracking how breathy a take is, not for grading it.",
+      "version": "1.0.0",
+      "tags": [
+        "vocal-analysis",
+        "breathiness",
+        "hnr",
+        "metering",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/breathiness-meter/breathiness-meter.dex",
+      "sizeBytes": 7000,
+      "className": "com.vocalmonitor.plugin.community.BreathinessMeter",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 200
+      }
+    },
+    {
+      "id": "formant-tracker",
+      "name": "Formant Tracker",
+      "author": "Vocal Monitor",
+      "category": "Vocal Analysis",
+      "description": "Tracks the first three formants (F1, F2, F3) in real time and plots them on the classic F1–F2 vowel map. Watch where the singer's A / E / I / O / U actually land vs the reference vowel zones — invaluable for classical, musical theatre, belt and pop technique work.",
+      "version": "1.0.0",
+      "tags": [
+        "vocal-analysis",
+        "formant",
+        "vowel",
+        "lpc",
+        "metering",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/formant-tracker/formant-tracker.dex",
+      "sizeBytes": 8512,
+      "className": "com.vocalmonitor.plugin.community.FormantTracker",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "4:3",
+        "min_height_dp": 280
+      }
+    },
+    {
+      "id": "pitch-accuracy",
+      "name": "Pitch Accuracy",
+      "author": "Vocal Monitor",
+      "category": "Vocal Analysis",
+      "description": "Far beyond a green/red tuner. Tracks per-frame cents-from-target, attack accuracy (how cleanly each note lands), release accuracy, slow pitch drift through long notes, and the phrase-level average error. Tells you 'this phrase drifted -18 cents flat over the last 300 ms' instead of just blinking a colour.",
+      "version": "1.0.0",
+      "tags": [
+        "vocal-analysis",
+        "pitch",
+        "tuner",
+        "intonation",
+        "metering",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/pitch-accuracy/pitch-accuracy.dex",
+      "sizeBytes": 8424,
+      "className": "com.vocalmonitor.plugin.community.PitchAccuracy",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 260
+      }
+    },
+    {
+      "id": "register-detector",
+      "name": "Register Detector",
+      "author": "Vocal Monitor",
+      "category": "Vocal Analysis",
+      "description": "Estimates which vocal register the singer is in: chest, mix, head, falsetto, or belt. Based on pitch, spectral slope, harmonic richness and the singer's-formant cluster ratio. Useful for training — see whether a high note actually stays in mix or slips into falsetto.",
+      "version": "1.0.0",
+      "tags": [
+        "vocal-analysis",
+        "register",
+        "voice",
+        "training",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/register-detector/register-detector.dex",
+      "sizeBytes": 7776,
+      "className": "com.vocalmonitor.plugin.community.RegisterDetector",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 220
+      }
+    },
+    {
+      "id": "resonance-monitor",
+      "name": "Resonance Monitor",
+      "author": "Vocal Monitor",
+      "category": "Vocal Analysis",
+      "description": "Tracks the Singer's Formant cluster (2.5–3.5 kHz) — the resonance peak that makes a voice carry through an orchestra or a mix. Shows the cluster's energy as a percentage of total signal energy + a 'carrying power' rating from Pressed / Balanced / Ringing.",
+      "version": "1.0.0",
+      "tags": [
+        "vocal-analysis",
+        "resonance",
+        "singer-formant",
+        "metering",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/resonance-monitor/resonance-monitor.dex",
+      "sizeBytes": 6860,
+      "className": "com.vocalmonitor.plugin.community.ResonanceMonitor",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 220
+      }
+    },
+    {
+      "id": "sibilance-detector",
+      "name": "Sibilance Detector",
+      "author": "Vocal Monitor",
+      "category": "Vocal Analysis",
+      "description": "Watches the 4–10 kHz band for sibilance spikes (S, SH, CH, TS) and harshness flares. Marks WHEN they happen on a timeline and reports their peak frequency so you can chase them with de-essers or technique adjustment.",
+      "version": "1.0.0",
+      "tags": [
+        "vocal-analysis",
+        "sibilance",
+        "harshness",
+        "metering",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/sibilance-detector/sibilance-detector.dex",
+      "sizeBytes": 6388,
+      "className": "com.vocalmonitor.plugin.community.SibilanceDetector",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 220
+      }
+    },
+    {
+      "id": "vibrato-analyzer",
+      "name": "Vibrato Analyzer",
+      "author": "Vocal Monitor",
+      "category": "Vocal Analysis",
+      "description": "Measures vibrato as a craft, not as a decoration. Rate (Hz), depth (cents), regularity (how even the cycles are), onset time (when it kicks in after the note attack), and a one-look quality verdict. Tells the difference between a controlled vibrato and an accidental pitch wobble.",
+      "version": "1.0.0",
+      "tags": [
+        "vocal-analysis",
+        "vibrato",
+        "pitch",
+        "metering",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/vibrato-analyzer/vibrato-analyzer.dex",
+      "sizeBytes": 8784,
+      "className": "com.vocalmonitor.plugin.community.VibratoAnalyzer",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 240
+      }
+    },
+    {
+      "id": "vocal-dynamics",
+      "name": "Vocal Dynamics",
+      "author": "Vocal Monitor",
+      "category": "Vocal Analysis",
+      "description": "Three meters in one: peak, short-term RMS, and integrated LUFS (K-weighted). Side panel reports the live dynamic range. Useful for training 'hold a sustained note at one volume' or 'don't let the phrase drop off at the end'.",
+      "version": "1.0.0",
+      "tags": [
+        "vocal-analysis",
+        "dynamics",
+        "loudness",
+        "rms",
+        "lufs",
+        "metering",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/vocal-dynamics/vocal-dynamics.dex",
+      "sizeBytes": 7608,
+      "className": "com.vocalmonitor.plugin.community.VocalDynamics",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 220
+      }
+    },
+    {
+      "id": "vocal-fatigue",
+      "name": "Vocal Load",
+      "author": "Vocal Monitor",
+      "category": "Vocal Analysis",
+      "description": "Long-window performance trend monitor — explicitly NOT a medical diagnosis. Tracks how the singer's pitch stability, brightness, breath-to-tone ratio and dynamic control evolve over an entire session and shows a single 'vocal load' trend line. Spot the moment fatigue begins to creep in.",
+      "version": "1.0.0",
+      "tags": [
+        "vocal-analysis",
+        "fatigue",
+        "trend",
+        "training",
+        "metering",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/vocal-fatigue/vocal-fatigue.dex",
+      "sizeBytes": 8836,
+      "className": "com.vocalmonitor.plugin.community.VocalFatigue",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 240
+      }
+    },
+    {
+      "id": "vocal-spectrum",
+      "name": "Vocal Spectrum",
+      "author": "Vocal Monitor",
+      "category": "Vocal Analysis",
+      "description": "Pro-grade scrolling spectrogram tuned for the vocal range. See exactly where the harshness, the mud, the sibilance and the breath energy sit in real time. Reads as a colour heatmap with sub-band overlays for the four most-musically-important zones: 80-300 Hz mud, 1-2 kHz body, 2-5 kHz harshness, 5-10 kHz sibilance, 10 kHz+ breath/air.",
+      "version": "1.0.0",
+      "tags": [
+        "vocal-analysis",
+        "spectrum",
+        "spectrogram",
+        "vocal",
+        "metering",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/vocal-spectrum/vocal-spectrum.dex",
+      "sizeBytes": 7856,
+      "className": "com.vocalmonitor.plugin.community.VocalSpectrum",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 260
+      }
+    },
+    {
+      "id": "vocal-stability",
+      "name": "Vocal Stability",
+      "author": "Vocal Monitor",
+      "category": "Vocal Analysis",
+      "description": "Composite stability monitor combining 4 sub-scores: pitch stability (cents variance), tone stability (spectral centroid variance), volume stability (RMS variance) and break-detection (sub-detection of micro pitch breaks). Outputs a single 0–100 stability score plus the 4 sub-scores for diagnosis.",
+      "version": "1.0.0",
+      "tags": [
+        "vocal-analysis",
+        "stability",
+        "composite",
+        "metering",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/vocal-stability/vocal-stability.dex",
+      "sizeBytes": 8388,
+      "className": "com.vocalmonitor.plugin.community.VocalStability",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
         "min_height_dp": 240
       }
     },

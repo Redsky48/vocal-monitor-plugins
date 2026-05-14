@@ -1,0 +1,12 @@
+{
+  "id": "vocal-stability",
+  "name": "Vocal Stability",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Composite stability monitor combining 4 sub-scores: pitch stability (cents variance), tone stability (spectral centroid variance), volume stability (RMS variance) and break-detection (sub-detection of micro pitch breaks). Outputs a single 0–100 stability score plus the 4 sub-scores for diagnosis.",
+  "tags": ["vocal-analysis", "stability", "composite", "metering", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.VocalStability",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "16:9", "min_height_dp": 240 }
+}

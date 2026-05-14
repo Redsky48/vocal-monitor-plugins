@@ -1,0 +1,12 @@
+{
+  "id": "articulation",
+  "name": "Articulation Meter",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Tracks diction clarity through onset / transient detection and spectral flux. Marks consonant bursts on the timeline + reports the average burst intensity per phrase. If consonants get buried, the meter shows it before the listener notices.",
+  "tags": ["vocal-analysis", "articulation", "consonants", "diction", "metering", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.Articulation",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "16:9", "min_height_dp": 200 }
+}

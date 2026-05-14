@@ -1,0 +1,12 @@
+{
+  "id": "register-detector",
+  "name": "Register Detector",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Estimates which vocal register the singer is in: chest, mix, head, falsetto, or belt. Based on pitch, spectral slope, harmonic richness and the singer's-formant cluster ratio. Useful for training — see whether a high note actually stays in mix or slips into falsetto.",
+  "tags": ["vocal-analysis", "register", "voice", "training", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.RegisterDetector",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "16:9", "min_height_dp": 220 }
+}

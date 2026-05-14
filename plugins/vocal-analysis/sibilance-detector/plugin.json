@@ -1,0 +1,12 @@
+{
+  "id": "sibilance-detector",
+  "name": "Sibilance Detector",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Watches the 4–10 kHz band for sibilance spikes (S, SH, CH, TS) and harshness flares. Marks WHEN they happen on a timeline and reports their peak frequency so you can chase them with de-essers or technique adjustment.",
+  "tags": ["vocal-analysis", "sibilance", "harshness", "metering", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.SibilanceDetector",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "16:9", "min_height_dp": 220 }
+}

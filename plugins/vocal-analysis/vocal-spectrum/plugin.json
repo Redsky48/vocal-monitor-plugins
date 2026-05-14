@@ -1,0 +1,15 @@
+{
+  "id": "vocal-spectrum",
+  "name": "Vocal Spectrum",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Pro-grade scrolling spectrogram tuned for the vocal range. See exactly where the harshness, the mud, the sibilance and the breath energy sit in real time. Reads as a colour heatmap with sub-band overlays for the four most-musically-important zones: 80-300 Hz mud, 1-2 kHz body, 2-5 kHz harshness, 5-10 kHz sibilance, 10 kHz+ breath/air.",
+  "tags": ["vocal-analysis", "spectrum", "spectrogram", "vocal", "metering", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.VocalSpectrum",
+  "ui_kind": "canvas",
+  "ui": {
+    "aspect": "16:9",
+    "min_height_dp": 260
+  }
+}

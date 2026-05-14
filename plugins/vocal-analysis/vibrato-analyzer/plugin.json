@@ -1,0 +1,15 @@
+{
+  "id": "vibrato-analyzer",
+  "name": "Vibrato Analyzer",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Measures vibrato as a craft, not as a decoration. Rate (Hz), depth (cents), regularity (how even the cycles are), onset time (when it kicks in after the note attack), and a one-look quality verdict. Tells the difference between a controlled vibrato and an accidental pitch wobble.",
+  "tags": ["vocal-analysis", "vibrato", "pitch", "metering", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.VibratoAnalyzer",
+  "ui_kind": "canvas",
+  "ui": {
+    "aspect": "16:9",
+    "min_height_dp": 240
+  }
+}

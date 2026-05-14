@@ -1,0 +1,12 @@
+{
+  "id": "resonance-monitor",
+  "name": "Resonance Monitor",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Tracks the Singer's Formant cluster (2.5–3.5 kHz) — the resonance peak that makes a voice carry through an orchestra or a mix. Shows the cluster's energy as a percentage of total signal energy + a 'carrying power' rating from Pressed / Balanced / Ringing.",
+  "tags": ["vocal-analysis", "resonance", "singer-formant", "metering", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.ResonanceMonitor",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "16:9", "min_height_dp": 220 }
+}

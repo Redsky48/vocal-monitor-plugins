@@ -1,0 +1,12 @@
+{
+  "id": "vocal-dynamics",
+  "name": "Vocal Dynamics",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Three meters in one: peak, short-term RMS, and integrated LUFS (K-weighted). Side panel reports the live dynamic range. Useful for training 'hold a sustained note at one volume' or 'don't let the phrase drop off at the end'.",
+  "tags": ["vocal-analysis", "dynamics", "loudness", "rms", "lufs", "metering", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.VocalDynamics",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "16:9", "min_height_dp": 220 }
+}

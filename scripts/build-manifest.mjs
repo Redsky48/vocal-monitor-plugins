@@ -29,6 +29,8 @@ const CATEGORY_LABELS = {
   eq: 'EQ',
   restoration: 'Restoration',
   creative: 'Creative',
+  visual: 'Visual',
+  'vocal-analysis': 'Vocal Analysis',
 };
 
 async function repoConfig() {

@@ -1,0 +1,15 @@
+{
+  "id": "formant-tracker",
+  "name": "Formant Tracker",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Tracks the first three formants (F1, F2, F3) in real time and plots them on the classic F1–F2 vowel map. Watch where the singer's A / E / I / O / U actually land vs the reference vowel zones — invaluable for classical, musical theatre, belt and pop technique work.",
+  "tags": ["vocal-analysis", "formant", "vowel", "lpc", "metering", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.FormantTracker",
+  "ui_kind": "canvas",
+  "ui": {
+    "aspect": "4:3",
+    "min_height_dp": 280
+  }
+}

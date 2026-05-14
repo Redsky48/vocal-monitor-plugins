@@ -1,0 +1,12 @@
+{
+  "id": "vocal-fatigue",
+  "name": "Vocal Load",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Long-window performance trend monitor — explicitly NOT a medical diagnosis. Tracks how the singer's pitch stability, brightness, breath-to-tone ratio and dynamic control evolve over an entire session and shows a single 'vocal load' trend line. Spot the moment fatigue begins to creep in.",
+  "tags": ["vocal-analysis", "fatigue", "trend", "training", "metering", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.VocalFatigue",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "16:9", "min_height_dp": 240 }
+}

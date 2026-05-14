@@ -1,0 +1,15 @@
+{
+  "id": "pitch-accuracy",
+  "name": "Pitch Accuracy",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Far beyond a green/red tuner. Tracks per-frame cents-from-target, attack accuracy (how cleanly each note lands), release accuracy, slow pitch drift through long notes, and the phrase-level average error. Tells you 'this phrase drifted -18 cents flat over the last 300 ms' instead of just blinking a colour.",
+  "tags": ["vocal-analysis", "pitch", "tuner", "intonation", "metering", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.PitchAccuracy",
+  "ui_kind": "canvas",
+  "ui": {
+    "aspect": "16:9",
+    "min_height_dp": 260
+  }
+}
