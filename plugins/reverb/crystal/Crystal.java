@@ -30,28 +30,42 @@ public final class Crystal
     // ─────────────────────────────────────────────────────────────
     //  Parameters
     // ─────────────────────────────────────────────────────────────
-    private float predelay   = 0.05f;
+    // Parameters mirror BABY Audio Crystalline's full control set:
+    //   12 side knobs (REFLECTIONS / DEPTH / CLEAN-UP / SHAPE) +
+    //   6 centre controls (START / END / DUCK / REV / FRZ / DRY-WET).
     private float size       = 0.55f;
-    private float decay      = 0.65f;
-    private float damping    = 0.30f;
+    private float sparkle    = 0.30f;   // NEW: HF emphasis in loop
+    private float width      = 0.90f;
+    private float resolution = 0.80f;   // NEW: algorithm complexity
     private float modulation = 0.30f;
     private float shimmer    = 0.0f;
-    private float width      = 0.90f;
-    private float tone       = 0.0f;
-    private float duck       = 0.0f;
+    private float damping    = 0.30f;
+    private float sides      = 0.0f;    // NEW: HP on stereo S channel
     private float gateDb     = -80f;
+    private float tone       = 0.0f;
+    private float smoothing  = 0.0f;    // NEW: notch EQ for resonances
+    private float warp       = 0.0f;    // NEW: transient shaper on input (bipolar)
+    private float predelay   = 0.05f;   // = START
+    private float decay      = 0.65f;   // = END
+    private float duck       = 0.0f;
+    private float rev        = 0.0f;    // NEW: reverse reverb toggle
     private float freeze     = 0.0f;
     private float mix        = 0.30f;
 
     @Override public String[] parameterNames() {
-        return new String[] { "predelay", "size", "decay", "damping",
-                              "modulation", "shimmer", "width", "tone",
-                              "duck", "gate", "freeze", "mix" };
+        return new String[] {
+            "size", "sparkle", "width",
+            "resolution", "modulation", "shimmer",
+            "damping", "sides", "gate",
+            "tone", "smoothing", "warp",
+            "predelay", "decay", "duck", "rev", "freeze", "mix"
+        };
     }
     @Override public float parameterMin(String n) {
         switch (n) {
             case "predelay": return 0.0f;
             case "tone":     return -1.0f;
+            case "warp":     return -1.0f;
             case "gate":     return -80.0f;
             default:         return 0.0f;
         }
@@ -60,22 +74,29 @@ public final class Crystal
         switch (n) {
             case "predelay": return 0.3f;
             case "tone":     return 1.0f;
+            case "warp":     return 1.0f;
             case "gate":     return 0.0f;
             default:         return 1.0f;
         }
     }
     @Override public float parameterDefault(String n) {
         switch (n) {
-            case "predelay":   return 0.05f;
             case "size":       return 0.55f;
-            case "decay":      return 0.65f;
-            case "damping":    return 0.30f;
+            case "sparkle":    return 0.30f;
+            case "width":      return 0.90f;
+            case "resolution": return 0.80f;
             case "modulation": return 0.30f;
             case "shimmer":    return 0.0f;
-            case "width":      return 0.90f;
-            case "tone":       return 0.0f;
-            case "duck":       return 0.0f;
+            case "damping":    return 0.30f;
+            case "sides":      return 0.0f;
             case "gate":       return -80.0f;
+            case "tone":       return 0.0f;
+            case "smoothing":  return 0.0f;
+            case "warp":       return 0.0f;
+            case "predelay":   return 0.05f;
+            case "decay":      return 0.65f;
+            case "duck":       return 0.0f;
+            case "rev":        return 0.0f;
             case "freeze":     return 0.0f;
             case "mix":        return 0.30f;
             default:           return 0.0f;
@@ -83,16 +104,22 @@ public final class Crystal
     }
     @Override public String parameterLabel(String n) {
         switch (n) {
-            case "predelay":   return "Pre (s)";
             case "size":       return "Size";
-            case "decay":      return "Decay";
-            case "damping":    return "Damp";
+            case "sparkle":    return "Sparkle";
+            case "width":      return "Width";
+            case "resolution": return "Resolution";
             case "modulation": return "Mod";
             case "shimmer":    return "Shimmer";
-            case "width":      return "Width";
-            case "tone":       return "Tone";
-            case "duck":       return "Duck";
+            case "damping":    return "Damp";
+            case "sides":      return "Sides";
             case "gate":       return "Gate (dB)";
+            case "tone":       return "Tone";
+            case "smoothing":  return "Smoothing";
+            case "warp":       return "Warp";
+            case "predelay":   return "Pre (s)";
+            case "decay":      return "Decay";
+            case "duck":       return "Duck";
+            case "rev":        return "Reverse";
             case "freeze":     return "Freeze";
             case "mix":        return "Mix";
             default:           return n;
@@ -100,16 +127,22 @@ public final class Crystal
     }
     @Override public void setParameter(String n, float v) {
         switch (n) {
-            case "predelay":   predelay = v; break;
             case "size":       size = v; break;
-            case "decay":      decay = v; break;
-            case "damping":    damping = v; break;
+            case "sparkle":    sparkle = v; break;
+            case "width":      width = v; break;
+            case "resolution": resolution = v; break;
             case "modulation": modulation = v; break;
             case "shimmer":    shimmer = v; break;
-            case "width":      width = v; break;
-            case "tone":       tone = v; break;
-            case "duck":       duck = v; break;
+            case "damping":    damping = v; break;
+            case "sides":      sides = v; break;
             case "gate":       gateDb = v; break;
+            case "tone":       tone = v; break;
+            case "smoothing":  smoothing = v; break;
+            case "warp":       warp = v; break;
+            case "predelay":   predelay = v; break;
+            case "decay":      decay = v; break;
+            case "duck":       duck = v; break;
+            case "rev":        rev = v; break;
             case "freeze":     freeze = v; break;
             case "mix":        mix = v; break;
         }
@@ -117,16 +150,22 @@ public final class Crystal
 
     private float getParameterValue(String n) {
         switch (n) {
-            case "predelay":   return predelay;
             case "size":       return size;
-            case "decay":      return decay;
-            case "damping":    return damping;
+            case "sparkle":    return sparkle;
+            case "width":      return width;
+            case "resolution": return resolution;
             case "modulation": return modulation;
             case "shimmer":    return shimmer;
-            case "width":      return width;
-            case "tone":       return tone;
-            case "duck":       return duck;
+            case "damping":    return damping;
+            case "sides":      return sides;
             case "gate":       return gateDb;
+            case "tone":       return tone;
+            case "smoothing":  return smoothing;
+            case "warp":       return warp;
+            case "predelay":   return predelay;
+            case "decay":      return decay;
+            case "duck":       return duck;
+            case "rev":        return rev;
             case "freeze":     return freeze;
             case "mix":        return mix;
             default:           return 0f;
@@ -170,6 +209,22 @@ public final class Crystal
     private float gateEnv = 0f;
     private float gateGain = 0f;
 
+    // ── NEW Crystalline parameters DSP state ─────────────────────
+    // Sparkle: 1-pole HP per tank pulls out HF from feedback so we
+    // can mix it back in with positive gain — boosts shimmer-like
+    // brightness IN the loop, not just on output.
+    private float sparkleHP_a = 0f, sparkleHP_b = 0f;
+    // Sides: 1-pole HP on the stereo S channel after M/S split.
+    private float sidesHP = 0f;
+    // Smoothing: state for a notch biquad at the algorithm's
+    // characteristic resonance band (~2.5 kHz).
+    private final float[] smoothState = new float[4];   // x1,x2,y1,y2
+    // Warp: fast/slow envelope followers for transient detection.
+    private float warpFastEnv = 0f, warpSlowEnv = 0f;
+    // Reverse: ring buffer of recent wet output to read backwards.
+    private float[] revBuf;
+    private int revBufLen, revBufW = 0;
+
     @Override public void init(int sr) {
         this.sampleRate = sr;
         preBuf = new float[Math.max(64, (int)(sr * 0.35f))];
@@ -207,6 +262,15 @@ public final class Crystal
         for (int i = 0; i < shimBuf.length; i++) shimBuf[i] = 0f;
         java.util.Arrays.fill(histRing, 0f);
         histRingW = 0;
+        sparkleHP_a = sparkleHP_b = 0f;
+        sidesHP = 0f;
+        java.util.Arrays.fill(smoothState, 0f);
+        warpFastEnv = warpSlowEnv = 0f;
+        // Reverse ring sized for ~400 ms of wet content — enough for
+        // the most dramatic reverse swell without exploding RAM.
+        revBufLen = Math.max(1024, (int)(sr * 0.4f));
+        revBuf = new float[revBufLen];
+        revBufW = 0;
     }
 
     private static int scaleLen(int dattorroLen, int sr) {
@@ -233,6 +297,25 @@ public final class Crystal
         final float dryMix     = 1f - mix;
         final float gateLin    = (float) Math.pow(10.0, gateDb / 20.0);
         final float sizeScale = 0.4f + 0.6f * size;
+        // NEW Crystalline params:
+        final float sparkleHpCoef = 0.45f;          // ~3 kHz HP for sparkle tap
+        final float sparkleAmt    = sparkle * 0.30f;
+        // Resolution scales the input-diffusion AP gains.  Higher RES
+        // = full strength APs (cleaner / denser). Lower RES = weaker
+        // diffusion (more colored).
+        final float resScale      = 0.35f + 0.65f * resolution;
+        // Sides: HP cutoff on stereo S channel — at 1 the cutoff is
+        // around 500 Hz, at 0 essentially flat.
+        final float sidesCoef     = 0.005f + sides * 0.18f;
+        // Smoothing: peaking biquad at 2.5 kHz with negative gain.
+        final float smoothCoefs[] = smoothing > 0.001f
+                ? peakingBiquad(2500f, 1.2f, -smoothing * 9f, sampleRate)
+                : null;
+        // Warp: bipolar transient gain. +warp boosts attacks, -warp
+        // softens them.  Computed per-sample below.
+        final float warpAmt       = warp;
+        final float revOn         = rev >= 0.5f ? 1f : 0f;
+        final boolean revActive   = revOn > 0.5f;
         final int d1aLen = (int)(scaleLen(TANK_LENS[1], sampleRate) * sizeScale);
         final int d2aLen = (int)(scaleLen(TANK_LENS[3], sampleRate) * sizeScale);
         final int d1bLen = (int)(scaleLen(TANK_LENS[6], sampleRate) * sizeScale);
@@ -252,12 +335,31 @@ public final class Crystal
         float _lfoNoiseA = lfoNoiseA, _lfoNoiseB = lfoNoiseB;
         float _shimReadA = shimReadA, _shimReadB = shimReadB;
         int _shimW = shimW;
+        float _sparkleHP_a = sparkleHP_a, _sparkleHP_b = sparkleHP_b;
+        float _sidesHP = sidesHP;
+        float _warpFastEnv = warpFastEnv, _warpSlowEnv = warpSlowEnv;
+        final float warpFastCoef = 1f - (float) Math.exp(-1.0 / (sampleRate * 0.0007));
+        final float warpSlowCoef = 1f - (float) Math.exp(-1.0 / (sampleRate * 0.030));
         for (int i = 0; i < n; i++) {
             final float dry = input[i];
             _bwHP += 0.0007f * (dry - _bwHP);
             float x = dry - _bwHP;
             _bwLP += 0.45f * (x - _bwLP);
             x = _bwLP;
+
+            // ── WARP: transient shaper on the wet-send path.
+            // Detect transients via fast/slow envelope ratio. Boost
+            // (warp > 0) or duck (warp < 0) attacks before they enter
+            // the reverb tank.
+            float xAbs = x < 0 ? -x : x;
+            _warpFastEnv += warpFastCoef * (xAbs - _warpFastEnv);
+            _warpSlowEnv += warpSlowCoef * (xAbs - _warpSlowEnv);
+            if (_warpSlowEnv < 1e-6f) _warpSlowEnv = 1e-6f;
+            float trans = Math.max(0f, _warpFastEnv / _warpSlowEnv - 1f);
+            if (trans > 4f) trans = 4f;
+            float warpGain = 1f + warpAmt * Math.min(1f, trans * 0.5f);
+            x *= warpGain;
+
             float dryAbs = dry < 0 ? -dry : dry;
             float rcCoef = dryAbs > _duckEnv ? DUCK_RC_FAST : DUCK_RC_SLOW;
             float duckIIR = 1f - (float) Math.exp(-1.0 / (sampleRate * rcCoef));
@@ -269,10 +371,13 @@ public final class Crystal
             preW++; if (preW >= preBuf.length) preW = 0;
             float shimOut = shimRead(shimBuf, _shimReadA, _shimReadB, shimGrainLen, shimGrainPos);
             float tankIn = preOut + shimOut * shimAmt;
-            tankIn = ap(tankIn, _ap1, _ap1L, _ap1w, AP_G[0]); _ap1w = (_ap1w + 1) % _ap1L;
-            tankIn = ap(tankIn, _ap2, _ap2L, _ap2w, AP_G[1]); _ap2w = (_ap2w + 1) % _ap2L;
-            tankIn = ap(tankIn, _ap3, _ap3L, _ap3w, AP_G[2]); _ap3w = (_ap3w + 1) % _ap3L;
-            tankIn = ap(tankIn, _ap4, _ap4L, _ap4w, AP_G[3]); _ap4w = (_ap4w + 1) % _ap4L;
+            // ── RESOLUTION: scale the input-diffusion AP gains.  Low
+            // RES gives a more "colored / chunky" reverb (the diffusion
+            // is incomplete), high RES gives the full Dattorro density.
+            tankIn = ap(tankIn, _ap1, _ap1L, _ap1w, AP_G[0] * resScale); _ap1w = (_ap1w + 1) % _ap1L;
+            tankIn = ap(tankIn, _ap2, _ap2L, _ap2w, AP_G[1] * resScale); _ap2w = (_ap2w + 1) % _ap2L;
+            tankIn = ap(tankIn, _ap3, _ap3L, _ap3w, AP_G[2] * resScale); _ap3w = (_ap3w + 1) % _ap3L;
+            tankIn = ap(tankIn, _ap4, _ap4L, _ap4w, AP_G[3] * resScale); _ap4w = (_ap4w + 1) % _ap4L;
             _lfoPhase += lfoInc;
             if (_lfoPhase > 6.283185f) _lfoPhase -= 6.283185f;
             float lfoSinA = (float) Math.sin(_lfoPhase);
@@ -281,7 +386,13 @@ public final class Crystal
             _lfoNoiseB += 0.0008f * (nextNoise() - _lfoNoiseB);
             float modA = (lfoSinA + _lfoNoiseA * 0.5f) * modDepth;
             float modB = (lfoSinB + _lfoNoiseB * 0.5f) * modDepth;
-            float aIn = tankIn + _fb_b * feedbackG;
+            // ── SPARKLE: extract HF from the cross-feedback via a
+            // 1-pole HP and mix it back amplified — adds extra
+            // brightness on every loop iteration without affecting
+            // overall decay character.
+            _sparkleHP_a += sparkleHpCoef * (_fb_b - _sparkleHP_a);
+            float fbBwithSparkle = _fb_b + (_fb_b - _sparkleHP_a) * sparkleAmt;
+            float aIn = tankIn + fbBwithSparkle * feedbackG;
             aIn = apMod(aIn, _mAp_a, mAp_a_w, modA, 0.7f);
             mAp_a_w = (mAp_a_w + 1) % _mAp_a.length;
             _d1_a[d1_a_w] = aIn;
@@ -298,7 +409,9 @@ public final class Crystal
             if (d2arIdx < 0) d2arIdx += _d2_a.length;
             _fb_a = _d2_a[d2arIdx];
             d2_a_w = (d2_a_w + 1) % _d2_a.length;
-            float bIn = tankIn + _fb_a * feedbackG;
+            _sparkleHP_b += sparkleHpCoef * (_fb_a - _sparkleHP_b);
+            float fbAwithSparkle = _fb_a + (_fb_a - _sparkleHP_b) * sparkleAmt;
+            float bIn = tankIn + fbAwithSparkle * feedbackG;
             bIn = apMod(bIn, _mAp_b, mAp_b_w, modB, 0.7f);
             mAp_b_w = (mAp_b_w + 1) % _mAp_b.length;
             _d1_b[d1_b_w] = bIn;
@@ -330,13 +443,47 @@ public final class Crystal
             shimGrainPos = (shimGrainPos + 1) % shimGrainLen;
             float mid  = (wetL + wetR) * 0.5f;
             float side = (wetL - wetR) * 0.5f;
+            // ── SIDES: 1-pole HP on the side channel — strips low-end
+            // mud from the stereo width while keeping the mono centre
+            // intact. At sides=0 essentially no cut; at sides=1 the HP
+            // ramps up past ~500 Hz.
+            _sidesHP += sidesCoef * (side - _sidesHP);
+            side -= _sidesHP * sides;
             side *= (0.2f + 1.6f * width);
             wetL = mid + side;
             wetR = mid - side;
             float wet = (wetL + wetR) * 0.5f;
+
+            // ── SMOOTHING: peaking biquad with negative gain at the
+            // algorithm's characteristic resonance band (~2.5 kHz)
+            // tames the metallic ring that algorithmic reverbs can
+            // get at high decay times.
+            if (smoothCoefs != null) {
+                float wetIn = wet;
+                wet = smoothCoefs[0] * wetIn
+                    + smoothCoefs[1] * smoothState[0]
+                    + smoothCoefs[2] * smoothState[1]
+                    - smoothCoefs[3] * smoothState[2]
+                    - smoothCoefs[4] * smoothState[3];
+                smoothState[1] = smoothState[0]; smoothState[0] = wetIn;
+                smoothState[3] = smoothState[2]; smoothState[2] = wet;
+            }
+
             _toneLP += 0.10f * (wet - _toneLP);
             float wetHP = wet - _toneLP;
             wet = wet + toneTilt * (wetHP - _toneLP) * 0.5f;
+
+            // ── REVERSE: when ON, read from the wet ring buffer
+            // BACKWARDS — produces the classic "pre-attack swell" sound
+            // (early Twin Peaks / shoegaze).  Off → pass current sample.
+            revBuf[revBufW] = wet;
+            if (revActive) {
+                int revR = revBufW - revBufLen + 1;
+                if (revR < 0) revR += revBufLen;
+                wet = revBuf[revR];   // oldest sample = current output
+            }
+            revBufW++; if (revBufW >= revBufLen) revBufW = 0;
+
             float duckGain = 1f - duckAmt * Math.min(1f, _duckEnv * 6f);
             wet *= duckGain;
             float wetAbs = wet < 0 ? -wet : wet;
@@ -360,6 +507,26 @@ public final class Crystal
         lfoNoiseA = _lfoNoiseA; lfoNoiseB = _lfoNoiseB;
         shimReadA = _shimReadA; shimReadB = _shimReadB;
         shimW = _shimW;
+        sparkleHP_a = _sparkleHP_a; sparkleHP_b = _sparkleHP_b;
+        sidesHP = _sidesHP;
+        warpFastEnv = _warpFastEnv; warpSlowEnv = _warpSlowEnv;
+    }
+
+    // RBJ cookbook peaking EQ biquad coefficients (returned as
+    // [b0,b1,b2,a1,a2] with a0 normalised out).  Used for SMOOTHING.
+    private static float[] peakingBiquad(float fc, float q, float gainDb, int sr) {
+        double A = Math.pow(10.0, gainDb / 40.0);
+        double w = 2.0 * Math.PI * fc / sr;
+        double cs = Math.cos(w), sn = Math.sin(w);
+        double alpha = sn / (2.0 * q);
+        double a0 = 1.0 + alpha / A;
+        return new float[] {
+            (float) ((1.0 + alpha * A) / a0),
+            (float) (-2.0 * cs / a0),
+            (float) ((1.0 - alpha * A) / a0),
+            (float) (-2.0 * cs / a0),
+            (float) ((1.0 - alpha / A) / a0)
+        };
     }
 
     private static float ap(float x, float[] buf, int len, int w, float g) {
@@ -428,6 +595,7 @@ public final class Crystal
     private float startX0, startY0, startX1, startY1;
     private float endX0,   endY0,   endX1,   endY1;
     private float duckX0,  duckY0,  duckX1,  duckY1;
+    private float revX0,   revY0,   revX1,   revY1;
     private float frzX0,   frzY0,   frzX1,   frzY1;
     private float sliderX0, sliderY0, sliderX1, sliderY1;  // dry/wet
 
@@ -453,24 +621,21 @@ public final class Crystal
                 && controls[0] != null) return;
         lastW = W; lastH = H;
 
-        // Define controls (order matters → hit-test reads back to back).
+        // Controls match Crystalline's side-panel layout 1:1.
         // Left column: REFLECTIONS row + DEPTH row.
-        controls[0]  = new ControlRect("size",       "SIZE",     0);
-        controls[1]  = new ControlRect("decay",      "DECAY",    0);
-        controls[2]  = new ControlRect("width",      "WIDTH",    0);
-        controls[3]  = new ControlRect("modulation", "MOD",      0);
-        controls[4]  = new ControlRect("shimmer",    "SHIMMER",  0);
-        controls[5]  = new ControlRect("predelay",   "PRE",      0);
+        controls[0]  = new ControlRect("size",       "SIZE",       0);
+        controls[1]  = new ControlRect("sparkle",    "SPARKLE",    0);
+        controls[2]  = new ControlRect("width",      "WIDTH",      0);
+        controls[3]  = new ControlRect("resolution", "RESOLUTION", 0);
+        controls[4]  = new ControlRect("modulation", "MOD",        0);
+        controls[5]  = new ControlRect("shimmer",    "SHIMMER",    0);
         // Right column: CLEAN-UP row + SHAPE row.
-        controls[6]  = new ControlRect("damping",    "DAMP",     0);
-        controls[7]  = new ControlRect("gate",       "GATE",     0);
-        controls[8]  = new ControlRect("freeze",     "FREEZE",   1);  // toggle
-        controls[9]  = new ControlRect("tone",       "TONE",     2);  // bipolar
-        controls[10] = new ControlRect("duck",       "DUCK",     0);
-        controls[11] = new ControlRect("mix",        "MIX",      0);
-        // controls[12] reserved for the bottom dry/wet horiz slider —
-        // but we treat that as a separate sliderXX rect, not in the
-        // controls array.
+        controls[6]  = new ControlRect("damping",    "DAMP",       0);
+        controls[7]  = new ControlRect("sides",      "SIDES",      0);
+        controls[8]  = new ControlRect("gate",       "GATE",       0);
+        controls[9]  = new ControlRect("tone",       "TONE",       2);  // bipolar
+        controls[10] = new ControlRect("smoothing",  "SMOOTHING",  0);
+        controls[11] = new ControlRect("warp",       "WARP",       2);  // bipolar
         controls[12] = null;
 
         // Layout geometry.
@@ -508,18 +673,22 @@ public final class Crystal
         startX1 = centerX0 + seW; startY1 = seY1;
         endX0 = startX1 + seGap;  endY0 = seY0;
         endX1 = centerX1;         endY1 = seY1;
-        // OUTPUT row: DUCK | FRZ | DRY/WET.
+        // OUTPUT row: DUCK | REV | FRZ | DRY/WET.
         float outY0 = seY1 + 22f;
         float outY1 = outY0 + 16f;
-        float duckW = centerW * 0.28f;
-        float frzSize = 18f;
-        float dwGap = 12f;
+        float duckW = centerW * 0.26f;
+        float dotSize = 16f;
+        float dwGap = 8f;
         duckX0 = centerX0;        duckY0 = outY0;
         duckX1 = centerX0 + duckW; duckY1 = outY1;
-        frzX0 = duckX1 + dwGap;
-        frzY0 = (outY0 + outY1) * 0.5f - frzSize * 0.5f;
-        frzX1 = frzX0 + frzSize;
-        frzY1 = frzY0 + frzSize;
+        revX0 = duckX1 + dwGap;
+        revY0 = (outY0 + outY1) * 0.5f - dotSize * 0.5f;
+        revX1 = revX0 + dotSize;
+        revY1 = revY0 + dotSize;
+        frzX0 = revX1 + dwGap;
+        frzY0 = revY0;
+        frzX1 = frzX0 + dotSize;
+        frzY1 = frzY0 + dotSize;
         sliderX0 = frzX1 + dwGap;
         sliderY0 = outY0;
         sliderX1 = centerX1;
@@ -558,6 +727,7 @@ public final class Crystal
     private static final int SLIDER_END    = -4;
     private static final int SLIDER_DUCK   = -5;
     private static final int DOT_FRZ       = -6;
+    private static final int DOT_REV       = -7;
 
     // ── Touch handlers ──
     @Override public void onTouchDown(float x, float y) {
@@ -577,6 +747,11 @@ public final class Crystal
         if (hits(x, y, duckX0, duckY0, duckX1, duckY1)) {
             activeIdx = SLIDER_DUCK;
             commitSliderAt("duck", x, duckX0, duckX1, 0f, 1f);
+            return;
+        }
+        if (hits(x, y, revX0 - 4f, revY0 - 4f, revX1 + 4f, revY1 + 4f)) {
+            activeIdx = DOT_REV;
+            commitParam("rev", rev >= 0.5f ? 0f : 1f);
             return;
         }
         if (hits(x, y, frzX0 - 4f, frzY0 - 4f, frzX1 + 4f, frzY1 + 4f)) {
@@ -608,7 +783,7 @@ public final class Crystal
     }
 
     @Override public void onTouchMove(float x, float y) {
-        if (activeIdx == -1 || activeIdx == DOT_FRZ) return;
+        if (activeIdx == -1 || activeIdx == DOT_FRZ || activeIdx == DOT_REV) return;
         switch (activeIdx) {
             case SLIDER_DRYWET:
                 commitSliderAt("mix", x, sliderX0, sliderX1, 0f, 1f); return;
@@ -793,8 +968,12 @@ public final class Crystal
         labelPaint.setColor(COLOR_INK_DIM).setTextSize(8.5f).setTextAlign(0);
         canvas.drawText("OUTPUT", duckX0, duckY0 - 14f, labelPaint);
         drawCenterSlider(canvas, "DUCK", duckX0, duckY0, duckX1, duckY1, duck);
+        // REV and FRZ dots side-by-side — matches Crystalline's OUTPUT
+        // row exactly (REV = reverse reverb, FRZ = freeze).
+        drawDot(canvas, revX0, revY0, revX1, revY1, rev    >= 0.5f, 0xFFE36C9C);
         drawDot(canvas, frzX0, frzY0, frzX1, frzY1, freeze >= 0.5f, 0xFF6DD3E0);
         labelPaint.setColor(COLOR_INK_DIM).setTextSize(7.5f).setTextAlign(1);
+        canvas.drawText("REV", (revX0 + revX1) * 0.5f, revY0 - 4f, labelPaint);
         canvas.drawText("FRZ", (frzX0 + frzX1) * 0.5f, frzY0 - 4f, labelPaint);
         drawDryWetSlider(canvas, sliderX0, sliderY0, sliderX1, sliderY1, mix);
     }
@@ -948,7 +1127,7 @@ public final class Crystal
                 break;
             }
             case "decay": {
-                // Decay envelope — falling triangle / wedge.
+                // (kept for backward compat) — Decay envelope wedge.
                 iconPaint.setColor(COLOR_REFLECT).setStyle(PluginStyle.FILL);
                 path1.reset();
                 float w = s * 0.95f, h = s * 0.75f * (0.4f + 0.6f * norm);
@@ -957,6 +1136,80 @@ public final class Crystal
                 path1.lineTo(cx + w * 0.5f, cy + h * 0.4f);
                 path1.close();
                 canvas.drawPath(path1, iconPaint);
+                break;
+            }
+            case "sparkle": {
+                // Crystalline-style sparkle: a vertical "ringing"
+                // glyph (3 horizontal red lines stacked) with extra
+                // sparkle dots above as value rises.
+                iconPaint.setColor(COLOR_REFLECT).setStyle(PluginStyle.STROKE).setStrokeWidth(sw);
+                float w = s * 0.7f;
+                canvas.drawLine(cx - w * 0.5f, cy + s * 0.4f, cx + w * 0.5f, cy + s * 0.4f, iconPaint);
+                canvas.drawLine(cx - w * 0.45f, cy + s * 0.15f, cx + w * 0.45f, cy + s * 0.15f, iconPaint);
+                canvas.drawLine(cx - w * 0.4f, cy - s * 0.1f, cx + w * 0.4f, cy - s * 0.1f, iconPaint);
+                iconPaint.setStyle(PluginStyle.FILL);
+                int dots = (int)(2 + 4 * norm);
+                for (int i = 0; i < dots; i++) {
+                    double a = i * 1.4 - dots * 0.7;
+                    canvas.drawCircle(cx + (float)(a * s * 0.18f),
+                                       cy - s * (0.35f + (float)(Math.abs(a) * 0.10f)),
+                                       1.5f, iconPaint);
+                }
+                break;
+            }
+            case "resolution": {
+                // Vertical bars of varying heights — more bars + finer
+                // grid as resolution increases.
+                iconPaint.setColor(COLOR_DEPTH).setStyle(PluginStyle.STROKE).setStrokeWidth(sw);
+                int bars = (int)(3 + 5 * norm);
+                float spread = s * 1.1f;
+                for (int i = 0; i < bars; i++) {
+                    float t = bars == 1 ? 0.5f : i / (float)(bars - 1);
+                    float bx = cx - spread * 0.5f + t * spread;
+                    float bh = s * (0.25f + 0.55f * (float)Math.sin(t * Math.PI));
+                    canvas.drawLine(bx, cy - bh, bx, cy + bh, iconPaint);
+                }
+                break;
+            }
+            case "sides": {
+                // Stereo width arrows pointing outward, with a hi-pass
+                // notch shape suggesting "sides HP".
+                iconPaint.setColor(COLOR_CLEAN).setStyle(PluginStyle.STROKE).setStrokeWidth(sw);
+                path1.reset();
+                float w = s * 1.2f, h = s * 0.4f;
+                path1.moveTo(cx - w * 0.5f, cy + h);
+                path1.lineTo(cx - w * 0.5f, cy + h * (1f - norm));
+                path1.lineTo(cx - w * 0.15f, cy - h * 0.4f);
+                path1.lineTo(cx + w * 0.15f, cy - h * 0.4f);
+                path1.lineTo(cx + w * 0.5f, cy + h * (1f - norm));
+                path1.lineTo(cx + w * 0.5f, cy + h);
+                canvas.drawPath(path1, iconPaint);
+                break;
+            }
+            case "smoothing": {
+                // Smooth dome (lopass-ish) curve.
+                iconPaint.setColor(COLOR_SHAPE).setStyle(PluginStyle.STROKE).setStrokeWidth(sw);
+                path1.reset();
+                float w = s * 1.4f, h = s * 0.6f;
+                path1.moveTo(cx - w * 0.5f, cy + h * 0.4f);
+                path1.quadTo(cx, cy - h * (0.3f + 0.5f * norm),
+                              cx + w * 0.5f, cy + h * 0.4f);
+                canvas.drawPath(path1, iconPaint);
+                break;
+            }
+            case "warp": {
+                // Vertical dashed lines — Crystalline's WARP icon.
+                // Spacing tightens / loosens with the bipolar value.
+                iconPaint.setColor(COLOR_SHAPE).setStyle(PluginStyle.STROKE).setStrokeWidth(sw);
+                float h = s * 0.7f;
+                int lines = 4;
+                float spread = s * 1.0f;
+                float bias = norm * 0.4f - 0.2f;  // bipolar widen/narrow
+                for (int i = 0; i < lines; i++) {
+                    float t = i / (float)(lines - 1);
+                    float bx = cx - spread * 0.5f + t * spread + bias * s;
+                    canvas.drawLine(bx, cy - h, bx, cy + h, iconPaint);
+                }
                 break;
             }
             case "width": {
