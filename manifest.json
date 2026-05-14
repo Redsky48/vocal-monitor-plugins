@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-14T11:56:49.032Z",
+  "generatedAt": "2026-05-14T12:41:50.034Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -1539,7 +1539,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/formant-tracker/formant-tracker.dex",
-      "sizeBytes": 10020,
+      "sizeBytes": 9588,
       "className": "com.vocalmonitor.plugin.community.FormantTracker",
       "ui_kind": "canvas",
       "ui": {

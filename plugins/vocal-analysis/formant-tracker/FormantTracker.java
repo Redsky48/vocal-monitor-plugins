@@ -59,11 +59,10 @@ public final class FormantTracker
     private final float[] R = new float[LPC_ORDER + 1];
     private int ringW = 0, sampleAcc = 0;
 
-    // Durand-Kerner working arrays (length LPC_ORDER for the roots).
-    private final double[] rootRe = new double[LPC_ORDER];
-    private final double[] rootIm = new double[LPC_ORDER];
-    // Polynomial coefficients in z (monic, descending).
-    private final double[] polyC = new double[LPC_ORDER + 1];
+    // LPC magnitude spectrum, sampled on SPEC_BINS points across the
+    // formant band (0..5.5 kHz), for peak-picking.
+    private static final int SPEC_BINS = 256;
+    private final float[] lpcSpec = new float[SPEC_BINS];
 
     // ── Result + trail ──
     private float f1 = 0f, f2 = 0f, f3 = 0f;
@@ -113,18 +112,14 @@ public final class FormantTracker
             energy += v * v;
         }
         float rms = (float) Math.sqrt(energy / FRAME_SIZE);
-        if (rms < 0.003f) {
-            f1 = f2 = f3 = 0f;
-            bw1 = bw2 = bw3 = 0f;
-            return;
-        }
+        if (rms < 0.003f) return;
         // Autocorrelation.
         for (int k = 0; k <= LPC_ORDER; k++) {
             float sum = 0f;
             for (int i = k; i < FRAME_SIZE; i++) sum += frame[i] * frame[i - k];
             R[k] = sum;
         }
-        if (R[0] < 1e-9f) { f1 = f2 = f3 = 0f; return; }
+        if (R[0] < 1e-9f) return;
         // Levinson-Durbin → lpcA.
         float[] a = new float[LPC_ORDER + 1];
         float[] aPrev = new float[LPC_ORDER + 1];
@@ -143,63 +138,44 @@ public final class FormantTracker
         }
         System.arraycopy(a, 0, lpcA, 0, LPC_ORDER + 1);
 
-        // Build monic polynomial in z: B(z) = z^p + a_1 z^(p-1) + ... + a_p.
-        for (int i = 0; i <= LPC_ORDER; i++) polyC[i] = lpcA[i];
-
-        // Durand-Kerner: 12 complex initial guesses on a spiral.
-        for (int i = 0; i < LPC_ORDER; i++) {
-            double ang = 2.0 * Math.PI * i / LPC_ORDER + 0.4;
-            rootRe[i] = 0.6 * Math.cos(ang);
-            rootIm[i] = 0.6 * Math.sin(ang);
-        }
-        for (int iter = 0; iter < 25; iter++) {
-            double maxDelta = 0;
-            for (int i = 0; i < LPC_ORDER; i++) {
-                // Numerator = polyC evaluated at z_i (Horner's).
-                double pRe = polyC[0], pIm = 0.0;
-                for (int k = 1; k <= LPC_ORDER; k++) {
-                    double nRe = pRe * rootRe[i] - pIm * rootIm[i] + polyC[k];
-                    double nIm = pRe * rootIm[i] + pIm * rootRe[i];
-                    pRe = nRe; pIm = nIm;
-                }
-                // Denominator = Π_{j≠i} (z_i − z_j).
-                double dRe = 1.0, dIm = 0.0;
-                for (int j = 0; j < LPC_ORDER; j++) {
-                    if (j == i) continue;
-                    double dxRe = rootRe[i] - rootRe[j];
-                    double dxIm = rootIm[i] - rootIm[j];
-                    double nRe = dRe * dxRe - dIm * dxIm;
-                    double nIm = dRe * dxIm + dIm * dxRe;
-                    dRe = nRe; dIm = nIm;
-                }
-                // delta = numerator / denominator
-                double den2 = dRe * dRe + dIm * dIm;
-                if (den2 < 1e-30) continue;
-                double sRe = (pRe * dRe + pIm * dIm) / den2;
-                double sIm = (pIm * dRe - pRe * dIm) / den2;
-                rootRe[i] -= sRe;
-                rootIm[i] -= sIm;
-                double delta = sRe * sRe + sIm * sIm;
-                if (delta > maxDelta) maxDelta = delta;
+        // LPC magnitude spectrum |1 / A(e^jω)| sampled on SPEC_BINS
+        // points from 0..5.5 kHz, then pick local maxima.  Bandwidths
+        // are estimated from the −3 dB width around each peak.  This
+        // is robust on every platform (the previous Durand-Kerner
+        // root-finder converged inconsistently on Android), so we
+        // stick with the proven peak-picking approach.
+        float maxHz = 5500f;
+        for (int b = 0; b < SPEC_BINS; b++) {
+            float freq = (b + 1) * maxHz / SPEC_BINS;
+            double w = 2.0 * Math.PI * freq / sampleRate;
+            double re = 0, im = 0;
+            for (int k = 0; k <= LPC_ORDER; k++) {
+                re += lpcA[k] * Math.cos(-w * k);
+                im += lpcA[k] * Math.sin(-w * k);
             }
-            if (maxDelta < 1e-12) break;
+            double mag2 = re * re + im * im;
+            lpcSpec[b] = mag2 > 1e-12f ? (float)(1.0 / Math.sqrt(mag2)) : 0f;
         }
-        // Collect valid formant candidates (positive imag, in band, BW < 600).
-        float[] candF  = new float[LPC_ORDER];
-        float[] candBw = new float[LPC_ORDER];
+        float[] candF  = new float[8];
+        float[] candBw = new float[8];
         int nCand = 0;
-        for (int i = 0; i < LPC_ORDER; i++) {
-            double mag = Math.sqrt(rootRe[i] * rootRe[i] + rootIm[i] * rootIm[i]);
-            if (mag >= 1.0 || mag < 0.05) continue;
-            double ang = Math.atan2(rootIm[i], rootRe[i]);
-            if (ang <= 0) continue;       // keep only positive-frequency conjugate
-            double freq = ang * sampleRate / (2.0 * Math.PI);
-            double bw   = -Math.log(mag) * sampleRate / Math.PI;
-            if (freq < 90 || freq > 5500) continue;
-            if (bw > 600) continue;
-            candF [nCand] = (float) freq;
-            candBw[nCand] = (float) bw;
-            nCand++;
+        for (int b = 2; b < SPEC_BINS - 2 && nCand < candF.length; b++) {
+            float v = lpcSpec[b];
+            if (v > lpcSpec[b - 1] && v > lpcSpec[b + 1]
+                    && v > lpcSpec[b - 2] && v > lpcSpec[b + 2]) {
+                float peakHz = (b + 1) * maxHz / SPEC_BINS;
+                if (peakHz < 200f || peakHz > 5000f) continue;
+                // −3 dB bandwidth: walk left + right until magnitude
+                // drops 1/sqrt(2).
+                float thresh = v * 0.7071f;
+                int bLo = b, bHi = b;
+                while (bLo > 0 && lpcSpec[bLo] > thresh) bLo--;
+                while (bHi < SPEC_BINS - 1 && lpcSpec[bHi] > thresh) bHi++;
+                float bwHz = (bHi - bLo) * maxHz / SPEC_BINS;
+                candF[nCand]  = peakHz;
+                candBw[nCand] = bwHz;
+                nCand++;
+            }
         }
         if (nCand == 0) return;
         // Sort candidates ascending by frequency.
