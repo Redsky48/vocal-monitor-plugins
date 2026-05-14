@@ -8,5 +8,6 @@
   "engine": "native",
   "className": "com.vocalmonitor.plugin.community.VocalFatigue",
   "ui_kind": "canvas",
-  "ui": { "aspect": "16:9", "min_height_dp": 240 }
+  "ui": { "aspect": "16:9", "min_height_dp": 240 },
+  "streams": ["waveform"]
 }

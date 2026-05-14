@@ -10,22 +10,20 @@ import com.vocalmonitor.plugin.VocalMonitorVisualPlugin;
 import java.util.Map;
 
 /**
- * Vibrato Analyzer — measures vibrato as a craft.  Extracts:
+ * Vibrato Analyzer — measures vibrato as a craft.
  *
- *   - Rate (Hz): how fast the cycle is (4 Hz lazy, 5–7 Hz musical,
- *     8 Hz+ nervous).
- *   - Depth (cents): peak-to-peak deviation around the note centre.
- *   - Regularity (0..1): how even the recent cycles are (high =
- *     controlled, low = unsteady).
- *   - Onset (ms): time from note-attack to first audible cycle.
+ * Rate detection uses **autocorrelation of the pitch-deviation
+ * buffer** (robust to noise; the old zero-crossing approach was
+ * easily fooled by jitter).  The autocorr peak in the 4–10 Hz lag
+ * window is the dominant cycle period.
  *
- * Approach: same YIN tracker as the other vocal-analysis plugins.
- * Smooth the cents-from-target signal with a 200 ms note-centre
- * lowpass to get the slow note centre, subtract to get the
- * deviation, then run autocorrelation on the deviation buffer to
- * find the dominant cycle period → rate.  Depth = RMS of the
- * deviation × 2.83 (peak-to-peak from RMS sinusoid).  Regularity
- * = 1 - (period stdev / period mean).
+ * Per-cycle stats are recorded **cycle-by-cycle** by detecting
+ * positive zero-crossings on a lightly-smoothed deviation signal
+ * and measuring depth + period between consecutive crossings.
+ *
+ * Vibrato "active" is asserted when the last ≥3 cycles have rate
+ * stdev < 0.5 Hz AND depth ≥ 15 cents (≈ the threshold under
+ * which classical pedagogy stops calling a wobble "vibrato").
  */
 public final class VibratoAnalyzer
         implements VocalMonitorNativePlugin, VocalMonitorVisualPlugin {
@@ -37,11 +35,15 @@ public final class VibratoAnalyzer
         java.util.Arrays.fill(audioRing, 0f);
         java.util.Arrays.fill(devHist, 0f);
         java.util.Arrays.fill(centsHist, Float.NaN);
+        java.util.Arrays.fill(cycleRateHist, 0f);
+        java.util.Arrays.fill(cycleDepthHist, 0f);
         ringW = 0; sampleAcc = 0; histW = 0;
+        cycleN = 0;
         noteCentre = 0f; lastMidi = -1;
-        noteOnsetSec = -1f;
+        noteOnsetSec = -1f; curWallSec = 0f;
         vibratoRate = 0f; vibratoDepth = 0f;
         vibratoReg = 0f; vibratoOnsetMs = 0f;
+        vibratoActive = false;
     }
 
     @Override public String[] parameterNames() { return new String[0]; }
@@ -51,7 +53,7 @@ public final class VibratoAnalyzer
     @Override public String parameterLabel(String n) { return n; }
     @Override public void setParameter(String n, float v) { }
 
-    // ── YIN (same as PitchAccuracy) ──
+    // ── YIN ──
     private static final int   ANALYSIS_SIZE = 1024;
     private static final int   ANALYSIS_HOP  = 256;          // ~5.8 ms/frame at 44.1k
     private static final int   LAG_MIN = 32, LAG_MAX = 512;
@@ -64,22 +66,29 @@ public final class VibratoAnalyzer
     private int ringW = 0, sampleAcc = 0;
 
     // ── Vibrato analysis state ──
-    // Deviation buffer: last ~1 second (170 frames @ 5.8 ms/frame).
-    private static final int DEV_LEN = 170;
-    private final float[] devHist = new float[DEV_LEN];     // cents off the slow centre
+    private static final int DEV_LEN = 170;                 // ~1 s
+    private final float[] devHist = new float[DEV_LEN];     // cents off slow centre
     private final float[] centsHist = new float[DEV_LEN];   // raw cents for display
     private int histW = 0;
     private float noteCentre = 0f;
     private int lastMidi = -1;
-    private float noteOnsetSec = -1f;    // wall time of last note start, seconds
+    private float noteOnsetSec = -1f;
     private float curWallSec = 0f;
 
-    // Computed results.
-    private float vibratoRate = 0f;       // Hz
-    private float vibratoDepth = 0f;      // cents pk-to-pk
-    private float vibratoReg = 0f;        // 0..1
-    private float vibratoOnsetMs = 0f;    // ms from attack to detected vibrato
+    // Per-cycle ring (last 8 cycles).
+    private static final int CYC_HIST = 8;
+    private final float[] cycleRateHist  = new float[CYC_HIST];
+    private final float[] cycleDepthHist = new float[CYC_HIST];
+    private int cycleN = 0;
 
+    private float vibratoRate = 0f;       // Hz (autocorrelation)
+    private float vibratoDepth = 0f;      // cents pk-to-pk (most recent cycle)
+    private float vibratoReg = 0f;        // 0..1 (1 - rate_stdev / mean)
+    private float vibratoOnsetMs = 0f;    // ms from attack to detected vibrato
+    private boolean vibratoActive = false;
+
+    // Pass-through + capture into a local ring; analysis runs in
+    // render() from streams["waveform"] (preferred) or this ring.
     @Override public void process(float[] input, float[] output) {
         int n = Math.min(input.length, output.length);
         for (int i = 0; i < n; i++) {
@@ -87,13 +96,22 @@ public final class VibratoAnalyzer
             output[i] = s;
             audioRing[ringW] = s;
             ringW = (ringW + 1) % ANALYSIS_SIZE;
-            sampleAcc++;
-            if (sampleAcc >= ANALYSIS_HOP) {
-                sampleAcc = 0;
-                analyseFrame();
-                curWallSec += ANALYSIS_HOP / (float) sampleRate;
-            }
         }
+    }
+
+    private void prepareWindow(java.util.Map<String, float[]> streams) {
+        float[] wave = streams != null ? streams.get("waveform") : null;
+        if (wave == null || wave.length < 64) return;
+        int n = wave.length;
+        int start = n - ANALYSIS_SIZE;
+        if (start < 0) {
+            int pad = -start;
+            for (int i = 0; i < pad; i++) audioRing[i] = 0f;
+            for (int i = 0; i < n; i++) audioRing[pad + i] = wave[i];
+        } else {
+            for (int i = 0; i < ANALYSIS_SIZE; i++) audioRing[i] = wave[start + i];
+        }
+        ringW = 0;
     }
 
     private void analyseFrame() {
@@ -154,75 +172,123 @@ public final class VibratoAnalyzer
         double midi = 69.0 + semitones;
         int midiRound = (int) Math.round(midi);
         float cents = (float) ((midi - midiRound) * 100.0);
-        // Note-centre tracker: slow IIR on the absolute MIDI position,
-        // so vibrato (fast) doesn't shift the centre but glissando
-        // (slow) does.  Time constant ~200 ms.
         float midiAbs = (float) midi;
         if (lastMidi != midiRound) {
-            // Note change → reset centre + onset timer.
             noteCentre = midiAbs;
             noteOnsetSec = curWallSec;
             vibratoOnsetMs = 0f;
+            cycleN = 0;
             lastMidi = midiRound;
         } else {
-            noteCentre += 0.05f * (midiAbs - noteCentre);  // ~30 ms IIR
+            noteCentre += 0.05f * (midiAbs - noteCentre);
         }
-        float dev = (midiAbs - noteCentre) * 100f;   // cents off centre
+        float dev = (midiAbs - noteCentre) * 100f;
         devHist[histW] = dev;
         centsHist[histW] = cents;
         histW = (histW + 1) % DEV_LEN;
-
-        // Compute vibrato characteristics from the deviation buffer.
         computeVibratoStats();
     }
 
     private void computeVibratoStats() {
-        // 1) Depth = RMS × 2.83 (peak-to-peak from sinusoid RMS).
-        double sumSq = 0;
-        for (float d : devHist) sumSq += d * d;
-        float rmsDev = (float) Math.sqrt(sumSq / DEV_LEN);
-        vibratoDepth = rmsDev * 2.83f;
-
-        // 2) Rate via simple zero-crossing on the deviation signal —
-        // count sign changes per full window, scale to Hz.
-        int crossings = 0;
-        float prev = devHist[(histW) % DEV_LEN];
-        for (int i = 1; i < DEV_LEN; i++) {
-            float cur = devHist[(histW + i) % DEV_LEN];
-            if ((prev <= 0f && cur > 0f) || (prev >= 0f && cur < 0f)) crossings++;
-            prev = cur;
+        // 1) Autocorrelation rate: search lag corresponding to 4-10 Hz.
+        float frameHz = sampleRate / (float) ANALYSIS_HOP;
+        int lagMin = Math.max(2, (int) Math.floor(frameHz / 10f));   // 10 Hz
+        int lagMax = Math.min(DEV_LEN / 3, (int) Math.ceil(frameHz / 4f));  // 4 Hz
+        // Walk dev in chronological order — copy into a flat array.
+        float[] xs = new float[DEV_LEN];
+        double mean = 0;
+        for (int i = 0; i < DEV_LEN; i++) {
+            xs[i] = devHist[(histW + i) % DEV_LEN];
+            mean += xs[i];
         }
-        // 2 crossings = 1 cycle. Window = DEV_LEN * ANALYSIS_HOP / SR.
-        float windowSec = DEV_LEN * ANALYSIS_HOP / (float) sampleRate;
-        vibratoRate = crossings * 0.5f / windowSec;
+        mean /= DEV_LEN;
+        for (int i = 0; i < DEV_LEN; i++) xs[i] -= (float) mean;
+        // Autocorrelation peak in [lagMin, lagMax].
+        float bestVal = -1e30f; int bestLag = lagMin;
+        float[] autoBuf = new float[lagMax + 2];
+        for (int lag = lagMin; lag <= lagMax; lag++) {
+            float sum = 0f;
+            int span = DEV_LEN - lag;
+            for (int i = 0; i < span; i++) sum += xs[i] * xs[i + lag];
+            autoBuf[lag] = sum;
+            if (sum > bestVal) { bestVal = sum; bestLag = lag; }
+        }
+        float refinedLag = bestLag;
+        if (bestLag > lagMin && bestLag < lagMax) {
+            float a0 = autoBuf[bestLag - 1], a1 = autoBuf[bestLag], a2 = autoBuf[bestLag + 1];
+            float denom = (a0 - 2f * a1 + a2);
+            if (Math.abs(denom) > 1e-9f) refinedLag = bestLag + 0.5f * (a0 - a2) / denom;
+        }
+        // Only report a rate if the autocorr peak is significant.
+        double sumSq = 0;
+        for (int i = 0; i < DEV_LEN; i++) sumSq += xs[i] * xs[i];
+        float autoNorm = (float)(sumSq > 1e-6 ? bestVal / sumSq : 0);
+        if (autoNorm > 0.25f && refinedLag > 0f) {
+            vibratoRate = frameHz / refinedLag;
+        } else {
+            vibratoRate = 0f;
+        }
 
-        // 3) Regularity: stdev / mean of cycle periods.  Cheap version
-        // — track distance between successive zero crossings.
+        // 2) Per-cycle measurement via positive zero crossings.
+        // Smooth lightly first (3-tap moving average).
+        float[] sm = new float[DEV_LEN];
+        sm[0] = xs[0]; sm[DEV_LEN - 1] = xs[DEV_LEN - 1];
+        for (int i = 1; i < DEV_LEN - 1; i++) sm[i] = (xs[i-1] + xs[i] + xs[i+1]) / 3f;
+        // Find positive zero crossings.
         int[] crossIdx = new int[DEV_LEN];
         int nCross = 0;
-        prev = devHist[histW % DEV_LEN];
-        for (int i = 1; i < DEV_LEN && nCross < crossIdx.length; i++) {
-            float cur = devHist[(histW + i) % DEV_LEN];
-            if (prev <= 0f && cur > 0f) crossIdx[nCross++] = i;
-            prev = cur;
+        float prev = sm[0];
+        for (int i = 1; i < DEV_LEN; i++) {
+            if (prev <= 0f && sm[i] > 0f) crossIdx[nCross++] = i;
+            prev = sm[i];
         }
-        if (nCross >= 3) {
-            float sum = 0, sumSqP = 0;
-            int periods = nCross - 1;
-            for (int i = 1; i < nCross; i++) {
-                int p = crossIdx[i] - crossIdx[i - 1];
-                sum += p; sumSqP += p * p;
+        // For each pair of consecutive crossings, compute period + depth.
+        cycleN = 0;
+        for (int c = 1; c < nCross && cycleN < CYC_HIST; c++) {
+            int i0 = crossIdx[c - 1], i1 = crossIdx[c];
+            float lo = Float.POSITIVE_INFINITY, hi = Float.NEGATIVE_INFINITY;
+            for (int k = i0; k <= i1; k++) {
+                if (sm[k] < lo) lo = sm[k];
+                if (sm[k] > hi) hi = sm[k];
             }
-            float mean = sum / periods;
-            float var = sumSqP / periods - mean * mean;
-            if (var < 0f) var = 0f;
-            float std = (float) Math.sqrt(var);
-            vibratoReg = mean > 0f ? Math.max(0f, 1f - std / mean) : 0f;
+            float pkpk = hi - lo;
+            float period = i1 - i0;
+            cycleRateHist[cycleN]  = period > 0f ? frameHz / period : 0f;
+            cycleDepthHist[cycleN] = pkpk;
+            cycleN++;
+        }
+        // Last cycle = most recent → primary depth readout.
+        if (cycleN > 0) vibratoDepth = cycleDepthHist[cycleN - 1];
+
+        // 3) Regularity from cycle-rate stdev.
+        if (cycleN >= 3) {
+            float sumR = 0, sumRSq = 0;
+            for (int i = 0; i < cycleN; i++) { sumR += cycleRateHist[i]; sumRSq += cycleRateHist[i] * cycleRateHist[i]; }
+            float m = sumR / cycleN;
+            float v = sumRSq / cycleN - m * m; if (v < 0) v = 0;
+            float std = (float) Math.sqrt(v);
+            vibratoReg = m > 0f ? Math.max(0f, 1f - std / m) : 0f;
+        } else if (cycleN > 0) {
+            vibratoReg = 0f;
         }
 
-        // 4) Onset: if depth has crossed 10 cents AND we have an
-        // attack time, the onset is "now - attackSec".  Otherwise 0.
-        if (noteOnsetSec >= 0f && vibratoOnsetMs == 0f && vibratoDepth > 10f) {
+        // 4) Vibrato active: ≥3 cycles, rate stdev < 0.5 Hz, depth ≥ 15 c.
+        boolean active = false;
+        if (cycleN >= 3) {
+            float sumR = 0, sumRSq = 0, sumD = 0;
+            for (int i = 0; i < cycleN; i++) {
+                sumR += cycleRateHist[i];
+                sumRSq += cycleRateHist[i] * cycleRateHist[i];
+                sumD += cycleDepthHist[i];
+            }
+            float m = sumR / cycleN;
+            float vv = sumRSq / cycleN - m * m; if (vv < 0) vv = 0;
+            float std = (float) Math.sqrt(vv);
+            float mD = sumD / cycleN;
+            active = std < 0.5f && mD >= 15f;
+        }
+        vibratoActive = active;
+        if (active && noteOnsetSec >= 0f && vibratoOnsetMs == 0f) {
             vibratoOnsetMs = Math.max(0f, (curWallSec - noteOnsetSec) * 1000f);
         }
     }
@@ -233,7 +299,8 @@ public final class VibratoAnalyzer
     private static final int COLOR_CARD_BORDER = 0xFF2A2B2F;
     private static final int COLOR_TEXT_BRIGHT = 0xFFE6E6EA;
     private static final int COLOR_TEXT_DIM    = 0xFF8A8B8F;
-    private static final int COLOR_SIGNATURE   = 0xFFE36C9C; // pink
+    private static final int COLOR_SIGNATURE   = 0xFFE36C9C;
+    private static final int COLOR_ACTIVE      = 0xFF6FE07A;
     private static final int COLOR_GRID        = 0xFF202125;
 
     private PluginPaint bgPaint, cardPaint, textBright, textDim,
@@ -246,18 +313,24 @@ public final class VibratoAnalyzer
     ) {
         if (bgPaint == null) initPaints(canvas);
         if (width < 60 || height < 60) return;
+        prepareWindow(streams);
+        curWallSec = timeMs / 1000f;
+        analyseFrame();
         float W = width, H = height;
 
         bgPaint.setColor(COLOR_BG).setStyle(PluginStyle.FILL);
         canvas.drawRect(0, 0, W, H, bgPaint);
-
         textBright.setColor(COLOR_TEXT_BRIGHT).setTextSize(12f).setTextAlign(0);
         canvas.drawText("VIBRATO ANALYZER", 12f, 16f, textBright);
+        if (vibratoActive) {
+            textBright.setColor(COLOR_ACTIVE).setTextSize(11f).setTextAlign(2);
+            canvas.drawText("● VIBRATO ACTIVE", W - 12f, 16f, textBright);
+        } else {
+            textDim.setColor(COLOR_TEXT_DIM).setTextSize(11f).setTextAlign(2);
+            canvas.drawText("○ no vibrato", W - 12f, 16f, textDim);
+        }
 
-        // Layout: contour plot on top half, stat boxes below.
-        float pad = 12f;
-        float headerH = 24f;
-        float statsH = 70f;
+        float pad = 12f, headerH = 24f, statsH = 70f;
         float plotX0 = pad + 24f, plotX1 = W - pad;
         float plotY0 = pad + headerH;
         float plotY1 = H - pad - statsH;
@@ -267,7 +340,6 @@ public final class VibratoAnalyzer
         cardPaint.setColor(COLOR_CARD_BORDER).setStyle(PluginStyle.STROKE).setStrokeWidth(0.8f);
         canvas.drawRoundRect(plotX0 - 4f, plotY0 - 4f, plotX1 + 4f, plotY1 + 4f, 8f, cardPaint);
 
-        // Y axis: cents-off-centre, ±60 cents window.
         float plotW = plotX1 - plotX0, plotH = plotY1 - plotY0;
         int[] gridC = { -50, -25, 0, 25, 50 };
         for (int c : gridC) {
@@ -280,7 +352,6 @@ public final class VibratoAnalyzer
             canvas.drawText((c > 0 ? "+" : "") + c + "c", plotX0 - 3f, y + 3f, textDim);
         }
 
-        // Deviation contour.
         devPath.reset();
         fillPath.reset();
         float step = plotW / (DEV_LEN - 1f);
@@ -303,23 +374,26 @@ public final class VibratoAnalyzer
         fillPath.lineTo(plotX0 + (DEV_LEN - 1) * step, plotY0 + plotH * 0.5f).close();
         fillPaint.setColor(0x33E36C9C).setStyle(PluginStyle.FILL);
         canvas.drawPath(fillPath, fillPaint);
-        linePaint.setColor(COLOR_SIGNATURE).setStyle(PluginStyle.STROKE).setStrokeWidth(1.5f);
+        linePaint.setColor(vibratoActive ? COLOR_ACTIVE : COLOR_SIGNATURE)
+                .setStyle(PluginStyle.STROKE).setStrokeWidth(1.5f);
         canvas.drawPath(devPath, linePaint);
 
         // Stats row — 4 cards.
         float statY0 = plotY1 + 10f;
         float statY1 = H - pad - 2f;
         float boxW = (plotW - 18f) / 4f;
-        drawStatBox(canvas, plotX0,                    statY0, plotX0 + boxW,                    statY1,
-                "RATE",      String.format("%.1f Hz", vibratoRate),    rateVerdict(vibratoRate));
-        drawStatBox(canvas, plotX0 + (boxW + 6f),      statY0, plotX0 + (boxW + 6f) + boxW,      statY1,
-                "DEPTH",     String.format("±%.0f c", vibratoDepth * 0.5f),
+        drawStatBox(canvas, plotX0, statY0, plotX0 + boxW, statY1,
+                "RATE", String.format("%.1f Hz", vibratoRate), rateVerdict(vibratoRate));
+        drawStatBox(canvas, plotX0 + (boxW + 6f), statY0, plotX0 + (boxW + 6f) + boxW, statY1,
+                "DEPTH", String.format("±%.0f c", vibratoDepth * 0.5f),
                 depthVerdict(vibratoDepth));
-        drawStatBox(canvas, plotX0 + 2 * (boxW + 6f),  statY0, plotX0 + 2 * (boxW + 6f) + boxW,  statY1,
+        drawStatBox(canvas, plotX0 + 2 * (boxW + 6f), statY0,
+                plotX0 + 2 * (boxW + 6f) + boxW, statY1,
                 "REGULARITY", String.format("%.0f%%", vibratoReg * 100),
                 regVerdict(vibratoReg));
-        drawStatBox(canvas, plotX0 + 3 * (boxW + 6f),  statY0, plotX0 + 3 * (boxW + 6f) + boxW,  statY1,
-                "ONSET",     vibratoOnsetMs > 0f ? String.format("%.0f ms", vibratoOnsetMs) : "-",
+        drawStatBox(canvas, plotX0 + 3 * (boxW + 6f), statY0,
+                plotX0 + 3 * (boxW + 6f) + boxW, statY1,
+                "ONSET", vibratoOnsetMs > 0f ? String.format("%.0f ms", vibratoOnsetMs) : "-",
                 COLOR_TEXT_DIM);
     }
 
@@ -336,9 +410,9 @@ public final class VibratoAnalyzer
     }
 
     private static int rateVerdict(float hz) {
-        if (hz >= 5f && hz <= 7f) return 0xFF6FE07A;   // musical
-        if (hz >= 4f && hz <= 8f) return 0xFFE0C040;   // borderline
-        if (hz > 0f) return 0xFFE0606A;                // off
+        if (hz >= 5f && hz <= 7f) return 0xFF6FE07A;
+        if (hz >= 4f && hz <= 8f) return 0xFFE0C040;
+        if (hz > 0f) return 0xFFE0606A;
         return COLOR_TEXT_DIM;
     }
     private static int depthVerdict(float cents) {

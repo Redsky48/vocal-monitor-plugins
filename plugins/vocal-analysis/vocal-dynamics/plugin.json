@@ -8,5 +8,6 @@
   "engine": "native",
   "className": "com.vocalmonitor.plugin.community.VocalDynamics",
   "ui_kind": "canvas",
-  "ui": { "aspect": "16:9", "min_height_dp": 220 }
+  "ui": { "aspect": "16:9", "min_height_dp": 220 },
+  "streams": ["waveform"]
 }

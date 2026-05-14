@@ -10,18 +10,30 @@ import com.vocalmonitor.plugin.VocalMonitorVisualPlugin;
 import java.util.Map;
 
 /**
- * Articulation Meter — measures diction clarity via two signals:
+ * Articulation Meter — pro-grade onset detection + consonant
+ * classification.
  *
- *   1. Spectral flux: per-FFT-frame sum of positive bin energy
- *      changes vs the previous frame. Spikes when content suddenly
- *      shifts (consonant onset).
- *   2. HF transient energy: fast-vs-slow RMS envelope ratio of the
- *      band-passed signal above 2 kHz. Spikes on plosives + fricatives.
+ * Onset detection function (ODF): **complex-domain** Bello/Dixon
+ * 2005:
  *
- * Onset events are marked when EITHER signal exceeds its slow
- * running baseline by 6 dB. The render shows a scrolling timeline
- * of the combined "clarity intensity" with onset ticks, plus a
- * 4-second average for phrase-level reading.
+ *   predicted X̂[n,k] = |X[n−1,k]| · exp(j · (2·φ[n−1,k] − φ[n−2,k]))
+ *   ODF[n]            = Σ_k | X[n,k] − X̂[n,k] |
+ *
+ * Captures BOTH magnitude changes (the spectral-flux idea) AND
+ * phase deviations (steady-state harmonics → ODF stays low even at
+ * loud sustained notes).
+ *
+ * Adaptive threshold = **100 ms moving median × 1.7 + floor**.
+ * Median is robust to occasional outliers; the 1.7× margin keeps
+ * normal vibrato modulation under the line.
+ *
+ * Consonant classifier at onset: HF/LF energy ratio sampled from
+ * the FFT at the onset frame.
+ *   ratio > 2.5  → /s/ /t/ /k/  (HF — sibilants / unvoiced)
+ *   ratio < 0.7  → /b/ /d/ /g/  (LF — voiced plosives)
+ *   else         → /m/ /n/ /v/  (mid — nasals / vowels)
+ *
+ * Most-recent classification is shown next to the title.
  */
 public final class Articulation
         implements VocalMonitorNativePlugin, VocalMonitorVisualPlugin {
@@ -32,11 +44,14 @@ public final class Articulation
         this.sampleRate = sr;
         java.util.Arrays.fill(audioRing, 0f);
         java.util.Arrays.fill(prevMag, 0f);
+        java.util.Arrays.fill(prevPhase, 0f);
+        java.util.Arrays.fill(prevPrevPhase, 0f);
+        java.util.Arrays.fill(odfHist, 0f);
+        java.util.Arrays.fill(odfMedianRing, 0f);
         java.util.Arrays.fill(clarityHist, 0f);
         java.util.Arrays.fill(events, 0f);
-        for (int j = 0; j < 4; j++) hfState[j] = 0f;
-        fastEnv = slowEnv = slowFlux = 0f;
-        ringW = 0; sampleAcc = 0; histW = 0;
+        ringW = 0; sampleAcc = 0; histW = 0; medianRingW = 0;
+        prevOdf = 0f; prevPrevOdf = 0f; lastClass = -1; phraseAvg = 0f;
     }
 
     @Override public String[] parameterNames() { return new String[0]; }
@@ -48,47 +63,62 @@ public final class Articulation
 
     private static final int FFT_SIZE = 512;
     private static final int HOP = 256;
+    private static final int FFT_HALF = FFT_SIZE / 2;
     private final float[] audioRing = new float[FFT_SIZE];
     private final float[] fftRe = new float[FFT_SIZE];
     private final float[] fftIm = new float[FFT_SIZE];
-    private final float[] hann = new float[FFT_SIZE];
+    private final float[] hann  = new float[FFT_SIZE];
     private boolean hannInit = false;
-    private final float[] prevMag = new float[FFT_SIZE / 2];
+    // Complex-domain ODF state.
+    private final float[] prevMag       = new float[FFT_HALF];
+    private final float[] prevPhase     = new float[FFT_HALF];
+    private final float[] prevPrevPhase = new float[FFT_HALF];
     private int ringW = 0, sampleAcc = 0;
 
-    // HF transient detector.
-    private float[] hfCoefs;
-    private final float[] hfState = new float[4];
-    private float fastEnv = 0f, slowEnv = 0f;
+    // ODF ring + 100 ms median (~9 frames @ 11.6 ms/frame).
+    private static final int MEDIAN_LEN = 9;
+    private final float[] odfMedianRing = new float[MEDIAN_LEN];
+    private final float[] medianSort    = new float[MEDIAN_LEN];
+    private int medianRingW = 0;
+    private float prevOdf = 0f, prevPrevOdf = 0f;
 
-    private float slowFlux = 0f;
     private static final int HIST_LEN = 256;
+    private final float[] odfHist     = new float[HIST_LEN];
     private final float[] clarityHist = new float[HIST_LEN];
-    private final float[] events = new float[HIST_LEN];
+    private final float[] events      = new float[HIST_LEN];
     private int histW = 0;
     private float phraseAvg = 0f;
 
+    // Consonant class: 0 = HF (s/t/k), 1 = mid (m/n/v), 2 = LF (b/d/g).
+    private int lastClass = -1;
+    private static final String[] CLASS_LABEL = { "s / t / k", "m / n / v", "b / d / g" };
+    private static final int[] CLASS_COLOUR = { 0xFFE34855, 0xFF4FCB60, 0xFF5BD9E0 };
+
+    // Pass-through + capture into a local ring; analysis runs in
+    // render() from streams["waveform"] (preferred) or this ring.
     @Override public void process(float[] input, float[] output) {
         int n = Math.min(input.length, output.length);
-        if (hfCoefs == null) hfCoefs = highPass(2000f, 0.7f, sampleRate);
-        float fastC = 1f - (float) Math.exp(-1.0 / (sampleRate * 0.0015));
-        float slowC = 1f - (float) Math.exp(-1.0 / (sampleRate * 0.060));
         for (int i = 0; i < n; i++) {
             float s = input[i];
             output[i] = s;
             audioRing[ringW] = s;
             ringW = (ringW + 1) % FFT_SIZE;
-            // HF transient follow.
-            float hf = biquad(s, hfCoefs, hfState);
-            float a = hf < 0 ? -hf : hf;
-            fastEnv += fastC * (a - fastEnv);
-            slowEnv += slowC * (a - slowEnv);
-            sampleAcc++;
-            if (sampleAcc >= HOP) {
-                sampleAcc = 0;
-                analyseFrame();
-            }
         }
+    }
+
+    private void prepareWindow(java.util.Map<String, float[]> streams) {
+        float[] wave = streams != null ? streams.get("waveform") : null;
+        if (wave == null || wave.length < 64) return;
+        int n = wave.length;
+        int start = n - FFT_SIZE;
+        if (start < 0) {
+            int pad = -start;
+            for (int i = 0; i < pad; i++) audioRing[i] = 0f;
+            for (int i = 0; i < n; i++) audioRing[pad + i] = wave[i];
+        } else {
+            for (int i = 0; i < FFT_SIZE; i++) audioRing[i] = wave[start + i];
+        }
+        ringW = 0;
     }
 
     private void analyseFrame() {
@@ -104,52 +134,70 @@ public final class Articulation
             fftIm[i] = 0f;
         }
         fftRadix2(fftRe, fftIm);
-        // Spectral flux: sum of positive magnitude differences.
-        float flux = 0f;
-        for (int b = 1; b < FFT_SIZE / 2; b++) {
-            float mag = (float) Math.sqrt(fftRe[b] * fftRe[b] + fftIm[b] * fftIm[b]) / FFT_SIZE;
-            float diff = mag - prevMag[b];
-            if (diff > 0f) flux += diff;
+        // Complex-domain ODF.
+        float odf = 0f;
+        // Track LF and HF energy for the classifier.
+        float lfE = 0f, hfE = 0f;
+        float binHz = sampleRate / (float) FFT_SIZE;
+        for (int b = 1; b < FFT_HALF; b++) {
+            float re = fftRe[b], im = fftIm[b];
+            float mag = (float) Math.sqrt(re * re + im * im) / FFT_SIZE;
+            float ph = (float) Math.atan2(im, re);
+            // Predicted phase: linear extrapolation from last two frames.
+            float predPh = 2f * prevPhase[b] - prevPrevPhase[b];
+            // Wrap into [-π, π].
+            float dphi = ph - predPh;
+            while (dphi >  (float) Math.PI) dphi -= (float)(2 * Math.PI);
+            while (dphi < -(float) Math.PI) dphi += (float)(2 * Math.PI);
+            // Predicted complex value: prevMag * exp(j*predPh).
+            // Observed: mag * exp(j*ph). Distance |observed - predicted|:
+            //   = sqrt(mag² + prevMag² − 2·mag·prevMag·cos(dphi))
+            float pm = prevMag[b];
+            float dist = (float) Math.sqrt(
+                    Math.max(0f, mag * mag + pm * pm - 2f * mag * pm * (float) Math.cos(dphi)));
+            // Emphasise mid+HF bins (where consonants live).
+            float f = b * binHz;
+            if (f > 800f) odf += dist * (f > 4000f ? 1.5f : 1.0f);
+            // Energy splits for classifier.
+            if (f >= 60f && f <= 1000f) lfE += mag * mag;
+            else if (f >= 3000f && f <= 8000f) hfE += mag * mag;
+            // Roll state.
+            prevPrevPhase[b] = prevPhase[b];
+            prevPhase[b] = ph;
             prevMag[b] = mag;
         }
-        // Slow baseline (300 ms).
-        slowFlux += 0.05f * (flux - slowFlux);
-        // Combined clarity intensity: weighted sum of normalised flux
-        // + HF transient ratio.
-        float hfRatio = slowEnv > 1e-6f ? fastEnv / slowEnv : 0f;
-        float clarity = Math.min(1f, flux * 30f) * 0.5f
-                       + Math.min(1f, Math.max(0f, hfRatio - 1f) * 0.5f) * 0.5f;
-        clarityHist[histW] = clarity;
-        // Event detection.
-        boolean fluxSpike = slowFlux > 1e-6f && flux > slowFlux * 2.5f;
-        boolean hfSpike   = hfRatio > 1.5f;
-        events[histW] = (fluxSpike || hfSpike) ? 1f : 0f;
+        // 100 ms moving median of ODF.
+        odfMedianRing[medianRingW] = odf;
+        medianRingW = (medianRingW + 1) % MEDIAN_LEN;
+        System.arraycopy(odfMedianRing, 0, medianSort, 0, MEDIAN_LEN);
+        java.util.Arrays.sort(medianSort);
+        float med = medianSort[MEDIAN_LEN / 2];
+        // Adaptive threshold: median × 1.7 + small floor.
+        float threshold = Math.max(1e-3f, med * 1.7f);
+        // Onset: ODF > threshold AND ODF is a local max (prev < cur > prevPrev).
+        boolean isPeak = odf > prevOdf && prevOdf > prevPrevOdf;
+        boolean fire = odf > threshold && isPeak;
+        // Store + classify.
+        odfHist[histW] = odf;
+        clarityHist[histW] = Math.min(1f, odf / Math.max(1e-3f, threshold * 2f));
+        if (fire) {
+            events[histW] = 1f;
+            float ratio = lfE > 1e-9f ? hfE / lfE : 10f;
+            if (ratio > 2.5f)      lastClass = 0;
+            else if (ratio < 0.7f) lastClass = 2;
+            else                   lastClass = 1;
+        } else {
+            events[histW] = 0f;
+        }
         histW = (histW + 1) % HIST_LEN;
-        // Phrase average (last 256 frames).
+        prevPrevOdf = prevOdf;
+        prevOdf = odf;
+        // Phrase average = mean clarity over history.
         float sum = 0f;
         for (float v : clarityHist) sum += v;
         phraseAvg = sum / HIST_LEN;
     }
 
-    private static float biquad(float x, float[] c, float[] st) {
-        float y = c[0] * x + c[1] * st[0] + c[2] * st[1] - c[3] * st[2] - c[4] * st[3];
-        st[1] = st[0]; st[0] = x;
-        st[3] = st[2]; st[2] = y;
-        return y;
-    }
-    private static float[] highPass(float fc, float q, int sr) {
-        double w = 2.0 * Math.PI * fc / sr;
-        double cs = Math.cos(w), sn = Math.sin(w);
-        double alpha = sn / (2.0 * q);
-        double a0 = 1 + alpha;
-        return new float[] {
-            (float)((1 + cs) * 0.5 / a0),
-            (float)(-(1 + cs) / a0),
-            (float)((1 + cs) * 0.5 / a0),
-            (float)(-2 * cs / a0),
-            (float)((1 - alpha) / a0)
-        };
-    }
     private static void fftRadix2(float[] re, float[] im) {
         int n = re.length;
         for (int i = 1, j = 0; i < n; i++) {
@@ -188,11 +236,10 @@ public final class Articulation
     private static final int COLOR_CARD_BORDER = 0xFF2A2B2F;
     private static final int COLOR_TEXT_BRIGHT = 0xFFE6E6EA;
     private static final int COLOR_TEXT_DIM    = 0xFF8A8B8F;
-    private static final int COLOR_SIGNATURE   = 0xFF4FCB60; // mint
-    private static final int COLOR_GRID        = 0xFF202125;
+    private static final int COLOR_SIGNATURE   = 0xFF4FCB60;
 
     private PluginPaint bgPaint, cardPaint, textBright, textDim,
-            gridPaint, fillPaint, linePaint, tickPaint;
+            fillPaint, linePaint, tickPaint;
     private PluginPath linePath, fillPath;
 
     @Override public void render(
@@ -201,14 +248,20 @@ public final class Articulation
     ) {
         if (bgPaint == null) initPaints(canvas);
         if (width < 60 || height < 60) return;
+        prepareWindow(streams);
+        analyseFrame();
         float W = width, H = height;
         bgPaint.setColor(COLOR_BG).setStyle(PluginStyle.FILL);
         canvas.drawRect(0, 0, W, H, bgPaint);
         textBright.setColor(COLOR_TEXT_BRIGHT).setTextSize(12f).setTextAlign(0);
         canvas.drawText("ARTICULATION", 12f, 16f, textBright);
-        textDim.setColor(COLOR_SIGNATURE).setTextSize(11f).setTextAlign(2);
-        canvas.drawText(String.format("phrase avg %.2f", phraseAvg),
-                W - 12f, 16f, textDim);
+        if (lastClass >= 0 && lastClass < CLASS_LABEL.length) {
+            textBright.setColor(CLASS_COLOUR[lastClass]).setTextSize(11f).setTextAlign(2);
+            canvas.drawText("last: " + CLASS_LABEL[lastClass], W - 12f, 16f, textBright);
+        } else {
+            textDim.setColor(COLOR_TEXT_DIM).setTextSize(11f).setTextAlign(2);
+            canvas.drawText("listening...", W - 12f, 16f, textDim);
+        }
 
         float pad = 12f, headerH = 24f;
         float plotX0 = pad + 24f, plotX1 = W - pad;
@@ -221,7 +274,6 @@ public final class Articulation
         cardPaint.setColor(COLOR_CARD_BORDER).setStyle(PluginStyle.STROKE).setStrokeWidth(0.8f);
         canvas.drawRoundRect(plotX0 - 4f, plotY0 - 4f, plotX1 + 4f, plotY1 + 4f, 8f, cardPaint);
 
-        // Clarity contour (filled).
         linePath.reset(); fillPath.reset();
         float step = plotW / (HIST_LEN - 1f);
         boolean started = false;
@@ -245,7 +297,6 @@ public final class Articulation
         linePaint.setColor(COLOR_SIGNATURE).setStyle(PluginStyle.STROKE).setStrokeWidth(1.4f);
         canvas.drawPath(linePath, linePaint);
 
-        // Onset ticks along the bottom edge.
         for (int i = 0; i < HIST_LEN; i++) {
             int idx = (histW + i) % HIST_LEN;
             if (events[idx] > 0.5f) {
@@ -254,13 +305,13 @@ public final class Articulation
                         plotX0 + i * step, plotY1, tickPaint);
             }
         }
-
         textDim.setColor(COLOR_TEXT_DIM).setTextSize(8.5f).setTextAlign(0);
-        canvas.drawText("older", plotX0, plotY1 + 11f, textDim);
+        canvas.drawText(String.format("phrase avg %.2f", phraseAvg),
+                plotX0, plotY1 + 11f, textDim);
         textDim.setTextAlign(2);
-        canvas.drawText("now", plotX1, plotY1 + 11f, textDim);
+        canvas.drawText("now (complex-domain ODF)", plotX1, plotY1 + 11f, textDim);
         textDim.setColor(0xFFFFE680).setTextAlign(1);
-        canvas.drawText("ticks = consonant onsets",
+        canvas.drawText("ticks = consonant onsets (adaptive threshold)",
                 (plotX0 + plotX1) * 0.5f, plotY1 + 11f, textDim);
     }
 
@@ -269,7 +320,6 @@ public final class Articulation
         cardPaint  = c.newPaint();
         textBright = c.newPaint();
         textDim    = c.newPaint();
-        gridPaint  = c.newPaint();
         fillPaint  = c.newPaint();
         linePaint  = c.newPaint();
         tickPaint  = c.newPaint();

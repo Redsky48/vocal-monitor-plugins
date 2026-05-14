@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-14T09:33:28.580Z",
+  "generatedAt": "2026-05-14T11:56:49.032Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -1484,13 +1484,16 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/articulation/articulation.dex",
-      "sizeBytes": 7364,
+      "sizeBytes": 8312,
       "className": "com.vocalmonitor.plugin.community.Articulation",
       "ui_kind": "canvas",
       "ui": {
         "aspect": "16:9",
         "min_height_dp": 200
-      }
+      },
+      "streams": [
+        "waveform"
+      ]
     },
     {
       "id": "breathiness-meter",
@@ -1508,13 +1511,16 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/breathiness-meter/breathiness-meter.dex",
-      "sizeBytes": 7000,
+      "sizeBytes": 10160,
       "className": "com.vocalmonitor.plugin.community.BreathinessMeter",
       "ui_kind": "canvas",
       "ui": {
         "aspect": "16:9",
         "min_height_dp": 200
-      }
+      },
+      "streams": [
+        "waveform"
+      ]
     },
     {
       "id": "formant-tracker",
@@ -1533,13 +1539,16 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/formant-tracker/formant-tracker.dex",
-      "sizeBytes": 8512,
+      "sizeBytes": 10020,
       "className": "com.vocalmonitor.plugin.community.FormantTracker",
       "ui_kind": "canvas",
       "ui": {
         "aspect": "4:3",
         "min_height_dp": 280
-      }
+      },
+      "streams": [
+        "waveform"
+      ]
     },
     {
       "id": "pitch-accuracy",
@@ -1558,13 +1567,16 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/pitch-accuracy/pitch-accuracy.dex",
-      "sizeBytes": 8424,
+      "sizeBytes": 10736,
       "className": "com.vocalmonitor.plugin.community.PitchAccuracy",
       "ui_kind": "canvas",
       "ui": {
         "aspect": "16:9",
         "min_height_dp": 260
-      }
+      },
+      "streams": [
+        "waveform"
+      ]
     },
     {
       "id": "register-detector",
@@ -1582,13 +1594,16 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/register-detector/register-detector.dex",
-      "sizeBytes": 7776,
+      "sizeBytes": 9840,
       "className": "com.vocalmonitor.plugin.community.RegisterDetector",
       "ui_kind": "canvas",
       "ui": {
         "aspect": "16:9",
         "min_height_dp": 220
-      }
+      },
+      "streams": [
+        "waveform"
+      ]
     },
     {
       "id": "resonance-monitor",
@@ -1606,13 +1621,16 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/resonance-monitor/resonance-monitor.dex",
-      "sizeBytes": 6860,
+      "sizeBytes": 9236,
       "className": "com.vocalmonitor.plugin.community.ResonanceMonitor",
       "ui_kind": "canvas",
       "ui": {
         "aspect": "16:9",
         "min_height_dp": 220
-      }
+      },
+      "streams": [
+        "waveform"
+      ]
     },
     {
       "id": "sibilance-detector",
@@ -1630,13 +1648,16 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/sibilance-detector/sibilance-detector.dex",
-      "sizeBytes": 6388,
+      "sizeBytes": 8056,
       "className": "com.vocalmonitor.plugin.community.SibilanceDetector",
       "ui_kind": "canvas",
       "ui": {
         "aspect": "16:9",
         "min_height_dp": 220
-      }
+      },
+      "streams": [
+        "waveform"
+      ]
     },
     {
       "id": "vibrato-analyzer",
@@ -1654,13 +1675,16 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/vibrato-analyzer/vibrato-analyzer.dex",
-      "sizeBytes": 8784,
+      "sizeBytes": 10148,
       "className": "com.vocalmonitor.plugin.community.VibratoAnalyzer",
       "ui_kind": "canvas",
       "ui": {
         "aspect": "16:9",
         "min_height_dp": 240
-      }
+      },
+      "streams": [
+        "waveform"
+      ]
     },
     {
       "id": "vocal-dynamics",
@@ -1680,13 +1704,16 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/vocal-dynamics/vocal-dynamics.dex",
-      "sizeBytes": 7608,
+      "sizeBytes": 11544,
       "className": "com.vocalmonitor.plugin.community.VocalDynamics",
       "ui_kind": "canvas",
       "ui": {
         "aspect": "16:9",
         "min_height_dp": 220
-      }
+      },
+      "streams": [
+        "waveform"
+      ]
     },
     {
       "id": "vocal-fatigue",
@@ -1705,13 +1732,16 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/vocal-fatigue/vocal-fatigue.dex",
-      "sizeBytes": 8836,
+      "sizeBytes": 12372,
       "className": "com.vocalmonitor.plugin.community.VocalFatigue",
       "ui_kind": "canvas",
       "ui": {
         "aspect": "16:9",
         "min_height_dp": 240
-      }
+      },
+      "streams": [
+        "waveform"
+      ]
     },
     {
       "id": "vocal-spectrum",
@@ -1730,13 +1760,16 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/vocal-spectrum/vocal-spectrum.dex",
-      "sizeBytes": 7856,
+      "sizeBytes": 9900,
       "className": "com.vocalmonitor.plugin.community.VocalSpectrum",
       "ui_kind": "canvas",
       "ui": {
         "aspect": "16:9",
         "min_height_dp": 260
-      }
+      },
+      "streams": [
+        "waveform"
+      ]
     },
     {
       "id": "vocal-stability",
@@ -1754,13 +1787,16 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/vocal-stability/vocal-stability.dex",
-      "sizeBytes": 8388,
+      "sizeBytes": 10584,
       "className": "com.vocalmonitor.plugin.community.VocalStability",
       "ui_kind": "canvas",
       "ui": {
         "aspect": "16:9",
         "min_height_dp": 240
-      }
+      },
+      "streams": [
+        "waveform"
+      ]
     },
     {
       "id": "megaphone",

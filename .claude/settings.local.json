@@ -31,7 +31,16 @@
       "WebFetch(domain:www.soundonsound.com)",
       "Bash(java \"C:/Users/edza/AppData/Local/Temp/VizCrystal.java\")",
       "Bash(java tools/test-app/MeasureIR.java --plugin crystal --seconds 3)",
-      "Bash(git pull *)"
+      "Bash(git pull *)",
+      "Bash(node scripts/build-native.mjs sibilance-detector)",
+      "Bash(node scripts/build-native.mjs resonance-monitor)",
+      "Bash(node scripts/build-native.mjs breathiness-meter)",
+      "Bash(node scripts/build-native.mjs vocal-fatigue)",
+      "Bash(node scripts/build-native.mjs vibrato-analyzer)",
+      "Bash(node scripts/build-native.mjs vocal-spectrum)",
+      "Bash(node scripts/build-native.mjs articulation)",
+      "Bash(node scripts/build-native.mjs formant-tracker)",
+      "Bash(node scripts/build-native.mjs pitch-accuracy)"
     ],
     "additionalDirectories": [
       "c:\\Users\\edza\\AppData\\Local\\Temp"

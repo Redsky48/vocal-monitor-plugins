@@ -10,18 +10,19 @@ import com.vocalmonitor.plugin.VocalMonitorVisualPlugin;
 import java.util.Map;
 
 /**
- * Vocal Stability — composite measurement combining four sub-scores
+ * Vocal Stability — composite measurement combining six sub-scores
  * over a rolling 2-second window:
  *
  *   - Pitch stability  : 100 - clamp(cents-stdev * 5)
- *   - Tone stability   : 100 - clamp(spectral-centroid-stdev / 30)
- *   - Volume stability : 100 - clamp(RMS-dB-stdev * 10)
- *   - Break score      : 100 - clamp(numBreaks * 30) — counts how
- *                        many times the YIN tracker went unvoiced
- *                        mid-sustained-note.
+ *   - Jitter (local)   : Praat-style |T_i - T_{i-1}| / mean(T) %
+ *   - Shimmer (local)  : Praat-style |20·log10(A_i/A_{i-1})| dB
+ *   - Tone stability   : real-FFT spectral centroid stdev
+ *   - Volume stability : RMS-dB stdev
+ *   - Break score      : penalises mid-sustain unvoiced flips.
  *
- * The overall stability score is the weighted average:
- *   overall = 0.4 * pitch + 0.25 * tone + 0.20 * vol + 0.15 * break.
+ * Composite weighting:
+ *   0.30 pitch + 0.15 jitter + 0.15 shimmer
+ *   + 0.15 tone + 0.15 volume + 0.10 breaks.
  */
 public final class VocalStability
         implements VocalMonitorNativePlugin, VocalMonitorVisualPlugin {
@@ -32,11 +33,15 @@ public final class VocalStability
         this.sampleRate = sr;
         java.util.Arrays.fill(audioRing, 0f);
         java.util.Arrays.fill(centsRing, Float.NaN);
-        java.util.Arrays.fill(centroidRing, 0f);
-        java.util.Arrays.fill(rmsRing, 0f);
+        java.util.Arrays.fill(centroidRing, Float.NaN);
+        java.util.Arrays.fill(rmsRing, Float.NaN);
+        java.util.Arrays.fill(periodRing, Float.NaN);
+        java.util.Arrays.fill(peakRing, Float.NaN);
         ringW = 0; sampleAcc = 0; histW = 0;
         wasVoiced = false; breakCount = 0;
-        pitchScore = toneScore = volScore = breakScore = overallScore = 0f;
+        pitchScore = toneScore = volScore = breakScore = 0f;
+        jitterScore = shimmerScore = overallScore = 0f;
+        jitterPct = 0f; shimmerDb = 0f;
         java.util.Arrays.fill(overallHist, 0f);
     }
 
@@ -59,21 +64,40 @@ public final class VocalStability
     private final float[] yinCMND = new float[LAG_MAX + 1];
     private int ringW = 0, sampleAcc = 0;
 
+    // Real FFT buffers (used for the *real* spectral centroid).
+    private static final int FFT_N = ANALYSIS_SIZE;       // 1024
+    private static final int FFT_HALF = FFT_N / 2;
+    private final float[] fftRe = new float[FFT_N];
+    private final float[] fftIm = new float[FFT_N];
+    private final float[] hann  = new float[FFT_N];
+    {
+        for (int i = 0; i < FFT_N; i++) {
+            hann[i] = (float)(0.5 * (1.0 - Math.cos(2.0 * Math.PI * i / (FFT_N - 1))));
+        }
+    }
+
     // 2-second ring of measurements (170 frames @ 12ms).
     private static final int HIST = 170;
     private final float[] centsRing    = new float[HIST];   // NaN if unvoiced
-    private final float[] centroidRing = new float[HIST];
+    private final float[] centroidRing = new float[HIST];   // NaN if unvoiced
     private final float[] rmsRing      = new float[HIST];
+    private final float[] periodRing   = new float[HIST];   // period in samples
+    private final float[] peakRing     = new float[HIST];   // peak |x| of last period
     private int histW = 0;
     private boolean wasVoiced = false;
     private int breakCount = 0;
 
-    // Scores (0..100).
+    // Scores (0..100) and raw readouts.
     private float pitchScore = 0f, toneScore = 0f, volScore = 0f, breakScore = 0f;
+    private float jitterScore = 0f, shimmerScore = 0f;
+    private float jitterPct = 0f, shimmerDb = 0f;
     private float overallScore = 0f;
     private static final int OVERALL_HIST = 256;
     private final float[] overallHist = new float[OVERALL_HIST];
+    private int histWO = 0;
 
+    // Pass-through + capture into a local ring; analysis runs in
+    // render() from streams["waveform"] (preferred) or this ring.
     @Override public void process(float[] input, float[] output) {
         int n = Math.min(input.length, output.length);
         for (int i = 0; i < n; i++) {
@@ -81,12 +105,22 @@ public final class VocalStability
             output[i] = s;
             audioRing[ringW] = s;
             ringW = (ringW + 1) % ANALYSIS_SIZE;
-            sampleAcc++;
-            if (sampleAcc >= ANALYSIS_HOP) {
-                sampleAcc = 0;
-                analyseFrame();
-            }
         }
+    }
+
+    private void prepareWindow(java.util.Map<String, float[]> streams) {
+        float[] wave = streams != null ? streams.get("waveform") : null;
+        if (wave == null || wave.length < 64) return;
+        int n = wave.length;
+        int start = n - ANALYSIS_SIZE;
+        if (start < 0) {
+            int pad = -start;
+            for (int i = 0; i < pad; i++) audioRing[i] = 0f;
+            for (int i = 0; i < n; i++) audioRing[pad + i] = wave[i];
+        } else {
+            for (int i = 0; i < ANALYSIS_SIZE; i++) audioRing[i] = wave[start + i];
+        }
+        ringW = 0;
     }
 
     private void analyseFrame() {
@@ -101,9 +135,11 @@ public final class VocalStability
         boolean voiced = rms >= 0.003f;
         if (!voiced) {
             if (wasVoiced) breakCount++;
-            centsRing[histW] = Float.NaN;
+            centsRing[histW]    = Float.NaN;
             centroidRing[histW] = Float.NaN;
-            rmsRing[histW] = Float.NaN;
+            rmsRing[histW]      = Float.NaN;
+            periodRing[histW]   = Float.NaN;
+            peakRing[histW]     = Float.NaN;
             histW = (histW + 1) % HIST;
             wasVoiced = false;
             computeScores();
@@ -135,24 +171,54 @@ public final class VocalStability
             }
         }
         if (chosen >= 0) {
-            float freq = sampleRate / (float) chosen;
+            // Parabolic interpolation for sub-sample period estimate.
+            float refined = chosen;
+            if (chosen > 1 && chosen < maxLag - 1) {
+                float s0 = yinCMND[chosen - 1];
+                float s1 = yinCMND[chosen];
+                float s2 = yinCMND[chosen + 1];
+                float denom = (s0 - 2f * s1 + s2);
+                if (Math.abs(denom) > 1e-12f) {
+                    refined = chosen + 0.5f * (s0 - s2) / denom;
+                }
+            }
+            float freq = sampleRate / refined;
             double semitones = 12.0 * (Math.log(freq / A4) / Math.log(2.0));
             int midiR = (int) Math.round(69.0 + semitones);
             float cents = (float) ((69.0 + semitones - midiR) * 100.0);
-            centsRing[histW] = cents;
+            centsRing[histW]  = cents;
+            periodRing[histW] = refined;
+            // Peak amplitude across the most recent pitch period — used
+            // for shimmer.  Period sits at the END of the analysis
+            // window (most recent samples).
+            int periodLen = Math.max(1, Math.round(refined));
+            int start = ANALYSIS_SIZE - periodLen;
+            float pk = 0f;
+            for (int j = start; j < ANALYSIS_SIZE; j++) {
+                float a = Math.abs(yinBuf[j]);
+                if (a > pk) pk = a;
+            }
+            peakRing[histW] = pk;
         } else {
-            centsRing[histW] = Float.NaN;
+            centsRing[histW]  = Float.NaN;
+            periodRing[histW] = Float.NaN;
+            peakRing[histW]   = Float.NaN;
         }
-        // Spectral centroid via simple weighted sum on the YIN buffer
-        // (cheap proxy: use audioRing energy distribution, not real
-        // FFT — adequate for variance comparisons).
-        double weighted = 0, total = 0;
-        for (int b = 1; b < half; b++) {
-            float v = Math.abs(yinBuf[b]) + Math.abs(yinBuf[b + 1]);
-            weighted += b * v;
-            total += v;
+        // Real spectral centroid via radix-2 FFT on Hann-windowed frame.
+        // (Replaces the previous buggy time-domain "centroid".)
+        for (int i = 0; i < FFT_N; i++) {
+            fftRe[i] = yinBuf[i] * hann[i];
+            fftIm[i] = 0f;
         }
-        centroidRing[histW] = (float)(total > 1e-9 ? weighted / total : 0);
+        fft(fftRe, fftIm);
+        double cWeighted = 0, cTotal = 0;
+        float binHz = sampleRate / (float) FFT_N;
+        for (int k = 1; k < FFT_HALF; k++) {
+            float mag = (float) Math.sqrt(fftRe[k] * fftRe[k] + fftIm[k] * fftIm[k]);
+            cWeighted += k * binHz * mag;
+            cTotal    += mag;
+        }
+        centroidRing[histW] = (float)(cTotal > 1e-9 ? cWeighted / cTotal : 0);
         rmsRing[histW] = 20f * (float) Math.log10(Math.max(1e-9f, rms));
         histW = (histW + 1) % HIST;
         computeScores();
@@ -172,10 +238,52 @@ public final class VocalStability
             float stdev = (float) Math.sqrt(var);
             pitchScore = clamp01(1f - stdev / 25f) * 100f;
         }
-        // Centroid stdev.
+        // Jitter (local, Praat-style): mean(|T_i - T_{i-1}|) / mean(T).
+        // Walks the periodRing in chronological order (oldest → newest).
+        double jSumDiff = 0, jSumT = 0; int jN = 0;
+        float prevT = Float.NaN;
+        for (int i = 0; i < HIST; i++) {
+            int idx = (histW + i) % HIST;
+            float t = periodRing[idx];
+            if (Float.isNaN(t)) { prevT = Float.NaN; continue; }
+            jSumT += t; jN++;
+            if (!Float.isNaN(prevT)) {
+                jSumDiff += Math.abs(t - prevT);
+            }
+            prevT = t;
+        }
+        if (jN > 2 && jSumT > 1e-9) {
+            float meanT = (float)(jSumT / jN);
+            jitterPct = (float)((jSumDiff / Math.max(1, jN - 1)) / meanT * 100.0);
+            // Score: 0% → 100, ≥3% → 0.  Clinical "normal" voice < 1.04%.
+            jitterScore = clamp01(1f - jitterPct / 3f) * 100f;
+        } else {
+            jitterPct = 0f; jitterScore = 0f;
+        }
+        // Shimmer (local, Praat-style): mean(|20·log10(A_i/A_{i-1})|).
+        double sSumDb = 0; int sN = 0;
+        float prevA = Float.NaN;
+        for (int i = 0; i < HIST; i++) {
+            int idx = (histW + i) % HIST;
+            float a = peakRing[idx];
+            if (Float.isNaN(a) || a < 1e-6f) { prevA = Float.NaN; continue; }
+            if (!Float.isNaN(prevA) && prevA > 1e-6f) {
+                sSumDb += Math.abs(20.0 * Math.log10(a / prevA));
+                sN++;
+            }
+            prevA = a;
+        }
+        if (sN > 0) {
+            shimmerDb = (float)(sSumDb / sN);
+            // 0 dB → 100, ≥2 dB → 0.  Clinical "normal" < 0.35 dB.
+            shimmerScore = clamp01(1f - shimmerDb / 2f) * 100f;
+        } else {
+            shimmerDb = 0f; shimmerScore = 0f;
+        }
+        // Centroid stdev (real FFT now — calibrated for Hz units).
         double sumX = 0, sumSqX = 0; int nX = 0;
         for (float c : centroidRing) {
-            if (c <= 0f) continue;
+            if (Float.isNaN(c) || c <= 0f) continue;
             sumX += c; sumSqX += c * c; nX++;
         }
         if (nX > 1) {
@@ -183,7 +291,8 @@ public final class VocalStability
             double var = sumSqX / nX - mean * mean;
             if (var < 0) var = 0;
             float stdev = (float) Math.sqrt(var);
-            toneScore = clamp01(1f - stdev / 30f) * 100f;
+            // 0 Hz stdev → 100, 800 Hz stdev → 0.
+            toneScore = clamp01(1f - stdev / 800f) * 100f;
         }
         // RMS dB stdev.
         double sumR = 0, sumSqR = 0; int nR = 0;
@@ -200,16 +309,55 @@ public final class VocalStability
         }
         // Break score: based on running count, decay slowly.
         breakScore = clamp01(1f - breakCount / 6f) * 100f;
-        // Composite.
-        overallScore = 0.40f * pitchScore + 0.25f * toneScore
-                     + 0.20f * volScore   + 0.15f * breakScore;
+        // Composite: pitch 30, jitter 15, shimmer 15, tone 15, vol 15, breaks 10.
+        overallScore = 0.30f * pitchScore
+                     + 0.15f * jitterScore
+                     + 0.15f * shimmerScore
+                     + 0.15f * toneScore
+                     + 0.15f * volScore
+                     + 0.10f * breakScore;
         // Decay break count slowly so a long stable run recovers.
         if (breakCount > 0 && Math.random() < 0.005) breakCount--;
-        // Push to history.
         overallHist[histWO] = overallScore;
         histWO = (histWO + 1) % OVERALL_HIST;
     }
-    private int histWO = 0;
+
+    // In-place radix-2 Cooley-Tukey FFT.  N must be a power of two.
+    private static void fft(float[] re, float[] im) {
+        int n = re.length;
+        // Bit-reverse.
+        int j = 0;
+        for (int i = 1; i < n; i++) {
+            int bit = n >> 1;
+            while ((j & bit) != 0) { j ^= bit; bit >>= 1; }
+            j ^= bit;
+            if (i < j) {
+                float tr = re[i]; re[i] = re[j]; re[j] = tr;
+                float ti = im[i]; im[i] = im[j]; im[j] = ti;
+            }
+        }
+        for (int len = 2; len <= n; len <<= 1) {
+            double ang = -2.0 * Math.PI / len;
+            float wRe = (float) Math.cos(ang);
+            float wIm = (float) Math.sin(ang);
+            for (int i = 0; i < n; i += len) {
+                float wpr = 1f, wpi = 0f;
+                int half = len >> 1;
+                for (int k = 0; k < half; k++) {
+                    int a = i + k, b = a + half;
+                    float tr = wpr * re[b] - wpi * im[b];
+                    float ti = wpr * im[b] + wpi * re[b];
+                    re[b] = re[a] - tr;
+                    im[b] = im[a] - ti;
+                    re[a] += tr;
+                    im[a] += ti;
+                    float nwpr = wpr * wRe - wpi * wIm;
+                    wpi = wpr * wIm + wpi * wRe;
+                    wpr = nwpr;
+                }
+            }
+        }
+    }
 
     private static float clamp01(float v) {
         if (v < 0f) return 0f; if (v > 1f) return 1f; return v;
@@ -235,6 +383,8 @@ public final class VocalStability
     ) {
         if (bgPaint == null) initPaints(canvas);
         if (width < 60 || height < 60) return;
+        prepareWindow(streams);
+        analyseFrame();
         float W = width, H = height;
         bgPaint.setColor(COLOR_BG).setStyle(PluginStyle.FILL);
         canvas.drawRect(0, 0, W, H, bgPaint);
@@ -268,23 +418,24 @@ public final class VocalStability
         textDim.setColor(COLOR_TEXT_DIM).setTextSize(9f).setTextAlign(1);
         canvas.drawText("STABILITY", ringCx, ringCy + ringR + 16f, textDim);
 
-        // Right: 4 sub-score bars.
+        // Right: 6 sub-score bars.
         float subX0 = ringCx + ringR + 24f;
         float subX1 = W - pad;
-        float subBarH = 18f;
-        float subGap = 6f;
+        float subBarH = 14f;
+        float subGap = 4f;
         float subY0 = headerH + pad;
-        drawSubBar(canvas, subX0, subY0,                      subX1, subY0 + subBarH,
-                "PITCH",  pitchScore);
-        drawSubBar(canvas, subX0, subY0 + (subBarH + subGap), subX1, subY0 + 2 * subBarH + subGap,
-                "TONE",   toneScore);
-        drawSubBar(canvas, subX0, subY0 + 2 * (subBarH + subGap), subX1, subY0 + 3 * subBarH + 2 * subGap,
-                "VOLUME", volScore);
-        drawSubBar(canvas, subX0, subY0 + 3 * (subBarH + subGap), subX1, subY0 + 4 * subBarH + 3 * subGap,
-                "BREAKS", breakScore);
+        String[] labels = { "PITCH", "JITTER", "SHIMMER", "TONE", "VOLUME", "BREAKS" };
+        float[]  scores = { pitchScore, jitterScore, shimmerScore,
+                            toneScore,  volScore,    breakScore };
+        for (int i = 0; i < 6; i++) {
+            float y0 = subY0 + i * (subBarH + subGap);
+            drawSubBar(canvas, subX0, y0, subX1, y0 + subBarH, labels[i], scores[i]);
+        }
 
-        // Bottom: overall score history.
-        float plotY0 = ringCy + ringR + 28f;
+        // Bottom: overall score history + jitter/shimmer raw readouts.
+        float subEndY = subY0 + 6 * (subBarH + subGap) - subGap;
+        float ringBottom = ringCy + ringR + 22f;
+        float plotY0 = Math.max(subEndY, ringBottom) + 6f;
         float plotY1 = H - pad - 4f;
         if (plotY1 - plotY0 > 30f) {
             cardPaint.setColor(COLOR_CARD).setStyle(PluginStyle.FILL);
@@ -303,6 +454,12 @@ public final class VocalStability
                 cardPaint.setColor(scoreColour(v)).setStyle(PluginStyle.FILL);
                 canvas.drawRect(px, py, px + step + 0.5f, plotY1, cardPaint);
             }
+            // Raw jitter / shimmer readouts in the top-left of the
+            // history strip — useful for clinical interpretation.
+            textDim.setColor(COLOR_TEXT_DIM).setTextSize(9f).setTextAlign(0);
+            canvas.drawText(
+                String.format("J %.2f%%   S %.2f dB", jitterPct, shimmerDb),
+                pad + 6f, plotY0 + 12f, textDim);
         }
     }
 
@@ -315,9 +472,9 @@ public final class VocalStability
         barFg.setColor(col).setStyle(PluginStyle.FILL);
         canvas.drawRoundRect(x0, y0, fx, y1, 4f, barFg);
         textBright.setColor(COLOR_TEXT_BRIGHT).setTextSize(9f).setTextAlign(0);
-        canvas.drawText(label, x0 + 6f, (y0 + y1) * 0.5f + 4f, textBright);
+        canvas.drawText(label, x0 + 6f, (y0 + y1) * 0.5f + 3f, textBright);
         textBright.setColor(col).setTextAlign(2);
-        canvas.drawText(String.format("%.0f", score), x1 - 6f, (y0 + y1) * 0.5f + 4f, textBright);
+        canvas.drawText(String.format("%.0f", score), x1 - 6f, (y0 + y1) * 0.5f + 3f, textBright);
     }
 
     private static int scoreColour(float s) {
