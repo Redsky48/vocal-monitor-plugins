@@ -471,7 +471,8 @@ public final class Crystal
         float midBot = H - pad - footerH;
         float midH = midBot - midTop;
 
-        float colW = W * 0.27f;
+        // 22 / 56 / 22 column split matching Crystalline proportions.
+        float colW = W * 0.24f;
         float leftX = pad;
         float rightX = W - pad - colW;
         float centerX0 = leftX + colW + pad;
@@ -593,16 +594,18 @@ public final class Crystal
     private boolean fftInit = false;
 
     // Crystalline palette — matched against the BABY Audio reference:
-    //   panel grey, white cards with subtle inset shadow, dim grey labels,
-    //   four section colours (red/blue/orange/green), and the amber-pink-
-    //   blue gradient on the central FFT display.
-    private static final int COLOR_BG          = 0xFFEEEFF1;  // panel grey
-    private static final int COLOR_CARD        = 0xFFE3E4E7;  // section card
-    private static final int COLOR_CARD_BORDER = 0xFFD3D4D7;
-    private static final int COLOR_BUTTON_BG   = 0xFFFAFAFC;  // button face
-    private static final int COLOR_BUTTON_LO   = 0xFFE6E7EA;  // inner shadow
-    private static final int COLOR_BUTTON_HI   = 0xFFFFFFFF;  // top highlight
-    private static final int COLOR_SHADOW      = 0x22000000;  // soft drop
+    //   panel grey, WHITE floating cards with stacked soft shadows,
+    //   near-flat buttons with subtle drop, four section colours
+    //   (red/blue/orange/green), amber-pink-blue gradient display.
+    private static final int COLOR_BG          = 0xFFE7E8EB;  // panel grey (darker so white cards pop)
+    private static final int COLOR_CARD        = 0xFFFCFCFD;  // WHITE floating card
+    private static final int COLOR_CARD_BORDER = 0x18000000;  // very faint
+    private static final int COLOR_BUTTON_BG   = 0xFFFAFAFB;  // near-white button face
+    private static final int COLOR_BUTTON_HI   = 0xFFFFFFFF;  // top highlight inside button
+    private static final int COLOR_BUTTON_LO   = 0xFFEAEAED;  // bottom subtle drop
+    private static final int COLOR_SHADOW_1    = 0x10000000;  // outermost soft shadow
+    private static final int COLOR_SHADOW_2    = 0x18000000;  // mid shadow
+    private static final int COLOR_SHADOW_3    = 0x10000000;  // closest shadow
     private static final int COLOR_INK         = 0xFF1A1A1E;
     private static final int COLOR_INK_DIM     = 0xFF7E7F84;
     private static final int COLOR_INK_FAINT   = 0xFFB0B1B5;
@@ -696,23 +699,32 @@ public final class Crystal
         drawDryWetSlider(canvas, sliderX0, sliderY0, sliderX1, sliderY1, mix);
     }
 
-    // ── Section card — light grey rounded rectangle with subtle drop
-    //    shadow and a centred uppercase label tucked into the top edge.
-    //    Matches the Crystalline section card aesthetic. ──
+    // ── Section card — pure white floating rectangle with a stacked
+    //    soft drop shadow underneath (3 progressively closer + darker
+    //    layers approximate a Gaussian blur).  Crystalline's signature
+    //    "lifted card" look without needing the host to support a real
+    //    shadow / blur primitive. ──
     private void drawSectionCard(PluginCanvas canvas, float x0, float y0,
                                   float x1, float y1, String label) {
-        // Drop shadow — draw an offset darker rect underneath.
-        cardPaint.setColor(COLOR_SHADOW).setStyle(PluginStyle.FILL);
-        canvas.drawRoundRect(x0 + 1f, y0 + 2f, x1 + 1f, y1 + 2f, 10f, cardPaint);
-        // Card body.
+        // Stacked soft drop shadow.  Each layer slightly larger and
+        // softer than the next, approximating Gaussian blur falloff.
+        cardPaint.setColor(COLOR_SHADOW_1).setStyle(PluginStyle.FILL);
+        canvas.drawRoundRect(x0 - 1f, y0 + 3f, x1 + 1f, y1 + 5f, 12f, cardPaint);
+        cardPaint.setColor(COLOR_SHADOW_2).setStyle(PluginStyle.FILL);
+        canvas.drawRoundRect(x0, y0 + 2f, x1, y1 + 4f, 11f, cardPaint);
+        cardPaint.setColor(COLOR_SHADOW_3).setStyle(PluginStyle.FILL);
+        canvas.drawRoundRect(x0, y0 + 1f, x1, y1 + 2f, 10f, cardPaint);
+
+        // Card body — pure white.
         cardPaint.setColor(COLOR_CARD).setStyle(PluginStyle.FILL);
         canvas.drawRoundRect(x0, y0, x1, y1, 10f, cardPaint);
-        // Inner border for definition.
-        cardPaint.setColor(COLOR_CARD_BORDER).setStyle(PluginStyle.STROKE).setStrokeWidth(1f);
+        // Hair-thin outline for definition against light backgrounds.
+        cardPaint.setColor(COLOR_CARD_BORDER).setStyle(PluginStyle.STROKE).setStrokeWidth(0.8f);
         canvas.drawRoundRect(x0, y0, x1, y1, 10f, cardPaint);
-        // Label tucked into the top.
-        sectionLabel.setColor(COLOR_INK_DIM).setTextSize(9f).setTextAlign(1);
-        canvas.drawText(label, (x0 + x1) * 0.5f, y0 + 11f, sectionLabel);
+
+        // Label centred at the top of the card.
+        sectionLabel.setColor(COLOR_INK_DIM).setTextSize(9.5f).setTextAlign(1);
+        canvas.drawText(label, (x0 + x1) * 0.5f, y0 + 13f, sectionLabel);
     }
 
     // ── Single Crystalline-style square control: white rounded
@@ -736,19 +748,28 @@ public final class Crystal
         float bx1 = c.cx + btnSize * 0.5f;
         float by1 = c.cy + btnSize * 0.5f;
 
-        // Subtle drop shadow.
-        buttonPaint.setColor(COLOR_SHADOW).setStyle(PluginStyle.FILL);
-        canvas.drawRoundRect(bx0 + 1f, by0 + 2f, bx1 + 1f, by1 + 2f, 8f, buttonPaint);
-        // Button face — top highlight via a thin top-rect, then main
-        // face on top so we get a faux 3D bevel.
-        buttonPaint.setColor(COLOR_BUTTON_HI).setStyle(PluginStyle.FILL);
-        canvas.drawRoundRect(bx0, by0, bx1, by1, 8f, buttonPaint);
+        // Stacked soft drop shadow — same approach as the section
+        // card, scaled down.  Two layers for subtler depth.
+        buttonPaint.setColor(COLOR_SHADOW_1).setStyle(PluginStyle.FILL);
+        canvas.drawRoundRect(bx0, by0 + 1.5f, bx1, by1 + 3f, 7.5f, buttonPaint);
+        buttonPaint.setColor(COLOR_SHADOW_2).setStyle(PluginStyle.FILL);
+        canvas.drawRoundRect(bx0, by0 + 1f, bx1, by1 + 1.5f, 7f, buttonPaint);
+        // Button face — near-white, almost flat.  The vertical hairline
+        // of slightly lighter colour at the top edge gives just enough
+        // bevel for the button to read as a button without looking
+        // aggressively 3D.
         buttonPaint.setColor(COLOR_BUTTON_BG).setStyle(PluginStyle.FILL);
-        canvas.drawRoundRect(bx0, by0 + 2f, bx1, by1, 8f, buttonPaint);
-        // Border.
-        buttonPaint.setColor(active ? COLOR_ACCENT : COLOR_BUTTON_LO)
-                .setStyle(PluginStyle.STROKE).setStrokeWidth(active ? 2f : 1f);
-        canvas.drawRoundRect(bx0, by0, bx1, by1, 8f, buttonPaint);
+        canvas.drawRoundRect(bx0, by0, bx1, by1, 7f, buttonPaint);
+        buttonPaint.setColor(COLOR_BUTTON_HI).setStyle(PluginStyle.STROKE).setStrokeWidth(0.8f);
+        canvas.drawLine(bx0 + 4f, by0 + 0.8f, bx1 - 4f, by0 + 0.8f, buttonPaint);
+        // Active border (only visible while dragging).
+        if (active) {
+            buttonPaint.setColor(COLOR_ACCENT).setStyle(PluginStyle.STROKE).setStrokeWidth(1.6f);
+            canvas.drawRoundRect(bx0, by0, bx1, by1, 7f, buttonPaint);
+        } else {
+            buttonPaint.setColor(0x12000000).setStyle(PluginStyle.STROKE).setStrokeWidth(0.8f);
+            canvas.drawRoundRect(bx0, by0, bx1, by1, 7f, buttonPaint);
+        }
 
         // Icon — fills ~70% of the button.
         drawIcon(canvas, c.paramName, c.cx, c.cy, btnSize * 0.36f, norm);
@@ -972,7 +993,7 @@ public final class Crystal
         sliderFill.setColor(COLOR_ACCENT).setStyle(PluginStyle.FILL);
         canvas.drawRoundRect(x0, midY - 3.5f, vx, midY + 3.5f, 4f, sliderFill);
         // Handle — small white circle with thin border + drop shadow.
-        sliderHandle.setColor(COLOR_SHADOW).setStyle(PluginStyle.FILL);
+        sliderHandle.setColor(COLOR_SHADOW_2).setStyle(PluginStyle.FILL);
         canvas.drawCircle(vx + 0.5f, midY + 1.5f, 8.5f, sliderHandle);
         sliderHandle.setColor(COLOR_BUTTON_HI).setStyle(PluginStyle.FILL);
         canvas.drawCircle(vx, midY, 8.5f, sliderHandle);
@@ -983,6 +1004,14 @@ public final class Crystal
     private void drawCentralDisplay(PluginCanvas canvas, float x0, float y0,
                                      float x1, float y1, long timeMs) {
         if (x1 - x0 < 40f || y1 - y0 < 40f) return;
+        // Stacked soft drop shadow matching the section card style.
+        displayBg.setColor(COLOR_SHADOW_1).setStyle(PluginStyle.FILL);
+        canvas.drawRoundRect(x0 - 1f, y0 + 3f, x1 + 1f, y1 + 5f, 16f, displayBg);
+        displayBg.setColor(COLOR_SHADOW_2).setStyle(PluginStyle.FILL);
+        canvas.drawRoundRect(x0, y0 + 2f, x1, y1 + 4f, 15f, displayBg);
+        displayBg.setColor(COLOR_SHADOW_3).setStyle(PluginStyle.FILL);
+        canvas.drawRoundRect(x0, y0 + 1f, x1, y1 + 2f, 14f, displayBg);
+        // Gradient fill.
         displayBg.setStyle(PluginStyle.FILL)
                 .setLinearGradient(x0, y0, x1, y0,
                         new int[] { GRAD_LEFT, GRAD_MIDDLE, GRAD_RIGHT },
