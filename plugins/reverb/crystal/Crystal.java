@@ -417,9 +417,19 @@ public final class Crystal
     private final ControlRect[] controls = new ControlRect[N_CTRL];
     private float lastW = 0f, lastH = 0f;
 
-    // Slider (dry/wet) is special — it's a horizontal bar rather than
-    // a knob, has its own rect.
-    private float sliderX0, sliderY0, sliderX1, sliderY1;
+    // Centre-column controls (matching Crystalline's stack below the
+    // gradient display):
+    //   - START slider  → linked to predelay
+    //   - END   slider  → linked to decay
+    //   - DUCK  slider  → linked to duck
+    //   - FRZ   button  → linked to freeze
+    //   - DRY/WET slider → linked to mix
+    private float displayBoxY1;                // bottom of gradient
+    private float startX0, startY0, startX1, startY1;
+    private float endX0,   endY0,   endX1,   endY1;
+    private float duckX0,  duckY0,  duckX1,  duckY1;
+    private float frzX0,   frzY0,   frzX1,   frzY1;
+    private float sliderX0, sliderY0, sliderX1, sliderY1;  // dry/wet
 
     // ── Drag state ──
     private int  activeIdx = -1;       // index into `controls`, or -2 for slider, or -1 = idle
@@ -482,12 +492,38 @@ public final class Crystal
         layoutGrid(leftX, midTop, leftX + colW, midBot, 0, 6);
         layoutGrid(rightX, midTop, rightX + colW, midBot, 6, 12);
 
-        // Footer slider (dry/wet handled via the mix knob in the grid,
-        // plus a wider strip across the centre for fine adjustment).
-        sliderX0 = centerX0;
-        sliderY0 = midBot + 8f;
+        // Centre column has 3 horizontal strips stacked vertically:
+        //   - Gradient display (top, takes ~60% of the centre height)
+        //   - START | END mini sliders row
+        //   - OUTPUT row: DUCK · FRZ · DRY/WET
+        float centerW = centerX1 - centerX0;
+        float displayY0 = midTop;
+        displayBoxY1 = midTop + (midBot - midTop) * 0.62f;
+        // START / END row.
+        float seY0 = displayBoxY1 + 14f;
+        float seY1 = seY0 + 16f;
+        float seGap = 10f;
+        float seW = (centerW - seGap) * 0.5f;
+        startX0 = centerX0;       startY0 = seY0;
+        startX1 = centerX0 + seW; startY1 = seY1;
+        endX0 = startX1 + seGap;  endY0 = seY0;
+        endX1 = centerX1;         endY1 = seY1;
+        // OUTPUT row: DUCK | FRZ | DRY/WET.
+        float outY0 = seY1 + 22f;
+        float outY1 = outY0 + 16f;
+        float duckW = centerW * 0.28f;
+        float frzSize = 18f;
+        float dwGap = 12f;
+        duckX0 = centerX0;        duckY0 = outY0;
+        duckX1 = centerX0 + duckW; duckY1 = outY1;
+        frzX0 = duckX1 + dwGap;
+        frzY0 = (outY0 + outY1) * 0.5f - frzSize * 0.5f;
+        frzX1 = frzX0 + frzSize;
+        frzY1 = frzY0 + frzSize;
+        sliderX0 = frzX1 + dwGap;
+        sliderY0 = outY0;
         sliderX1 = centerX1;
-        sliderY1 = H - pad - 4f;
+        sliderY1 = outY1;
     }
 
     private void layoutGrid(float x0, float y0, float x1, float y1,
@@ -516,19 +552,41 @@ public final class Crystal
         }
     }
 
+    // Slider ids beyond the controls[] grid.
+    private static final int SLIDER_DRYWET = -2;
+    private static final int SLIDER_START  = -3;
+    private static final int SLIDER_END    = -4;
+    private static final int SLIDER_DUCK   = -5;
+    private static final int DOT_FRZ       = -6;
+
     // ── Touch handlers ──
     @Override public void onTouchDown(float x, float y) {
         recomputeLayout(lastW, lastH);
-        // Dry/wet slider has priority — it's the wide strip across the
-        // bottom and overlaps no other control.
-        if (x >= sliderX0 && x <= sliderX1 && y >= sliderY0 && y <= sliderY1) {
-            activeIdx = -2;
-            touchDownX = x; touchDownY = y;
-            dragStartValue = mix;
-            // Tap-to-position: jump the slider straight to the touched x.
-            float t = (x - sliderX0) / (sliderX1 - sliderX0);
-            if (t < 0f) t = 0f; else if (t > 1f) t = 1f;
-            commitParam("mix", t);
+        // Centre-column controls have priority (overlap nothing else).
+        if (hits(x, y, startX0, startY0, startX1, startY1)) {
+            activeIdx = SLIDER_START;
+            commitSliderAt("predelay", x, startX0, startX1,
+                    parameterMin("predelay"), parameterMax("predelay"));
+            return;
+        }
+        if (hits(x, y, endX0, endY0, endX1, endY1)) {
+            activeIdx = SLIDER_END;
+            commitSliderAt("decay", x, endX0, endX1, 0f, 1f);
+            return;
+        }
+        if (hits(x, y, duckX0, duckY0, duckX1, duckY1)) {
+            activeIdx = SLIDER_DUCK;
+            commitSliderAt("duck", x, duckX0, duckX1, 0f, 1f);
+            return;
+        }
+        if (hits(x, y, frzX0 - 4f, frzY0 - 4f, frzX1 + 4f, frzY1 + 4f)) {
+            activeIdx = DOT_FRZ;
+            commitParam("freeze", freeze >= 0.5f ? 0f : 1f);
+            return;
+        }
+        if (hits(x, y, sliderX0, sliderY0, sliderX1, sliderY1)) {
+            activeIdx = SLIDER_DRYWET;
+            commitSliderAt("mix", x, sliderX0, sliderX1, 0f, 1f);
             return;
         }
         for (int i = 0; i < controls.length; i++) {
@@ -550,25 +608,39 @@ public final class Crystal
     }
 
     @Override public void onTouchMove(float x, float y) {
-        if (activeIdx == -1) return;
-        if (activeIdx == -2) {
-            // Slider: absolute X position drives value.
-            float t = (x - sliderX0) / (sliderX1 - sliderX0);
-            if (t < 0f) t = 0f; else if (t > 1f) t = 1f;
-            commitParam("mix", t);
-            return;
+        if (activeIdx == -1 || activeIdx == DOT_FRZ) return;
+        switch (activeIdx) {
+            case SLIDER_DRYWET:
+                commitSliderAt("mix", x, sliderX0, sliderX1, 0f, 1f); return;
+            case SLIDER_START:
+                commitSliderAt("predelay", x, startX0, startX1,
+                        parameterMin("predelay"), parameterMax("predelay")); return;
+            case SLIDER_END:
+                commitSliderAt("decay", x, endX0, endX1, 0f, 1f); return;
+            case SLIDER_DUCK:
+                commitSliderAt("duck", x, duckX0, duckX1, 0f, 1f); return;
+            default: /* fall through to knob drag */
         }
+        if (activeIdx < 0 || activeIdx >= controls.length) return;
         ControlRect c = controls[activeIdx];
-        if (c == null || c.kind == 1) return;   // toggle = no drag
-        // Knob: vertical drag changes value. 200 dp = full range,
-        // shift-modifier-style fine tweak handled by smaller delta-
-        // per-pixel implicitly through the 200dp scale.
-        float dyDp = touchDownY - y;            // up = positive
+        if (c == null || c.kind == 1) return;
+        // Knob: vertical drag changes value. 200 dp = full range.
+        float dyDp = touchDownY - y;
         float min = parameterMin(c.paramName);
         float max = parameterMax(c.paramName);
         float v = dragStartValue + (max - min) * (dyDp / 200f);
         if (v < min) v = min; else if (v > max) v = max;
         commitParam(c.paramName, v);
+    }
+
+    private static boolean hits(float x, float y, float x0, float y0, float x1, float y1) {
+        return x >= x0 && x <= x1 && y >= y0 && y <= y1;
+    }
+    private void commitSliderAt(String name, float xOnPanel,
+                                 float x0, float x1, float min, float max) {
+        float t = (xOnPanel - x0) / (x1 - x0);
+        if (t < 0f) t = 0f; else if (t > 1f) t = 1f;
+        commitParam(name, min + (max - min) * t);
     }
 
     @Override public void onTouchUp(float x, float y) {
@@ -583,8 +655,21 @@ public final class Crystal
     // ─────────────────────────────────────────────────────────────
     //  Visual / FFT history (same as before)
     // ─────────────────────────────────────────────────────────────
-    private static final int FFT_SIZE = 256;
-    private static final int WAVE_LANES = 20;
+    // FFT waterfall — Crystalline-style 3D scrolling spectrogram.
+    //   - Every CAPTURE_MS, a fresh FFT slice is pushed onto a ring.
+    //   - On every render frame we compute a SMOOTH age value
+    //     (= lane index + fraction of the next capture window already
+    //     elapsed), so the lanes slide continuously backward instead
+    //     of jumping in 33 ms steps.
+    //   - Each lane's Y offset grows with age (perspective recede)
+    //     and its X offset shifts slightly to the right (parallax).
+    //   - Alpha falls off with age — front lane is bright white, back
+    //     lanes fade to almost transparent.
+    //   - FFT bins are mapped LOGARITHMICALLY to X so the low-frequency
+    //     energy doesn't pile up at the left edge.
+    private static final int   FFT_SIZE     = 256;
+    private static final int   WAVE_LANES   = 22;
+    private static final long  CAPTURE_MS   = 50L;   // 20 Hz capture rate
     private final float[][] waveLanes = new float[WAVE_LANES][FFT_SIZE / 2];
     private int waveWritePos = 0;
     private long lastFftCaptureMs = 0L;
@@ -665,14 +750,15 @@ public final class Crystal
                 W - 12f, 16f, headerPaint);
 
         // ── Centre gradient FFT display ──
+        // Bottom of the display is `displayBoxY1` (set in
+        // recomputeLayout) — below it sit the START/END row and the
+        // OUTPUT row.
         float pad = 12f;
         float headerH = 32f;
-        float footerH = 36f;
         float dispX0 = controls[2].bx1 + pad;
         float dispX1 = controls[6].bx0 - pad;
         float dispY0 = pad + headerH;
-        float dispY1 = H - pad - footerH;
-        drawCentralDisplay(canvas, dispX0, dispY0, dispX1, dispY1, timeMs);
+        drawCentralDisplay(canvas, dispX0, dispY0, dispX1, displayBoxY1, timeMs);
 
         // ── Section cards + their inner button rows ──
         drawSectionCard(canvas, controls[0].bx0 - 6f, controls[0].by0 - 16f,
@@ -695,8 +781,58 @@ public final class Crystal
             drawControl(canvas, c, i == activeIdx);
         }
 
-        // ── DRY/WET slider at bottom ──
+        // ── START / END mini sliders below the display (Crystalline-
+        //    style: START → predelay, END → decay).
+        drawCenterSlider(canvas, "START", startX0, startY0, startX1, startY1,
+                          predelay / parameterMax("predelay"));
+        drawCenterSlider(canvas, "END",   endX0,   endY0,   endX1,   endY1,   decay);
+
+        // ── OUTPUT row: DUCK mini slider + FRZ toggle dot + DRY/WET ──
+        // Single OUTPUT section label spans the full row above all
+        // three controls, so individual slider labels don't fight it.
+        labelPaint.setColor(COLOR_INK_DIM).setTextSize(8.5f).setTextAlign(0);
+        canvas.drawText("OUTPUT", duckX0, duckY0 - 14f, labelPaint);
+        drawCenterSlider(canvas, "DUCK", duckX0, duckY0, duckX1, duckY1, duck);
+        drawDot(canvas, frzX0, frzY0, frzX1, frzY1, freeze >= 0.5f, 0xFF6DD3E0);
+        labelPaint.setColor(COLOR_INK_DIM).setTextSize(7.5f).setTextAlign(1);
+        canvas.drawText("FRZ", (frzX0 + frzX1) * 0.5f, frzY0 - 4f, labelPaint);
         drawDryWetSlider(canvas, sliderX0, sliderY0, sliderX1, sliderY1, mix);
+    }
+
+    // Mini horizontal slider with name label above + value handle.
+    private void drawCenterSlider(PluginCanvas canvas, String label,
+            float x0, float y0, float x1, float y1, float value) {
+        labelPaint.setColor(COLOR_INK_DIM).setTextSize(8.5f).setTextAlign(0);
+        canvas.drawText(label, x0, y0 - 3f, labelPaint);
+        float midY = (y0 + y1) * 0.5f;
+        // Track.
+        sliderTrack.setColor(COLOR_CARD_BORDER).setStyle(PluginStyle.FILL);
+        canvas.drawRoundRect(x0, midY - 3f, x1, midY + 3f, 3f, sliderTrack);
+        // Fill.
+        float v = Math.max(0f, Math.min(1f, value));
+        float vx = x0 + (x1 - x0) * v;
+        sliderFill.setColor(COLOR_ACCENT).setStyle(PluginStyle.FILL);
+        canvas.drawRoundRect(x0, midY - 3f, vx, midY + 3f, 3f, sliderFill);
+        // Handle — small white circle.
+        sliderHandle.setColor(COLOR_SHADOW_2).setStyle(PluginStyle.FILL);
+        canvas.drawCircle(vx + 0.5f, midY + 1.5f, 6f, sliderHandle);
+        sliderHandle.setColor(COLOR_BUTTON_HI).setStyle(PluginStyle.FILL);
+        canvas.drawCircle(vx, midY, 6f, sliderHandle);
+        sliderHandle.setColor(COLOR_INK_DIM).setStyle(PluginStyle.STROKE).setStrokeWidth(0.8f);
+        canvas.drawCircle(vx, midY, 6f, sliderHandle);
+    }
+
+    // Toggle dot — Crystalline-style coloured circle that fills when ON.
+    private void drawDot(PluginCanvas canvas, float x0, float y0,
+                          float x1, float y1, boolean on, int colourOn) {
+        float cx = (x0 + x1) * 0.5f, cy = (y0 + y1) * 0.5f, r = (x1 - x0) * 0.5f;
+        sliderHandle.setColor(COLOR_SHADOW_2).setStyle(PluginStyle.FILL);
+        canvas.drawCircle(cx + 0.5f, cy + 1.5f, r, sliderHandle);
+        sliderHandle.setColor(on ? colourOn : COLOR_BUTTON_BG).setStyle(PluginStyle.FILL);
+        canvas.drawCircle(cx, cy, r, sliderHandle);
+        sliderHandle.setColor(on ? colourOn : COLOR_INK_DIM)
+                .setStyle(PluginStyle.STROKE).setStrokeWidth(1.2f);
+        canvas.drawCircle(cx, cy, r, sliderHandle);
     }
 
     // ── Section card — pure white floating rectangle with a stacked
@@ -978,13 +1114,13 @@ public final class Crystal
 
     private void drawDryWetSlider(PluginCanvas canvas, float x0, float y0,
                                    float x1, float y1, float value) {
-        // OUTPUT label above the track.
-        labelPaint.setColor(COLOR_INK_DIM).setTextSize(9f).setTextAlign(0);
-        canvas.drawText("OUTPUT  -  DRY / WET", x0, y0 + 2f, labelPaint);
-        labelPaint.setColor(COLOR_INK).setTextSize(9f).setTextAlign(2);
-        canvas.drawText(String.format("%.0f%%", value * 100), x1, y0 + 2f, labelPaint);
+        // Slider name (matches START/END/DUCK label style).
+        labelPaint.setColor(COLOR_INK_DIM).setTextSize(8.5f).setTextAlign(0);
+        canvas.drawText("DRY / WET", x0, y0 - 3f, labelPaint);
+        labelPaint.setColor(COLOR_INK).setTextSize(8.5f).setTextAlign(2);
+        canvas.drawText(String.format("%.0f%%", value * 100), x1, y0 - 3f, labelPaint);
 
-        float midY = y1 - 12f;
+        float midY = (y0 + y1) * 0.5f;
         // Track — soft grey channel.
         sliderTrack.setColor(COLOR_CARD_BORDER).setStyle(PluginStyle.FILL);
         canvas.drawRoundRect(x0, midY - 3.5f, x1, midY + 3.5f, 4f, sliderTrack);
@@ -1018,41 +1154,75 @@ public final class Crystal
                         new float[] { 0f, 0.5f, 1f });
         canvas.drawRoundRect(x0, y0, x1, y1, 14f, displayBg);
 
-        if (timeMs - lastFftCaptureMs >= 33L) {
+        // Capture a fresh FFT slice at fixed cadence.
+        if (lastFftCaptureMs == 0L) lastFftCaptureMs = timeMs;
+        while (timeMs - lastFftCaptureMs >= CAPTURE_MS) {
             captureFftSlice();
-            lastFftCaptureMs = timeMs;
+            lastFftCaptureMs += CAPTURE_MS;
         }
+        // Sub-capture fraction (0..1) — how far we've travelled into the
+        // *next* capture window since the last slice was pushed.  Used
+        // to interpolate lane positions for smooth scrolling instead of
+        // 30 Hz step-jumps.
+        float subFrac = Math.max(0f,
+                Math.min(1f, (timeMs - lastFftCaptureMs) / (float) CAPTURE_MS));
 
         canvas.save();
         canvas.clipRect(x0 + 6f, y0 + 6f, x1 - 6f, y1 - 6f);
-        float innerW = (x1 - x0) - 24f;
-        float innerH = (y1 - y0) - 24f;
-        float centreY = (y0 + y1) * 0.5f;
-        for (int lane = 0; lane < WAVE_LANES; lane++) {
-            int age = (WAVE_LANES - 1) - lane;
-            int idx = (waveWritePos - age - 1 + WAVE_LANES * 2) % WAVE_LANES;
+
+        // Layout: the front line sits below the centre, back lanes
+        // recede upward + slightly right (parallax).  Frequency axis
+        // is log-mapped so vocal energy reads across the panel.
+        float padIn   = 18f;
+        float innerW  = (x1 - x0) - padIn * 2f;
+        float innerH  = (y1 - y0) - padIn * 2f;
+        float frontY  = y0 + innerH * 0.82f;     // newest line near bottom
+        float backY   = y0 + innerH * 0.20f;     // oldest line near top
+        float shiftPerLane = innerW * 0.012f;    // X parallax per step
+        // Draw OLDEST → NEWEST so the new line stacks on top.
+        for (int step = WAVE_LANES - 1; step >= 0; step--) {
+            float laneAge = step + subFrac;   // continuous age (smooth scroll)
+            int idx = (waveWritePos - 1 - step + WAVE_LANES * 4) % WAVE_LANES;
             float[] frame = waveLanes[idx];
-            float laneOffset = -age * (innerH * 0.012f);
-            float laneShift  = age * 3f;
-            int alpha = (int)(255 * (1f - age / (float)(WAVE_LANES + 4)));
-            if (alpha < 32) alpha = 32;
+
+            // Perspective: linear interpolation between front and back
+            // works well at our resolution; quadratic gives stronger
+            // depth but compresses the back lanes too much.
+            float t = laneAge / (float) WAVE_LANES;       // 0 = front, 1 = far back
+            float laneY  = frontY + (backY - frontY) * t;
+            float laneX  = laneAge * shiftPerLane;
+
+            // Alpha: front bright, back nearly transparent.
+            float alphaF = (1f - t) * (1f - t);           // square falloff
+            int alpha = (int)(230 * alphaF + 25);
+            if (alpha > 255) alpha = 255;
             int col = (alpha << 24) | 0x00FFFFFF;
+
             wavePath.reset();
             int bins = frame.length;
-            for (int b = 0; b < bins; b++) {
-                float t = b / (float)(bins - 1);
-                float px = x0 + 12f + laneShift + t * (innerW - laneShift);
+            // Skip the top FFT bin pile-up — start at bin 2.
+            int firstBin = 2;
+            for (int b = firstBin; b < bins; b++) {
+                // Log-x mapping: 1.0 at the front bin, 0.0 at top of
+                // the perspective wedge.  Map bin index → fraction
+                // logarithmically so low-freq energy spreads out.
+                float bt = (float)(Math.log(b - firstBin + 1)
+                              / Math.log(bins - firstBin));
+                float px = x0 + padIn + laneX + bt * (innerW - laneX - padIn);
                 float mag = frame[b];
-                float py = centreY + laneOffset - mag * innerH * 0.32f;
-                if (b == 0) wavePath.moveTo(px, py);
-                else        wavePath.lineTo(px, py);
+                // Amplitude falls off with age too so old lines smooth
+                // into the background instead of staying jagged.
+                float ampScale = (1f - t * 0.5f);
+                float py = laneY - mag * innerH * 0.28f * ampScale;
+                if (b == firstBin) wavePath.moveTo(px, py);
+                else               wavePath.lineTo(px, py);
             }
             lanePaint.setColor(col).setStyle(PluginStyle.STROKE)
-                    .setStrokeWidth(age == 0 ? 1.7f : 1.0f);
+                    .setStrokeWidth(step == 0 ? 1.7f : 1.0f);
             canvas.drawPath(wavePath, lanePaint);
         }
         canvas.restore();
-        displayBorder.setColor(0x66000000).setStyle(PluginStyle.STROKE).setStrokeWidth(1.5f);
+        displayBorder.setColor(0x40000000).setStyle(PluginStyle.STROKE).setStrokeWidth(1.0f);
         canvas.drawRoundRect(x0, y0, x1, y1, 14f, displayBorder);
     }
 
