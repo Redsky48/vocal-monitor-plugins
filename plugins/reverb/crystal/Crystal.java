@@ -491,18 +491,21 @@ public final class Crystal
 
     private void layoutGrid(float x0, float y0, float x1, float y1,
                             int from, int to) {
-        int n = to - from;
-        // 2 rows × 3 cols.
+        // 2 rows × 3 cols.  Each row gets an internal gap so the section
+        // card around the top row doesn't bleed into the bottom row's
+        // card (no Crystalline-style "gap between cards" otherwise).
         int cols = 3, rows = 2;
+        float rowGap = 26f;
         float cw = (x1 - x0) / cols;
-        float rh = (y1 - y0) / rows;
+        float rh = ((y1 - y0) - rowGap) / rows;
         float radius = Math.min(cw, rh) * 0.30f;
         if (radius < 12f) radius = 12f;
+        int n = to - from;
         for (int i = 0; i < n; i++) {
             int col = i % cols;
             int row = i / cols;
             float cellX = x0 + col * cw;
-            float cellY = y0 + row * rh;
+            float cellY = y0 + row * (rh + rowGap);
             ControlRect c = controls[from + i];
             c.cx = cellX + cw * 0.5f;
             c.cy = cellY + rh * 0.42f;          // top-biased so label fits below
@@ -589,24 +592,30 @@ public final class Crystal
     private final float[] hann  = new float[FFT_SIZE];
     private boolean fftInit = false;
 
-    private static final int COLOR_BG          = 0xFF0A0A0E;
-    private static final int COLOR_CARD        = 0xFFE9E9EE;
-    private static final int COLOR_CARD_DARK   = 0xFFC4C4CA;
-    private static final int COLOR_BUTTON_BG   = 0xFFF6F6F8;
+    // Crystalline palette — matched against the BABY Audio reference:
+    //   panel grey, white cards with subtle inset shadow, dim grey labels,
+    //   four section colours (red/blue/orange/green), and the amber-pink-
+    //   blue gradient on the central FFT display.
+    private static final int COLOR_BG          = 0xFFEEEFF1;  // panel grey
+    private static final int COLOR_CARD        = 0xFFE3E4E7;  // section card
+    private static final int COLOR_CARD_BORDER = 0xFFD3D4D7;
+    private static final int COLOR_BUTTON_BG   = 0xFFFAFAFC;  // button face
+    private static final int COLOR_BUTTON_LO   = 0xFFE6E7EA;  // inner shadow
+    private static final int COLOR_BUTTON_HI   = 0xFFFFFFFF;  // top highlight
+    private static final int COLOR_SHADOW      = 0x22000000;  // soft drop
     private static final int COLOR_INK         = 0xFF1A1A1E;
-    private static final int COLOR_INK_DIM     = 0xFF6E6E76;
-    private static final int COLOR_INK_INV     = 0xFFE6E6EA;
-    private static final int COLOR_ACCENT      = 0xFFF5C842;  // yellow
-    private static final int COLOR_ACCENT_DIM  = 0x77F5C842;
-    private static final int COLOR_REFLECT     = 0xFFE0606A;  // red (reflections icons)
-    private static final int COLOR_DEPTH       = 0xFF6098E0;  // blue (depth icons)
-    private static final int COLOR_CLEAN       = 0xFFE09060;  // orange (clean-up icons)
-    private static final int COLOR_SHAPE       = 0xFF6FE07A;  // green (shape icons)
+    private static final int COLOR_INK_DIM     = 0xFF7E7F84;
+    private static final int COLOR_INK_FAINT   = 0xFFB0B1B5;
+    private static final int COLOR_ACCENT      = 0xFFF5C842;
+    private static final int COLOR_REFLECT     = 0xFFE34855;  // red
+    private static final int COLOR_DEPTH       = 0xFF4290D8;  // blue
+    private static final int COLOR_CLEAN       = 0xFFEE8A2C;  // orange
+    private static final int COLOR_SHAPE       = 0xFF4FCB60;  // green
     private static final int GRAD_LEFT   = 0xFFFFB44A;
     private static final int GRAD_MIDDLE = 0xFFF38FB7;
     private static final int GRAD_RIGHT  = 0xFF7AB6E0;
 
-    private PluginPaint bgPaint, cardPaint, buttonPaint, valArc, valArcBg,
+    private PluginPaint bgPaint, cardPaint, buttonPaint,
             iconPaint, labelPaint, headerPaint, sectionLabel,
             displayBg, displayBorder, lanePaint,
             sliderTrack, sliderFill, sliderHandle;
@@ -629,75 +638,88 @@ public final class Crystal
         if (W < 40 || H < 40) return;
 
         // Pull current values from host params map (source of truth).
-        // Fall back to local field state if the host didn't supply.
         for (ControlRect c : controls) {
             if (c == null) continue;
             Float v = params != null ? params.get(c.paramName) : null;
             if (v != null) setParameter(c.paramName, v);
         }
 
-        // ── Background ──
+        // ── Panel background (light grey, Crystalline-style) ──
         bgPaint.setColor(COLOR_BG);
         canvas.drawRect(0, 0, W, H, bgPaint);
 
-        // ── Header strip ──
-        headerPaint.setColor(COLOR_INK_INV).setTextSize(13f).setTextAlign(0);
-        canvas.drawText("CRYSTAL", 14f, 18f, headerPaint);
-        headerPaint.setColor(COLOR_INK_DIM).setTextSize(11f).setTextAlign(1);
+        // ── Header (italic "crystal" wordmark + decay readout) ──
+        // Tiny faux-italic via a slight shear isn't supported by the
+        // abstract canvas, so use bold + larger size for emphasis.
+        headerPaint.setColor(COLOR_INK).setTextSize(22f).setTextAlign(1);
+        canvas.drawText("crystal", W * 0.5f, 24f, headerPaint);
+        // Side-corner annotations: thin top labels left/right.
+        headerPaint.setColor(COLOR_INK_DIM).setTextSize(9f).setTextAlign(0);
+        canvas.drawText("VOCAL MONITOR.", 12f, 16f, headerPaint);
         float decaySec = 0.2f + decay * decay * 8f;
-        canvas.drawText(String.format("decay  %.1f s", decaySec), W * 0.5f, 18f, headerPaint);
-        headerPaint.setColor(COLOR_INK_DIM).setTextSize(11f).setTextAlign(2);
-        canvas.drawText("REVERB", W - 14f, 18f, headerPaint);
+        headerPaint.setColor(COLOR_INK_DIM).setTextSize(9f).setTextAlign(2);
+        canvas.drawText(String.format("DECAY  %.1f s", decaySec),
+                W - 12f, 16f, headerPaint);
 
         // ── Centre gradient FFT display ──
-        // Spans the full gap between the left column (controls 0..5)
-        // and the right column (controls 6..11), top down to just
-        // above the dry/wet slider.
         float pad = 12f;
-        float headerH = 26f;
+        float headerH = 32f;
         float footerH = 36f;
-        float dispX0 = controls[2].bx1 + pad;   // right edge of left col
-        float dispX1 = controls[6].bx0 - pad;   // left edge of right col
+        float dispX0 = controls[2].bx1 + pad;
+        float dispX1 = controls[6].bx0 - pad;
         float dispY0 = pad + headerH;
         float dispY1 = H - pad - footerH;
         drawCentralDisplay(canvas, dispX0, dispY0, dispX1, dispY1, timeMs);
 
-        // ── Section group backgrounds + labels ──
-        drawSectionGroup(canvas, controls[0].bx0 - 4f, controls[0].by0 - 4f,
-                          controls[2].bx1 + 4f, controls[2].by1 + 4f,
-                          "REFLECTIONS", COLOR_REFLECT);
-        drawSectionGroup(canvas, controls[3].bx0 - 4f, controls[3].by0 - 4f,
-                          controls[5].bx1 + 4f, controls[5].by1 + 4f,
-                          "DEPTH", COLOR_DEPTH);
-        drawSectionGroup(canvas, controls[6].bx0 - 4f, controls[6].by0 - 4f,
-                          controls[8].bx1 + 4f, controls[8].by1 + 4f,
-                          "CLEAN-UP", COLOR_CLEAN);
-        drawSectionGroup(canvas, controls[9].bx0 - 4f, controls[9].by0 - 4f,
-                          controls[11].bx1 + 4f, controls[11].by1 + 4f,
-                          "SHAPE", COLOR_SHAPE);
+        // ── Section cards + their inner button rows ──
+        drawSectionCard(canvas, controls[0].bx0 - 6f, controls[0].by0 - 16f,
+                          controls[2].bx1 + 6f, controls[2].by1 + 6f,
+                          "REFLECTIONS");
+        drawSectionCard(canvas, controls[3].bx0 - 6f, controls[3].by0 - 16f,
+                          controls[5].bx1 + 6f, controls[5].by1 + 6f,
+                          "DEPTH");
+        drawSectionCard(canvas, controls[6].bx0 - 6f, controls[6].by0 - 16f,
+                          controls[8].bx1 + 6f, controls[8].by1 + 6f,
+                          "CLEAN-UP");
+        drawSectionCard(canvas, controls[9].bx0 - 6f, controls[9].by0 - 16f,
+                          controls[11].bx1 + 6f, controls[11].by1 + 6f,
+                          "SHAPE");
 
-        // ── Draw every control ──
+        // ── All control buttons ──
         for (int i = 0; i < controls.length; i++) {
             ControlRect c = controls[i];
             if (c == null) continue;
             drawControl(canvas, c, i == activeIdx);
         }
 
-        // ── Bottom OUTPUT row: DRY/WET slider ──
+        // ── DRY/WET slider at bottom ──
         drawDryWetSlider(canvas, sliderX0, sliderY0, sliderX1, sliderY1, mix);
     }
 
-    private void drawSectionGroup(PluginCanvas canvas, float x0, float y0,
-                                   float x1, float y1, String label, int accent) {
+    // ── Section card — light grey rounded rectangle with subtle drop
+    //    shadow and a centred uppercase label tucked into the top edge.
+    //    Matches the Crystalline section card aesthetic. ──
+    private void drawSectionCard(PluginCanvas canvas, float x0, float y0,
+                                  float x1, float y1, String label) {
+        // Drop shadow — draw an offset darker rect underneath.
+        cardPaint.setColor(COLOR_SHADOW).setStyle(PluginStyle.FILL);
+        canvas.drawRoundRect(x0 + 1f, y0 + 2f, x1 + 1f, y1 + 2f, 10f, cardPaint);
+        // Card body.
         cardPaint.setColor(COLOR_CARD).setStyle(PluginStyle.FILL);
-        canvas.drawRoundRect(x0, y0, x1, y1, 8f, cardPaint);
-        cardPaint.setColor(0x33000000).setStyle(PluginStyle.STROKE).setStrokeWidth(1f);
-        canvas.drawRoundRect(x0, y0, x1, y1, 8f, cardPaint);
+        canvas.drawRoundRect(x0, y0, x1, y1, 10f, cardPaint);
+        // Inner border for definition.
+        cardPaint.setColor(COLOR_CARD_BORDER).setStyle(PluginStyle.STROKE).setStrokeWidth(1f);
+        canvas.drawRoundRect(x0, y0, x1, y1, 10f, cardPaint);
+        // Label tucked into the top.
         sectionLabel.setColor(COLOR_INK_DIM).setTextSize(9f).setTextAlign(1);
         canvas.drawText(label, (x0 + x1) * 0.5f, y0 + 11f, sectionLabel);
     }
 
-    // Draw a single knob/toggle with its label.
+    // ── Single Crystalline-style square control: white rounded
+    //    rectangle with a soft drop shadow, large coloured line-art
+    //    icon centred inside whose shape encodes the parameter value,
+    //    label below.  No external value arcs — the icon itself is
+    //    the indicator. Pressed/active state highlights the border. ──
     private void drawControl(PluginCanvas canvas, ControlRect c, boolean active) {
         float val = getParameterValue(c.paramName);
         float min = parameterMin(c.paramName);
@@ -705,116 +727,96 @@ public final class Crystal
         float norm = max > min ? (val - min) / (max - min) : 0f;
         if (norm < 0f) norm = 0f; else if (norm > 1f) norm = 1f;
 
-        // White button background (Crystalline-style).
+        // Square button bounds — inscribed inside the cell with margin
+        // so the section card border isn't crowded.
+        float btnSize = Math.min(c.bx1 - c.bx0, (c.by1 - c.by0) - 18f) - 8f;
+        if (btnSize < 24f) btnSize = 24f;
+        float bx0 = c.cx - btnSize * 0.5f;
+        float by0 = c.cy - btnSize * 0.5f;
+        float bx1 = c.cx + btnSize * 0.5f;
+        float by1 = c.cy + btnSize * 0.5f;
+
+        // Subtle drop shadow.
+        buttonPaint.setColor(COLOR_SHADOW).setStyle(PluginStyle.FILL);
+        canvas.drawRoundRect(bx0 + 1f, by0 + 2f, bx1 + 1f, by1 + 2f, 8f, buttonPaint);
+        // Button face — top highlight via a thin top-rect, then main
+        // face on top so we get a faux 3D bevel.
+        buttonPaint.setColor(COLOR_BUTTON_HI).setStyle(PluginStyle.FILL);
+        canvas.drawRoundRect(bx0, by0, bx1, by1, 8f, buttonPaint);
         buttonPaint.setColor(COLOR_BUTTON_BG).setStyle(PluginStyle.FILL);
-        canvas.drawCircle(c.cx, c.cy, c.r, buttonPaint);
-        buttonPaint.setColor(active ? COLOR_ACCENT : 0x33000000)
+        canvas.drawRoundRect(bx0, by0 + 2f, bx1, by1, 8f, buttonPaint);
+        // Border.
+        buttonPaint.setColor(active ? COLOR_ACCENT : COLOR_BUTTON_LO)
                 .setStyle(PluginStyle.STROKE).setStrokeWidth(active ? 2f : 1f);
-        canvas.drawCircle(c.cx, c.cy, c.r, buttonPaint);
+        canvas.drawRoundRect(bx0, by0, bx1, by1, 8f, buttonPaint);
 
-        // Value arc around the knob (yellow, like a tiny ring meter).
-        // 270° sweep from 7-o'clock to 5-o'clock (Crystalline style).
-        drawValueArc(canvas, c.cx, c.cy, c.r + 4f, norm, c.kind == 2);
+        // Icon — fills ~70% of the button.
+        drawIcon(canvas, c.paramName, c.cx, c.cy, btnSize * 0.36f, norm);
 
-        // Icon centred on the knob — colourful glyph that suggests
-        // what the parameter is doing. Each icon scales subtly with
-        // value so the user sees the knob is "alive".
-        drawIcon(canvas, c.paramName, c.cx, c.cy, c.r * 0.85f, norm);
+        // Label BELOW the button, uppercase, dim grey.
+        labelPaint.setColor(COLOR_INK_DIM).setTextSize(9.5f).setTextAlign(1);
+        canvas.drawText(c.label, c.cx, c.by1 - 4f, labelPaint);
 
-        // Label below.
-        labelPaint.setColor(COLOR_INK).setTextSize(9.5f).setTextAlign(1);
-        canvas.drawText(c.label, c.cx, c.by1 - 6f, labelPaint);
-
-        // Toggle ON-pill for the freeze button.
+        // Freeze toggle: extra ON badge inside the button when active.
         if (c.kind == 1 && norm >= 0.5f) {
             buttonPaint.setColor(COLOR_ACCENT).setStyle(PluginStyle.FILL);
-            canvas.drawRoundRect(c.cx - 14f, c.by1 - 22f, c.cx + 14f, c.by1 - 10f, 5f, buttonPaint);
-            labelPaint.setColor(0xFF101010).setTextSize(8.5f).setTextAlign(1);
-            canvas.drawText("ON", c.cx, c.by1 - 13f, labelPaint);
+            canvas.drawRoundRect(c.cx - 12f, by1 - 14f, c.cx + 12f, by1 - 4f, 4f, buttonPaint);
+            labelPaint.setColor(0xFF101010).setTextSize(7.5f).setTextAlign(1);
+            canvas.drawText("ON", c.cx, by1 - 6f, labelPaint);
         }
     }
 
-    private void drawValueArc(PluginCanvas canvas, float cx, float cy,
-                               float r, float norm, boolean bipolar) {
-        // Approximate an arc using a 32-segment polyline. Real APIs
-        // would have drawArc; this draws short tangent line segments.
-        valArcBg.setColor(0xFFD0D0D6).setStyle(PluginStyle.STROKE).setStrokeWidth(2f);
-        valArc.setColor(COLOR_ACCENT).setStyle(PluginStyle.STROKE).setStrokeWidth(2.5f);
-        // Sweep from 7-o'clock (225°) to 5-o'clock (-45°) → 270° total.
-        // Convert to math radians: 225° = 5π/4, -45° = -π/4
-        float startDeg = 225f, sweep = 270f;
-        // Background full arc.
-        drawArc(canvas, cx, cy, r, startDeg, sweep, valArcBg);
-        if (bipolar) {
-            // Bipolar (centred at 50% = 0): the arc fills outward from
-            // the centre to the current value, so positive values fill
-            // right, negative fill left.
-            float centreOffset = sweep * 0.5f;
-            float fromAngle = startDeg + centreOffset;       // 12 o'clock
-            float toAngle = startDeg + sweep * norm;
-            float fromA = fromAngle, toA = toAngle;
-            if (fromA > toA) { float t = fromA; fromA = toA; toA = t; }
-            drawArc(canvas, cx, cy, r, fromA, toA - fromA, valArc);
-        } else {
-            // Unipolar: fill from start angle up to norm fraction.
-            drawArc(canvas, cx, cy, r, startDeg, sweep * norm, valArc);
-        }
-    }
-
-    private void drawArc(PluginCanvas canvas, float cx, float cy, float r,
-                          float startDeg, float sweepDeg, PluginPaint paint) {
-        int segs = Math.max(2, (int)(Math.abs(sweepDeg) / 6f));
-        float ang0 = (float) Math.toRadians(startDeg);
-        float angStep = (float) Math.toRadians(sweepDeg) / segs;
-        float px = cx + r * (float) Math.cos(ang0);
-        float py = cy + r * (float) Math.sin(ang0);
-        for (int s = 1; s <= segs; s++) {
-            float a = ang0 + angStep * s;
-            float nx = cx + r * (float) Math.cos(a);
-            float ny = cy + r * (float) Math.sin(a);
-            canvas.drawLine(px, py, nx, ny, paint);
-            px = nx; py = ny;
-        }
-    }
-
-    // Per-parameter icon — each parameter gets a visual glyph in its
-    // theme colour, so the user can read the panel without labels.
+    // Per-parameter icon — each parameter gets a large line-art glyph
+    // in its section colour, sized big inside its button. The icon's
+    // own shape encodes the parameter value (more rings for higher
+    // SIZE, taller bars for higher DECAY, etc.) so no external arc /
+    // meter is needed.
+    //
+    // `s` is the icon half-extent — typical line art fits roughly in
+    // a box of (2s × 2s) centred at (cx, cy).
     private void drawIcon(PluginCanvas canvas, String param, float cx, float cy,
                            float s, float norm) {
+        float sw = Math.max(1.8f, s * 0.10f);   // icon stroke width
         switch (param) {
             case "size": {
-                iconPaint.setColor(COLOR_REFLECT).setStyle(PluginStyle.STROKE).setStrokeWidth(1.6f);
-                // Concentric arcs widening with value.
-                for (int i = 0; i < 3; i++) {
-                    float r = s * (0.18f + 0.16f * i + 0.10f * norm * i);
-                    canvas.drawCircle(cx, cy, r, iconPaint);
-                }
+                // Bullseye — 3 concentric rings. Outer ring grows with
+                // value so a "bigger room" reads as a bigger target.
+                iconPaint.setColor(COLOR_REFLECT).setStyle(PluginStyle.STROKE).setStrokeWidth(sw);
+                canvas.drawCircle(cx, cy, s * 0.30f, iconPaint);
+                canvas.drawCircle(cx, cy, s * (0.55f + 0.20f * norm), iconPaint);
+                canvas.drawCircle(cx, cy, s * (0.80f + 0.20f * norm), iconPaint);
+                // Filled centre dot.
+                iconPaint.setStyle(PluginStyle.FILL);
+                canvas.drawCircle(cx, cy, s * 0.12f, iconPaint);
                 break;
             }
             case "decay": {
-                // Falling envelope: 4 vertical bars descending in height
+                // Decay envelope — falling triangle / wedge.
                 iconPaint.setColor(COLOR_REFLECT).setStyle(PluginStyle.FILL);
-                for (int i = 0; i < 5; i++) {
-                    float bx = cx - s * 0.4f + i * (s * 0.18f);
-                    float bh = s * (0.55f - i * 0.10f) * (0.4f + 0.6f * norm);
-                    canvas.drawRect(bx - 1.5f, cy - bh, bx + 1.5f, cy + s * 0.15f, iconPaint);
-                }
+                path1.reset();
+                float w = s * 0.95f, h = s * 0.75f * (0.4f + 0.6f * norm);
+                path1.moveTo(cx - w * 0.5f, cy + h * 0.4f);
+                path1.lineTo(cx - w * 0.5f, cy - h * 0.6f);
+                path1.lineTo(cx + w * 0.5f, cy + h * 0.4f);
+                path1.close();
+                canvas.drawPath(path1, iconPaint);
                 break;
             }
             case "width": {
-                // Circle, fatter when wider.
+                // Open circle that thickens with value — visual analogue
+                // of "wider stereo image".
                 iconPaint.setColor(COLOR_REFLECT).setStyle(PluginStyle.STROKE)
-                        .setStrokeWidth(1.5f + 2.5f * norm);
-                canvas.drawCircle(cx, cy, s * 0.40f, iconPaint);
+                        .setStrokeWidth(sw + 4f * norm);
+                canvas.drawCircle(cx, cy, s * 0.70f, iconPaint);
                 break;
             }
             case "modulation": {
-                // Sine wave that gets wavier with norm.
-                iconPaint.setColor(COLOR_DEPTH).setStyle(PluginStyle.STROKE).setStrokeWidth(1.6f);
+                // Sine wave — amplitude grows with norm.
+                iconPaint.setColor(COLOR_DEPTH).setStyle(PluginStyle.STROKE).setStrokeWidth(sw);
                 path1.reset();
-                float w = s * 0.7f;
-                float amp = s * (0.10f + 0.25f * norm);
-                int npts = 24;
+                float w = s * 1.4f;
+                float amp = s * (0.15f + 0.40f * norm);
+                int npts = 32;
                 for (int i = 0; i <= npts; i++) {
                     float t = i / (float) npts;
                     float px = cx - w * 0.5f + t * w;
@@ -826,102 +828,127 @@ public final class Crystal
                 break;
             }
             case "shimmer": {
-                // Dots in a grid — denser with norm.
+                // Sparkle pattern: small dot ring + central dot + a few
+                // outer dots that fade in with value.  The "ON" badge
+                // sits below when shimmer crosses 50%.
                 iconPaint.setColor(COLOR_DEPTH).setStyle(PluginStyle.FILL);
-                int dots = (int)(3 + 6 * norm);
-                for (int i = 0; i < dots; i++) {
-                    double a = i * 2.3994f;  // golden angle for nice scatter
-                    float rr = s * 0.40f * ((i + 1) / (float) dots);
-                    float dx = (float)(rr * Math.cos(a));
-                    float dy = (float)(rr * Math.sin(a));
-                    canvas.drawCircle(cx + dx, cy + dy, 1.4f, iconPaint);
+                canvas.drawCircle(cx, cy, s * 0.12f, iconPaint);
+                int ring = 5;
+                for (int i = 0; i < ring; i++) {
+                    double a = i * 2 * Math.PI / ring - Math.PI / 2;
+                    canvas.drawCircle(cx + (float)(s * 0.55f * Math.cos(a)),
+                                       cy + (float)(s * 0.55f * Math.sin(a)),
+                                       s * 0.085f, iconPaint);
+                }
+                if (norm > 0.5f) {
+                    int outer = 5;
+                    for (int i = 0; i < outer; i++) {
+                        double a = (i + 0.5) * 2 * Math.PI / outer - Math.PI / 2;
+                        canvas.drawCircle(cx + (float)(s * 0.95f * Math.cos(a)),
+                                           cy + (float)(s * 0.95f * Math.sin(a)),
+                                           s * 0.07f, iconPaint);
+                    }
                 }
                 break;
             }
             case "predelay": {
-                // Horizontal arrow → length scales with norm.
-                iconPaint.setColor(COLOR_DEPTH).setStyle(PluginStyle.STROKE).setStrokeWidth(1.8f);
-                float arrowLen = s * (0.25f + 0.55f * norm);
-                canvas.drawLine(cx - s * 0.40f, cy, cx - s * 0.40f + arrowLen, cy, iconPaint);
+                // Arrow + start-pulse: a vertical pulse on the left
+                // and an arrow extending rightward, length scaling with
+                // pre-delay value.
+                iconPaint.setColor(COLOR_DEPTH).setStyle(PluginStyle.STROKE).setStrokeWidth(sw);
+                canvas.drawLine(cx - s * 0.75f, cy - s * 0.45f,
+                                 cx - s * 0.75f, cy + s * 0.45f, iconPaint);
+                float arrowLen = s * (0.5f + 0.8f * norm);
+                canvas.drawLine(cx - s * 0.55f, cy,
+                                 cx - s * 0.55f + arrowLen, cy, iconPaint);
                 iconPaint.setStyle(PluginStyle.FILL);
                 path1.reset();
-                float tipX = cx - s * 0.40f + arrowLen;
-                path1.moveTo(tipX, cy);
-                path1.lineTo(tipX - 5f, cy - 4f);
-                path1.lineTo(tipX - 5f, cy + 4f).close();
+                float tipX = cx - s * 0.55f + arrowLen;
+                path1.moveTo(tipX + 4f, cy);
+                path1.lineTo(tipX - 4f, cy - 5f);
+                path1.lineTo(tipX - 4f, cy + 5f).close();
                 canvas.drawPath(path1, iconPaint);
                 break;
             }
             case "damping": {
-                // Hill curve (lowpass-ish).
-                iconPaint.setColor(COLOR_CLEAN).setStyle(PluginStyle.STROKE).setStrokeWidth(1.8f);
+                // Low-pass hill: rises gently then falls sharply on the
+                // right. The drop depth scales with damping value.
+                iconPaint.setColor(COLOR_CLEAN).setStyle(PluginStyle.STROKE).setStrokeWidth(sw);
                 path1.reset();
-                float w = s * 0.7f, h = s * 0.4f;
+                float w = s * 1.4f, h = s * 0.7f;
                 path1.moveTo(cx - w * 0.5f, cy + h * 0.4f);
-                path1.quadTo(cx - w * 0.15f, cy - h, cx + w * 0.5f,
-                              cy + h * (0.4f - 0.7f * norm));
+                path1.quadTo(cx - w * 0.1f, cy - h * 0.7f,
+                              cx + w * 0.5f, cy + h * (0.4f + 0.4f * norm));
                 canvas.drawPath(path1, iconPaint);
                 break;
             }
             case "gate": {
-                // Gate-shape (down-up-down step).
-                iconPaint.setColor(COLOR_CLEAN).setStyle(PluginStyle.STROKE).setStrokeWidth(1.8f);
-                path1.reset();
-                float w = s * 0.7f, h = s * 0.35f;
-                path1.moveTo(cx - w * 0.5f, cy + h);
-                path1.lineTo(cx - w * 0.2f, cy + h);
-                path1.lineTo(cx - w * 0.2f, cy - h);
-                path1.lineTo(cx + w * 0.2f, cy - h);
-                path1.lineTo(cx + w * 0.2f, cy + h);
-                path1.lineTo(cx + w * 0.5f, cy + h);
-                canvas.drawPath(path1, iconPaint);
+                // Filled gate-pulse step — sharp opening that scales
+                // height with the threshold parameter.
+                iconPaint.setColor(COLOR_CLEAN).setStyle(PluginStyle.FILL);
+                float w = s * 0.55f, h = s * (0.40f + 0.40f * (1f - norm * 0.7f));
+                canvas.drawRect(cx - w * 0.5f, cy - h, cx + w * 0.5f, cy + h * 0.5f, iconPaint);
+                iconPaint.setColor(COLOR_CLEAN).setStyle(PluginStyle.STROKE).setStrokeWidth(sw);
+                canvas.drawLine(cx - s, cy + h * 0.5f, cx - w * 0.5f, cy + h * 0.5f, iconPaint);
+                canvas.drawLine(cx + w * 0.5f, cy + h * 0.5f, cx + s, cy + h * 0.5f, iconPaint);
                 break;
             }
             case "freeze": {
-                // Snowflake-ish: 6 spokes from centre.
+                // Asterisk / snowflake — 8 spokes, colour flips to
+                // accent yellow when the toggle is on.
                 iconPaint.setColor(norm >= 0.5f ? COLOR_ACCENT : COLOR_CLEAN)
-                        .setStyle(PluginStyle.STROKE).setStrokeWidth(1.6f);
-                for (int i = 0; i < 6; i++) {
-                    float a = (float)(i * Math.PI / 3);
-                    canvas.drawLine(cx, cy, cx + s * 0.35f * (float)Math.cos(a),
-                                            cy + s * 0.35f * (float)Math.sin(a), iconPaint);
+                        .setStyle(PluginStyle.STROKE).setStrokeWidth(sw);
+                for (int i = 0; i < 8; i++) {
+                    double a = i * Math.PI / 4;
+                    canvas.drawLine(cx, cy,
+                            cx + s * 0.70f * (float)Math.cos(a),
+                            cy + s * 0.70f * (float)Math.sin(a), iconPaint);
                 }
+                iconPaint.setStyle(PluginStyle.FILL);
+                canvas.drawCircle(cx, cy, s * 0.13f, iconPaint);
                 break;
             }
             case "tone": {
-                // S-tilt curve (rising line) — slope depends on tone.
-                iconPaint.setColor(COLOR_SHAPE).setStyle(PluginStyle.STROKE).setStrokeWidth(1.8f);
+                // Tilt: short curved horizontal line whose slope tracks
+                // the bipolar tone value. Flat at 0, rising for +tone,
+                // falling for -tone.
+                iconPaint.setColor(COLOR_SHAPE).setStyle(PluginStyle.STROKE).setStrokeWidth(sw);
                 path1.reset();
-                float w = s * 0.7f, h = s * 0.35f;
-                // norm 0..1 → tilt slope -h..+h
+                float w = s * 1.4f, h = s * 0.55f;
                 float slope = (norm * 2f - 1f) * h;
                 path1.moveTo(cx - w * 0.5f, cy + slope);
-                path1.quadTo(cx, cy + slope * 0.3f, cx + w * 0.5f, cy - slope);
+                path1.quadTo(cx, cy, cx + w * 0.5f, cy - slope);
                 canvas.drawPath(path1, iconPaint);
                 break;
             }
             case "duck": {
-                // Ducking arrow → curve dipping with value.
-                iconPaint.setColor(COLOR_SHAPE).setStyle(PluginStyle.STROKE).setStrokeWidth(1.8f);
+                // Ducker dip: flat-flat with a U dip in the middle that
+                // deepens with the ducker amount.
+                iconPaint.setColor(COLOR_SHAPE).setStyle(PluginStyle.STROKE).setStrokeWidth(sw);
                 path1.reset();
-                float w = s * 0.7f, h = s * 0.35f;
+                float w = s * 1.4f, h = s * 0.6f;
                 path1.moveTo(cx - w * 0.5f, cy - h * 0.4f);
-                path1.lineTo(cx - w * 0.15f, cy - h * 0.4f);
-                path1.quadTo(cx, cy + h * norm, cx + w * 0.15f, cy - h * 0.4f);
+                path1.lineTo(cx - w * 0.18f, cy - h * 0.4f);
+                path1.quadTo(cx, cy + h * (0.10f + 0.90f * norm),
+                              cx + w * 0.18f, cy - h * 0.4f);
                 path1.lineTo(cx + w * 0.5f, cy - h * 0.4f);
                 canvas.drawPath(path1, iconPaint);
                 break;
             }
             case "mix": {
-                // Two overlapping circles, opacity per side.
-                iconPaint.setColor(COLOR_SHAPE).setStyle(PluginStyle.STROKE).setStrokeWidth(1.6f);
-                canvas.drawCircle(cx - s * 0.16f, cy, s * 0.22f, iconPaint);
-                iconPaint.setColor(0xCCF5C842);
-                canvas.drawCircle(cx + s * 0.16f, cy, s * 0.22f, iconPaint);
+                // Two overlapping circles — Venn diagram style. Filled
+                // proportions track the dry/wet balance.
+                iconPaint.setColor(COLOR_SHAPE).setStyle(PluginStyle.STROKE).setStrokeWidth(sw);
+                canvas.drawCircle(cx - s * 0.30f, cy, s * 0.45f, iconPaint);
+                canvas.drawCircle(cx + s * 0.30f, cy, s * 0.45f, iconPaint);
+                // Filled overlap proportional to mix.
+                int wetAlpha = (int)(0x55 + 0x80 * norm);
+                int wetCol = (wetAlpha << 24) | (COLOR_SHAPE & 0x00FFFFFF);
+                iconPaint.setColor(wetCol).setStyle(PluginStyle.FILL);
+                canvas.drawCircle(cx + s * 0.30f, cy, s * 0.45f * norm, iconPaint);
                 break;
             }
             default: {
-                // Fallback dot.
                 iconPaint.setColor(COLOR_INK).setStyle(PluginStyle.FILL);
                 canvas.drawCircle(cx, cy, 3f, iconPaint);
             }
@@ -930,24 +957,27 @@ public final class Crystal
 
     private void drawDryWetSlider(PluginCanvas canvas, float x0, float y0,
                                    float x1, float y1, float value) {
-        // Track.
-        float midY = (y0 + y1) * 0.5f;
-        sliderTrack.setColor(COLOR_CARD).setStyle(PluginStyle.FILL);
-        canvas.drawRoundRect(x0, midY - 4f, x1, midY + 4f, 4f, sliderTrack);
-        // Fill up to value.
+        // OUTPUT label above the track.
+        labelPaint.setColor(COLOR_INK_DIM).setTextSize(9f).setTextAlign(0);
+        canvas.drawText("OUTPUT  -  DRY / WET", x0, y0 + 2f, labelPaint);
+        labelPaint.setColor(COLOR_INK).setTextSize(9f).setTextAlign(2);
+        canvas.drawText(String.format("%.0f%%", value * 100), x1, y0 + 2f, labelPaint);
+
+        float midY = y1 - 12f;
+        // Track — soft grey channel.
+        sliderTrack.setColor(COLOR_CARD_BORDER).setStyle(PluginStyle.FILL);
+        canvas.drawRoundRect(x0, midY - 3.5f, x1, midY + 3.5f, 4f, sliderTrack);
+        // Filled portion from x0 to value, accent yellow.
         float vx = x0 + (x1 - x0) * Math.max(0f, Math.min(1f, value));
         sliderFill.setColor(COLOR_ACCENT).setStyle(PluginStyle.FILL);
-        canvas.drawRoundRect(x0, midY - 4f, vx, midY + 4f, 4f, sliderFill);
-        // Handle.
-        sliderHandle.setColor(COLOR_INK_INV).setStyle(PluginStyle.FILL);
-        canvas.drawCircle(vx, midY, 8f, sliderHandle);
-        sliderHandle.setColor(COLOR_INK).setStyle(PluginStyle.STROKE).setStrokeWidth(1.5f);
-        canvas.drawCircle(vx, midY, 8f, sliderHandle);
-        // Label.
-        labelPaint.setColor(COLOR_INK_INV).setTextSize(10f).setTextAlign(0);
-        canvas.drawText("DRY / WET", x0, y0 - 2f, labelPaint);
-        labelPaint.setColor(COLOR_ACCENT).setTextSize(10f).setTextAlign(2);
-        canvas.drawText(String.format("%.0f%%", value * 100), x1, y0 - 2f, labelPaint);
+        canvas.drawRoundRect(x0, midY - 3.5f, vx, midY + 3.5f, 4f, sliderFill);
+        // Handle — small white circle with thin border + drop shadow.
+        sliderHandle.setColor(COLOR_SHADOW).setStyle(PluginStyle.FILL);
+        canvas.drawCircle(vx + 0.5f, midY + 1.5f, 8.5f, sliderHandle);
+        sliderHandle.setColor(COLOR_BUTTON_HI).setStyle(PluginStyle.FILL);
+        canvas.drawCircle(vx, midY, 8.5f, sliderHandle);
+        sliderHandle.setColor(COLOR_INK_DIM).setStyle(PluginStyle.STROKE).setStrokeWidth(1f);
+        canvas.drawCircle(vx, midY, 8.5f, sliderHandle);
     }
 
     private void drawCentralDisplay(PluginCanvas canvas, float x0, float y0,
@@ -1053,8 +1083,6 @@ public final class Crystal
         bgPaint       = c.newPaint();
         cardPaint     = c.newPaint();
         buttonPaint   = c.newPaint();
-        valArc        = c.newPaint();
-        valArcBg      = c.newPaint();
         iconPaint     = c.newPaint();
         labelPaint    = c.newPaint();
         headerPaint   = c.newPaint();
