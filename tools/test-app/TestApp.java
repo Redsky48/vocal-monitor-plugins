@@ -1423,6 +1423,8 @@ public class TestApp extends JFrame {
         final Class<?> canvasIface, paintIface, pathIface, styleEnum, blendEnum;
         final Deque<AffineTransform> txStack = new ArrayDeque<>();
         final Deque<Shape> clipStack = new ArrayDeque<>();
+        private static final Shape NO_CLIP_SENTINEL =
+                new java.awt.Rectangle(-1_000_000, -1_000_000, 2_000_000, 2_000_000);
 
         CanvasHandler(Graphics2D g, ClassLoader loader,
                       Class<?> canvasIface, Class<?> paintIface, Class<?> pathIface,
@@ -1482,11 +1484,19 @@ public class TestApp extends JFrame {
                 }
                 case "save":
                     txStack.push(new AffineTransform(g.getTransform()));
-                    clipStack.push(g.getClip());
+                    // ArrayDeque rejects null but Graphics2D.getClip()
+                    // returns null when no clip is set. Substitute a
+                    // huge sentinel rect so we can round-trip; map it
+                    // back to null on restore.
+                    Shape c = g.getClip();
+                    clipStack.push(c != null ? c : NO_CLIP_SENTINEL);
                     return null;
                 case "restore":
                     if (!txStack.isEmpty()) g.setTransform(txStack.pop());
-                    if (!clipStack.isEmpty()) g.setClip(clipStack.pop());
+                    if (!clipStack.isEmpty()) {
+                        Shape s = clipStack.pop();
+                        g.setClip(s == NO_CLIP_SENTINEL ? null : s);
+                    }
                     return null;
                 case "translate":
                     g.translate((double) (float) args[0], (double) (float) args[1]);
