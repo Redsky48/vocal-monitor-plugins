@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-14T21:24:51.647Z",
+  "generatedAt": "2026-05-14T21:41:07.670Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -1594,7 +1594,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/register-detector/register-detector.dex",
-      "sizeBytes": 9840,
+      "sizeBytes": 10008,
       "className": "com.vocalmonitor.plugin.community.RegisterDetector",
       "ui_kind": "canvas",
       "ui": {
