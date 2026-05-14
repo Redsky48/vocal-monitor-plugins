@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-14T21:41:07.670Z",
+  "generatedAt": "2026-05-14T21:46:50.896Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -1621,7 +1621,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/resonance-monitor/resonance-monitor.dex",
-      "sizeBytes": 9236,
+      "sizeBytes": 12188,
       "className": "com.vocalmonitor.plugin.community.ResonanceMonitor",
       "ui_kind": "canvas",
       "ui": {
