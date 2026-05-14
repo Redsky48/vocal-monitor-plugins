@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-14T01:50:10.204Z",
+  "generatedAt": "2026-05-14T02:01:32.050Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -1229,7 +1229,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/reverb/crystal/crystal.dex",
-      "sizeBytes": 32540,
+      "sizeBytes": 33156,
       "className": "com.vocalmonitor.plugin.community.Crystal",
       "ui_kind": "canvas",
       "ui": {
