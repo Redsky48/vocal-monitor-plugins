@@ -852,6 +852,9 @@ public final class Crystal
     private final float[] fftIm = new float[FFT_SIZE];
     private final float[] hann  = new float[FFT_SIZE];
     private boolean fftInit = false;
+    // Captured at the start of each render() so per-icon animations
+    // can use it without re-plumbing the signature.
+    private long lastRenderMs = 0L;
 
     // Crystalline palette — matched against the BABY Audio reference:
     //   panel grey, WHITE floating cards with stacked soft shadows,
@@ -896,6 +899,7 @@ public final class Crystal
             fftInit = true;
         }
         recomputeLayout(width, height);
+        lastRenderMs = timeMs;
 
         float W = width, H = height;
         if (W < 40 || H < 40) return;
@@ -1115,15 +1119,22 @@ public final class Crystal
         float sw = Math.max(1.8f, s * 0.10f);   // icon stroke width
         switch (param) {
             case "size": {
-                // Bullseye — 3 concentric rings. Outer ring grows with
-                // value so a "bigger room" reads as a bigger target.
+                // Crystalline-style SIZE: three horizontal lines
+                // compressed toward the centre — like a "wave being
+                // squished".  Spacing tightens with smaller rooms,
+                // spreads out with bigger.
                 iconPaint.setColor(COLOR_REFLECT).setStyle(PluginStyle.STROKE).setStrokeWidth(sw);
-                canvas.drawCircle(cx, cy, s * 0.30f, iconPaint);
-                canvas.drawCircle(cx, cy, s * (0.55f + 0.20f * norm), iconPaint);
-                canvas.drawCircle(cx, cy, s * (0.80f + 0.20f * norm), iconPaint);
-                // Filled centre dot.
-                iconPaint.setStyle(PluginStyle.FILL);
-                canvas.drawCircle(cx, cy, s * 0.12f, iconPaint);
+                float w = s * 0.85f;
+                // Lower value = lines closer together (small room),
+                // higher value = lines spread further apart.
+                float spacing = s * (0.20f + 0.30f * norm);
+                // The TOP line is widest; the bottom narrowest — gives
+                // a "fanning" look that reads as room-size growing.
+                canvas.drawLine(cx - w * 0.5f, cy - spacing, cx + w * 0.5f, cy - spacing, iconPaint);
+                float wMid = w * (0.65f + 0.20f * norm);
+                canvas.drawLine(cx - wMid * 0.5f, cy, cx + wMid * 0.5f, cy, iconPaint);
+                float wBot = w * (0.35f + 0.30f * norm);
+                canvas.drawLine(cx - wBot * 0.5f, cy + spacing, cx + wBot * 0.5f, cy + spacing, iconPaint);
                 break;
             }
             case "decay": {
@@ -1221,16 +1232,20 @@ public final class Crystal
                 break;
             }
             case "modulation": {
-                // Sine wave — amplitude grows with norm.
+                // Sine wave — amplitude grows with norm AND the wave
+                // rolls in time, so a non-zero MOD value visibly moves.
                 iconPaint.setColor(COLOR_DEPTH).setStyle(PluginStyle.STROKE).setStrokeWidth(sw);
                 path1.reset();
                 float w = s * 1.4f;
-                float amp = s * (0.15f + 0.40f * norm);
+                float amp = s * (0.10f + 0.42f * norm);
+                // Phase advances with time — faster rolling at higher
+                // MOD values, matching Crystalline's lively MOD icon.
+                float phase = lastRenderMs * 0.001f * (0.5f + norm * 3.0f);
                 int npts = 32;
                 for (int i = 0; i <= npts; i++) {
                     float t = i / (float) npts;
                     float px = cx - w * 0.5f + t * w;
-                    float py = cy + (float)(Math.sin(t * 2 * Math.PI * 1.5) * amp);
+                    float py = cy + (float)(Math.sin(t * 2 * Math.PI * 1.5 + phase) * amp);
                     if (i == 0) path1.moveTo(px, py);
                     else path1.lineTo(px, py);
                 }
@@ -1238,25 +1253,30 @@ public final class Crystal
                 break;
             }
             case "shimmer": {
-                // Sparkle pattern: small dot ring + central dot + a few
-                // outer dots that fade in with value.  The "ON" badge
-                // sits below when shimmer crosses 50%.
+                // Crystalline SHIMMER: 2 rows of 3 dots — outer dots
+                // small, centre dot bigger.  Each dot twinkles
+                // independently with a phase offset, brightness rising
+                // with the shimmer amount.
                 iconPaint.setColor(COLOR_DEPTH).setStyle(PluginStyle.FILL);
-                canvas.drawCircle(cx, cy, s * 0.12f, iconPaint);
-                int ring = 5;
-                for (int i = 0; i < ring; i++) {
-                    double a = i * 2 * Math.PI / ring - Math.PI / 2;
-                    canvas.drawCircle(cx + (float)(s * 0.55f * Math.cos(a)),
-                                       cy + (float)(s * 0.55f * Math.sin(a)),
-                                       s * 0.085f, iconPaint);
-                }
-                if (norm > 0.5f) {
-                    int outer = 5;
-                    for (int i = 0; i < outer; i++) {
-                        double a = (i + 0.5) * 2 * Math.PI / outer - Math.PI / 2;
-                        canvas.drawCircle(cx + (float)(s * 0.95f * Math.cos(a)),
-                                           cy + (float)(s * 0.95f * Math.sin(a)),
-                                           s * 0.07f, iconPaint);
+                float rowSpacing = s * 0.45f;
+                float colSpacing = s * 0.45f;
+                int[] sizes = { 2, 3, 2, 3, 4, 3 };  // big in middle
+                float baseR = s * 0.07f;
+                for (int r = 0; r < 2; r++) {
+                    for (int c = 0; c < 3; c++) {
+                        int idx = r * 3 + c;
+                        float dx = (c - 1) * colSpacing;
+                        float dy = (r * 2 - 1) * rowSpacing * 0.5f;
+                        // Twinkle: each dot has its own phase, brightness
+                        // pulses subtly to suggest "alive".
+                        float twk = (float)(0.7 + 0.3 *
+                                Math.sin(lastRenderMs * 0.004 + idx * 1.3));
+                        float alpha = 0.4f + 0.6f * norm * twk;
+                        if (alpha > 1f) alpha = 1f;
+                        int col = ((int)(alpha * 255) << 24) | (COLOR_DEPTH & 0x00FFFFFF);
+                        iconPaint.setColor(col);
+                        canvas.drawCircle(cx + dx, cy + dy,
+                                           baseR * sizes[idx] * 0.4f, iconPaint);
                     }
                 }
                 break;
@@ -1281,26 +1301,49 @@ public final class Crystal
                 break;
             }
             case "damping": {
-                // Low-pass hill: rises gently then falls sharply on the
-                // right. The drop depth scales with damping value.
+                // Crystalline DAMPING: a "pacman" / open arch shape —
+                // a circle with a wedge cut out on the right.  The cut
+                // angle grows with the damping amount so the icon
+                // visibly closes as you damp more.
                 iconPaint.setColor(COLOR_CLEAN).setStyle(PluginStyle.STROKE).setStrokeWidth(sw);
-                path1.reset();
-                float w = s * 1.4f, h = s * 0.7f;
-                path1.moveTo(cx - w * 0.5f, cy + h * 0.4f);
-                path1.quadTo(cx - w * 0.1f, cy - h * 0.7f,
-                              cx + w * 0.5f, cy + h * (0.4f + 0.4f * norm));
-                canvas.drawPath(path1, iconPaint);
+                float r = s * 0.55f;
+                // Draw the arc from (top-left) sweeping clockwise,
+                // stopping early as norm rises (= bigger cut).
+                int segs = 36;
+                float startA = (float) Math.PI;        // 9 o'clock
+                float endA = (float)(Math.PI * 2.0 + Math.PI * 0.5 * (1f - norm));
+                // Approximate arc with line segments.
+                float pxPrev = cx + r * (float)Math.cos(startA);
+                float pyPrev = cy + r * (float)Math.sin(startA);
+                for (int i = 1; i <= segs; i++) {
+                    float t = i / (float) segs;
+                    float a = startA + (endA - startA) * t;
+                    float px = cx + r * (float)Math.cos(a);
+                    float py = cy + r * (float)Math.sin(a);
+                    canvas.drawLine(pxPrev, pyPrev, px, py, iconPaint);
+                    pxPrev = px; pyPrev = py;
+                }
                 break;
             }
             case "gate": {
-                // Filled gate-pulse step — sharp opening that scales
-                // height with the threshold parameter.
-                iconPaint.setColor(COLOR_CLEAN).setStyle(PluginStyle.FILL);
-                float w = s * 0.55f, h = s * (0.40f + 0.40f * (1f - norm * 0.7f));
-                canvas.drawRect(cx - w * 0.5f, cy - h, cx + w * 0.5f, cy + h * 0.5f, iconPaint);
+                // Crystalline GATE: an upward-arched smile shape with a
+                // narrow gap in the middle — looks like an opening
+                // gate.  The gap width scales with the GATE threshold,
+                // wider gap = tighter gate.
                 iconPaint.setColor(COLOR_CLEAN).setStyle(PluginStyle.STROKE).setStrokeWidth(sw);
-                canvas.drawLine(cx - s, cy + h * 0.5f, cx - w * 0.5f, cy + h * 0.5f, iconPaint);
-                canvas.drawLine(cx + w * 0.5f, cy + h * 0.5f, cx + s, cy + h * 0.5f, iconPaint);
+                // Gap in middle increases with norm.  Threshold knob is
+                // in dB: -80 (open) … 0 (closed-most).  Normalise so
+                // closed-most → biggest visible gap.
+                float r = s * 0.55f;
+                float gapAng = (float)(Math.PI * 0.15f + norm * Math.PI * 0.35f);
+                // Left half of arc.
+                float startA = (float)(Math.PI + 0.15);      // ~9-10 o'clock
+                float midA   = (float)(Math.PI * 1.5 - gapAng * 0.5);
+                drawArcSegments(canvas, cx, cy, r, startA, midA, iconPaint);
+                // Right half of arc.
+                float midA2  = (float)(Math.PI * 1.5 + gapAng * 0.5);
+                float endA   = (float)(Math.PI * 2.0 - 0.15);
+                drawArcSegments(canvas, cx, cy, r, midA2, endA, iconPaint);
                 break;
             }
             case "freeze": {
@@ -1528,6 +1571,23 @@ public final class Crystal
                     wr = nwr;
                 }
             }
+        }
+    }
+
+    // Cheap arc renderer — splits the angular range into short line
+    // segments. Used by DAMPING and GATE icons.
+    private void drawArcSegments(PluginCanvas canvas, float cx, float cy,
+                                  float r, float a0, float a1, PluginPaint paint) {
+        int segs = Math.max(2, (int) Math.ceil(Math.abs(a1 - a0) * 8));
+        float pxPrev = cx + r * (float)Math.cos(a0);
+        float pyPrev = cy + r * (float)Math.sin(a0);
+        for (int i = 1; i <= segs; i++) {
+            float t = i / (float) segs;
+            float a = a0 + (a1 - a0) * t;
+            float px = cx + r * (float)Math.cos(a);
+            float py = cy + r * (float)Math.sin(a);
+            canvas.drawLine(pxPrev, pyPrev, px, py, paint);
+            pxPrev = px; pyPrev = py;
         }
     }
 
