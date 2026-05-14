@@ -42,6 +42,7 @@ public final class Crystal
     private float damping    = 0.30f;
     private float sides      = 0.0f;    // NEW: HP on stereo S channel
     private float gateDb     = -80f;
+    private float gateReleaseMs = 60f;   // 5..500 ms user release
     private float tone       = 0.0f;
     private float smoothing  = 0.0f;    // NEW: notch EQ for resonances
     private float warp       = 0.0f;    // NEW: transient shaper on input (bipolar)
@@ -53,36 +54,46 @@ public final class Crystal
     private float freeze     = 0.0f;
     private float mix        = 0.30f;
     private float wetLock    = 0.0f;    // 0/1 toggle (preset behaviour)
-    private float syncMode   = 0.0f;    // 0/1 cosmetic — flags BPM mode
+    private float syncMode   = 0.0f;    // 0 = ms, 1 = tempo-locked
+    private float tempoBpm   = 120.0f;  // 30..300 BPM (manual user setting)
+    // When syncMode == 1, predelay/decay knobs index into musical
+    // divisions instead of being read as raw seconds. Buckets:
+    //   START (predelay) → 1/64, 1/32, 1/16, 1/8, 1/4 of a beat
+    //   END   (decay)    → 1/4, 1/2, 1, 2, 4 beats
     private float shimmerOct = 0.0f;    // 0 = 2×, 0.5 = 4×, 1 = 6× (1/2/3 octaves)
     private float shimmerCut = 0.0f;    // 0..1 → HP cutoff 0 Hz → 4 kHz on shimmer feed
+    private float shimmerMode = 0.0f;   // 0 = HF Decay (Crystalline), 1 = Octave (granular)
 
     @Override public String[] parameterNames() {
         return new String[] {
             "size", "sparkle", "width",
-            "resolution", "modulation", "shimmer", "shimmerOct", "shimmerCut",
-            "damping", "sides", "gate",
+            "resolution", "modulation", "shimmer", "shimmerOct", "shimmerCut", "shimmerMode",
+            "damping", "sides", "gate", "gateRelease",
             "tone", "smoothing", "warp",
             "predelay", "decay", "duck", "duckMode",
-            "rev", "freeze", "mix", "wetLock", "syncMode"
+            "rev", "freeze", "mix", "wetLock", "syncMode", "tempoBpm"
         };
     }
     @Override public float parameterMin(String n) {
         switch (n) {
-            case "predelay": return 0.0f;
-            case "tone":     return -1.0f;
-            case "warp":     return -1.0f;
-            case "gate":     return -80.0f;
-            default:         return 0.0f;
+            case "predelay":    return 0.0f;
+            case "tempoBpm":    return 30.0f;
+            case "tone":        return -1.0f;
+            case "warp":        return -1.0f;
+            case "gate":        return -80.0f;
+            case "gateRelease": return 5.0f;
+            default:            return 0.0f;
         }
     }
     @Override public float parameterMax(String n) {
         switch (n) {
-            case "predelay": return 0.3f;
-            case "tone":     return 1.0f;
-            case "warp":     return 1.0f;
-            case "gate":     return 0.0f;
-            default:         return 1.0f;
+            case "predelay":    return 0.3f;
+            case "tempoBpm":    return 300.0f;
+            case "tone":        return 1.0f;
+            case "warp":        return 1.0f;
+            case "gate":        return 0.0f;
+            case "gateRelease": return 500.0f;
+            default:            return 1.0f;
         }
     }
     @Override public float parameterDefault(String n) {
@@ -95,9 +106,11 @@ public final class Crystal
             case "shimmer":    return 0.0f;
             case "shimmerOct": return 0.0f;
             case "shimmerCut": return 0.0f;
+            case "shimmerMode": return 0.0f;  // default = HF Decay (Crystalline behaviour)
             case "damping":    return 0.30f;
             case "sides":      return 0.0f;
             case "gate":       return -80.0f;
+            case "gateRelease": return 60.0f;
             case "tone":       return 0.0f;
             case "smoothing":  return 0.0f;
             case "warp":       return 0.0f;
@@ -110,6 +123,7 @@ public final class Crystal
             case "mix":        return 0.30f;
             case "wetLock":    return 0.0f;
             case "syncMode":   return 0.0f;
+            case "tempoBpm":   return 120.0f;
             default:           return 0.0f;
         }
     }
@@ -121,11 +135,13 @@ public final class Crystal
             case "resolution": return "Resolution";
             case "modulation": return "Mod";
             case "shimmer":    return "Shimmer";
-            case "shimmerOct": return "Shim Oct";
-            case "shimmerCut": return "Shim Cut";
+            case "shimmerOct":  return "Shim Oct";
+            case "shimmerCut":  return "Shim Cut";
+            case "shimmerMode": return "Shim Mode";
             case "damping":    return "Damp";
             case "sides":      return "Sides";
-            case "gate":       return "Gate (dB)";
+            case "gate":        return "Gate (dB)";
+            case "gateRelease": return "Gate Rel (ms)";
             case "tone":       return "Tone";
             case "smoothing":  return "Smoothing";
             case "warp":       return "Warp";
@@ -138,6 +154,7 @@ public final class Crystal
             case "mix":        return "Mix";
             case "wetLock":    return "Wet Lock";
             case "syncMode":   return "Sync";
+            case "tempoBpm":   return "Tempo (BPM)";
             default:           return n;
         }
     }
@@ -149,11 +166,13 @@ public final class Crystal
             case "resolution": resolution = v; break;
             case "modulation": modulation = v; break;
             case "shimmer":    shimmer = v; break;
-            case "shimmerOct": shimmerOct = v; break;
-            case "shimmerCut": shimmerCut = v; break;
+            case "shimmerOct":  shimmerOct = v; break;
+            case "shimmerCut":  shimmerCut = v; break;
+            case "shimmerMode": shimmerMode = v; break;
             case "damping":    damping = v; break;
             case "sides":      sides = v; break;
-            case "gate":       gateDb = v; break;
+            case "gate":        gateDb = v; break;
+            case "gateRelease": gateReleaseMs = v; break;
             case "tone":       tone = v; break;
             case "smoothing":  smoothing = v; break;
             case "warp":       warp = v; break;
@@ -166,6 +185,7 @@ public final class Crystal
             case "mix":        mix = v; break;
             case "wetLock":    wetLock = v; break;
             case "syncMode":   syncMode = v; break;
+            case "tempoBpm":   tempoBpm = v; break;
         }
     }
 
@@ -177,11 +197,13 @@ public final class Crystal
             case "resolution": return resolution;
             case "modulation": return modulation;
             case "shimmer":    return shimmer;
-            case "shimmerOct": return shimmerOct;
-            case "shimmerCut": return shimmerCut;
+            case "shimmerOct":  return shimmerOct;
+            case "shimmerCut":  return shimmerCut;
+            case "shimmerMode": return shimmerMode;
             case "damping":    return damping;
             case "sides":      return sides;
-            case "gate":       return gateDb;
+            case "gate":        return gateDb;
+            case "gateRelease": return gateReleaseMs;
             case "tone":       return tone;
             case "smoothing":  return smoothing;
             case "warp":       return warp;
@@ -194,6 +216,7 @@ public final class Crystal
             case "mix":        return mix;
             case "wetLock":    return wetLock;
             case "syncMode":   return syncMode;
+            case "tempoBpm":   return tempoBpm;
             default:           return 0f;
         }
     }
@@ -244,6 +267,22 @@ public final class Crystal
     // into the pitch-shifter ring so only the HF gets shimmered (not
     // the body of the vocal).
     private float shimHP = 0f;
+    // HF Decay shimmer state (Crystalline-style): per-tank running
+    // state for the HP-extracted high band that's recirculated into
+    // the tank with its OWN longer decay coefficient — so the HF
+    // bins die away 2×/4×/6× slower than the rest of the spectrum.
+    private float hfDecayState_a = 0f, hfDecayState_b = 0f;
+    private float hfDecayMem_a = 0f, hfDecayMem_b = 0f;
+
+    // FREEZE production-grade state:
+    //   - inputGate ramps 1 → 0 on freeze ON (mutes input feed in
+    //     ~10 ms so the frozen tail isn't contaminated by new audio)
+    //   - dcBlock removes DC drift that can build up in an
+    //     infinite-feedback loop (very-LF HP, ~5 Hz)
+    //   - soft-limit triggers above ±0.95 inside the feedback path
+    //     so a hot snapshot can't run away to NaN over long holds
+    private float freezeInputGate = 1f;    // 1 = audio passes, 0 = muted
+    private float dcBlockState = 0f;
     private float gateEnv = 0f;
     private float gateGain = 0f;
 
@@ -254,14 +293,39 @@ public final class Crystal
     private float sparkleHP_a = 0f, sparkleHP_b = 0f;
     // Sides: 1-pole HP on the stereo S channel after M/S split.
     private float sidesHP = 0f;
-    // Smoothing: state for a notch biquad at the algorithm's
-    // characteristic resonance band (~2.5 kHz).
-    private final float[] smoothState = new float[4];   // x1,x2,y1,y2
+    // Smoothing: 4-band biquad bank addressing the characteristic
+    // resonance zones of a Dattorro-style tank.  Each band has its
+    // own peaking filter with negative gain — together they shape a
+    // "custom EQ curve" (Crystalline marketing's words) that tames
+    // metallic ring without dulling the whole spectrum.
+    // Per-band [x1, x2, y1, y2] state interleaved.
+    private static final int SMOOTH_BANDS = 4;
+    private final float[] smoothState = new float[SMOOTH_BANDS * 4];
+    private static final float[] SMOOTH_FREQS = { 900f, 1800f, 2800f, 4500f };
+    private static final float[] SMOOTH_QS    = { 0.7f, 1.0f, 1.4f, 1.0f };
+    // Per-band gain weighting — band 2 (2.8 kHz) is the strongest
+    // resonance zone, so it gets the biggest cut for the same
+    // smoothing knob value.
+    private static final float[] SMOOTH_WEIGHTS = { 0.6f, 0.85f, 1.0f, 0.75f };
     // Warp: fast/slow envelope followers for transient detection.
     private float warpFastEnv = 0f, warpSlowEnv = 0f;
-    // Reverse: ring buffer of recent wet output to read backwards.
-    private float[] revBuf;
-    private int revBufLen, revBufW = 0;
+    // Reverse: segmented buffer for TRUE reverse playback.  Eight
+    // segments of ~50 ms each (= 400 ms total memory).  At any
+    // moment one segment is being WRITTEN by the wet path (forward
+    // direction), the other 7 are available for backwards reading.
+    // When reverse is ON the output reads from the most-recently
+    // finished segment with the read pointer travelling from end →
+    // start.  A short Hann crossfade between adjacent reversed
+    // segments hides the seams so the result sounds like a
+    // continuous backwards swell, not a series of 50 ms chunks.
+    private static final int REV_N_SEGS = 8;
+    private float[] revSegBuf;          // contiguous storage, REV_N_SEGS × segLen
+    private int     revSegLen;          // samples per segment
+    private int     revWriteSeg = 0;    // which segment is being filled
+    private int     revWritePos = 0;    // position inside the active segment
+    private int     revReadSeg  = -1;   // which segment we're playing back (most-recent finished)
+    private int     revReadPos  = 0;    // position inside the reversed segment (counts DOWN)
+    private float   revFade     = 0f;   // crossfade gain for the OUTGOING segment
 
     @Override public void init(int sr) {
         this.sampleRate = sr;
@@ -290,6 +354,10 @@ public final class Crystal
         duckEnv = 0f;
         gateEnv = 0f; gateGain = 0f;
         shimHP = 0f;
+        hfDecayState_a = hfDecayState_b = 0f;
+        hfDecayMem_a = hfDecayMem_b = 0f;
+        freezeInputGate = 1f;
+        dcBlockState = 0f;
         shimBufLen = Math.max(2048, sr / 20);
         shimBuf = new float[shimBufLen];
         shimW = 0;
@@ -306,11 +374,14 @@ public final class Crystal
         sidesHP = 0f;
         java.util.Arrays.fill(smoothState, 0f);
         warpFastEnv = warpSlowEnv = 0f;
-        // Reverse ring sized for ~400 ms of wet content — enough for
-        // the most dramatic reverse swell without exploding RAM.
-        revBufLen = Math.max(1024, (int)(sr * 0.4f));
-        revBuf = new float[revBufLen];
-        revBufW = 0;
+        // Reverse: 8 × ~50 ms segments for true reverse playback.
+        revSegLen = Math.max(256, sr / 20);
+        revSegBuf = new float[REV_N_SEGS * revSegLen];
+        revWriteSeg = 0;
+        revWritePos = 0;
+        revReadSeg  = -1;
+        revReadPos  = 0;
+        revFade     = 0f;
     }
 
     private static int scaleLen(int dattorroLen, int sr) {
@@ -324,8 +395,30 @@ public final class Crystal
 
     @Override public void process(float[] input, float[] output) {
         final int n = Math.min(input.length, output.length);
-        final int   preLen     = Math.max(1, (int)(predelay * sampleRate));
-        final float decayCoef  = 0.25f + 0.7f * decay;
+        // ── Tempo-sync resolution of START + END.
+        // When syncMode is on, the predelay/decay knobs are reinterpreted
+        // as musical-division selectors against the manual `tempoBpm`.
+        // Otherwise they're plain ms / 0..1.
+        float effectivePredelay = predelay;
+        float effectiveDecay    = decay;
+        if (syncMode >= 0.5f && tempoBpm > 1f) {
+            float beatSec = 60f / tempoBpm;
+            // START divisions: 1/64, 1/32, 1/16, 1/8, 1/4 of a beat.
+            int preIdx = Math.min(4, (int)(predelay / 0.3f * 5f));
+            float[] preDiv = { 1f/64, 1f/32, 1f/16, 1f/8, 1f/4 };
+            effectivePredelay = preDiv[preIdx] * beatSec;
+            // END divisions: 1/4, 1/2, 1, 2, 4 beats.
+            int decIdx = Math.min(4, (int)(decay * 5f));
+            float[] decDiv = { 0.25f, 0.5f, 1f, 2f, 4f };
+            float decSec = decDiv[decIdx] * beatSec;
+            // Map seconds → decayCoef so RT60 ≈ decSec at typical
+            // damping. Reverse from `RT60 ≈ -3*log(coef) * delay`
+            // → coef ≈ exp(-3 * meanDelay / decSec / SR).
+            float meanDelayS = scaleLen(TANK_LENS[1], sampleRate) / (float) sampleRate;
+            effectiveDecay = Math.min(1f, (float) Math.exp(-3.0 * meanDelayS / decSec));
+        }
+        final int   preLen     = Math.max(1, (int)(effectivePredelay * sampleRate));
+        final float decayCoef  = 0.25f + 0.7f * effectiveDecay;
         final float feedbackG  = freeze >= 0.5f ? 1.00f : decayCoef;
         final float dampCutoff = 0.10f + (1f - damping) * 0.80f;
         // Dual-filter damping: same `damping` knob drives both ends.
@@ -336,20 +429,36 @@ public final class Crystal
         final float modDepth   = modulation * 32f;
         final float lfoInc     = (float)(2.0 * Math.PI * 0.7f / sampleRate);
         final float shimAmt    = shimmer * 0.45f;
-        // SHIMMER multiplier — Crystalline lets you pick 2× / 4× / 6×
-        // which corresponds to +1 / +2 / +3 octaves.  shimmerOct is a
-        // 0..1 continuous knob, mapped to discrete octave buckets.
-        final float shimReadRate = shimmerOct < 0.33f ? 2.0f
-                                  : shimmerOct < 0.67f ? 4.0f : 6.0f;
-        // SHIMMER cutoff — HP filter coefficient on the shimmer feed,
-        // so only HF gets pitch-shifted.  At shimCut=1 the HP corner
-        // sits around ~4 kHz; at 0 it's effectively bypassed.
+        // SHIMMER multiplier: 2× / 4× / 6×.  In Octave mode this is
+        // the pitch-shift read rate (+1/+2/+3 octaves).  In HF Decay
+        // mode this is the DECAY multiplier — HF dies away that many
+        // times slower than the main spectrum.
+        final float shimMul = shimmerOct < 0.33f ? 2.0f
+                              : shimmerOct < 0.67f ? 4.0f : 6.0f;
+        // SHIMMER cutoff — HP filter coefficient on the shimmer feed.
+        // At shimmerCut=1 the corner sits around ~4 kHz; at 0 mostly
+        // bypassed.  Same coef used in both modes (defines where HF
+        // begins for shimmer purposes).
         final float shimHpCoef = 0.0008f + shimmerCut * 0.45f;
+        // HF Decay mode flag — 0 = HF Decay (Crystalline), 1 = Octave.
+        final boolean shimHfDecay = shimmerMode < 0.5f;
+        // HF Decay feedback coef: tank's main feedback is `feedbackG`.
+        // The HF band gets a separate feedback whose *effective decay*
+        // is shimMul times longer.  In ring-loop terms that's
+        // `pow(feedbackG, 1/shimMul)` — a coef closer to 1 → longer
+        // tail.  Clamped just below 1 for stability.
+        float hfDecayG = (float) Math.pow(feedbackG, 1.0 / shimMul);
+        if (hfDecayG > 0.999f) hfDecayG = 0.999f;
         final float toneTilt   = tone;
         final float duckAmt    = duck;
         final float wetMix     = mix;
         final float dryMix     = 1f - mix;
         final float gateLin    = (float) Math.pow(10.0, gateDb / 20.0);
+        // Gate release coefficient — user-controlled 5..500 ms.
+        // Attack stays fast (~20 ms) for snappy openings.
+        final float gateAttackCoef  = 1f - (float) Math.exp(-1.0 / (sampleRate * 0.020));
+        final float gateReleaseCoef = 1f - (float) Math.exp(
+                -1.0 / Math.max(1, sampleRate * (gateReleaseMs / 1000.0)));
         final float sizeScale = 0.4f + 0.6f * size;
         // NEW Crystalline params:
         final float sparkleHpCoef = 0.45f;          // ~3 kHz HP for sparkle tap
@@ -361,15 +470,33 @@ public final class Crystal
         // Sides: HP cutoff on stereo S channel — at 1 the cutoff is
         // around 500 Hz, at 0 essentially flat.
         final float sidesCoef     = 0.005f + sides * 0.18f;
-        // Smoothing: peaking biquad at 2.5 kHz with negative gain.
-        final float smoothCoefs[] = smoothing > 0.001f
-                ? peakingBiquad(2500f, 1.2f, -smoothing * 9f, sampleRate)
-                : null;
+        // Smoothing: pre-compute coef sets for all 4 bands.  Skip
+        // entirely when smoothing is essentially off (avoids running
+        // 4 biquads per sample for a no-op).
+        final float[][] smoothBands;
+        if (smoothing > 0.001f) {
+            smoothBands = new float[SMOOTH_BANDS][];
+            for (int b = 0; b < SMOOTH_BANDS; b++) {
+                float gainDb = -smoothing * 9f * SMOOTH_WEIGHTS[b];
+                smoothBands[b] = peakingBiquad(SMOOTH_FREQS[b], SMOOTH_QS[b],
+                        gainDb, sampleRate);
+            }
+        } else {
+            smoothBands = null;
+        }
         // Warp: bipolar transient gain. +warp boosts attacks, -warp
         // softens them.  Computed per-sample below.
         final float warpAmt       = warp;
         final float revOn         = rev >= 0.5f ? 1f : 0f;
         final boolean revActive   = revOn > 0.5f;
+        // FREEZE input-gate target: when freeze is ON, ramp the
+        // input feed to 0 over ~10 ms so the frozen snapshot isn't
+        // contaminated by new audio.  When freeze releases, ramp
+        // back to 1 over the same window.
+        final float freezeGateTarget = freeze >= 0.5f ? 0f : 1f;
+        final float freezeGateCoef   = 1f - (float) Math.exp(-1.0 / (sampleRate * 0.010));
+        // Tank feedback soft-limit threshold (above this, tanh).
+        final float SOFT_LIMIT = 0.95f;
         final int d1aLen = (int)(scaleLen(TANK_LENS[1], sampleRate) * sizeScale);
         final int d2aLen = (int)(scaleLen(TANK_LENS[3], sampleRate) * sizeScale);
         final int d1bLen = (int)(scaleLen(TANK_LENS[6], sampleRate) * sizeScale);
@@ -391,6 +518,10 @@ public final class Crystal
         float _shimReadA = shimReadA, _shimReadB = shimReadB;
         int _shimW = shimW;
         float _sparkleHP_a = sparkleHP_a, _sparkleHP_b = sparkleHP_b;
+        float _hfDecayState_a = hfDecayState_a, _hfDecayState_b = hfDecayState_b;
+        float _hfDecayMem_a = hfDecayMem_a, _hfDecayMem_b = hfDecayMem_b;
+        float _freezeGate = freezeInputGate;
+        float _dcBlockState = dcBlockState;
         float _sidesHP = sidesHP;
         float _warpFastEnv = warpFastEnv, _warpSlowEnv = warpSlowEnv;
         final float warpFastCoef = 1f - (float) Math.exp(-1.0 / (sampleRate * 0.0007));
@@ -429,7 +560,25 @@ public final class Crystal
             if (preR < 0) preR += preBuf.length;
             float preOut = preBuf[preR];
             preW++; if (preW >= preBuf.length) preW = 0;
-            float shimOut = shimRead(shimBuf, _shimReadA, _shimReadB, shimGrainLen, shimGrainPos);
+            // FREEZE input gate ramp — when freeze flips on, the gate
+            // smoothly closes (10 ms) so the snapshot isn't tainted.
+            _freezeGate += freezeGateCoef * (freezeGateTarget - _freezeGate);
+            preOut *= _freezeGate;
+            // ── SHIMMER feed into tank input.  Two modes:
+            //   HF Decay (default, Crystalline) → HF band fed back with
+            //   its own longer decay coefficient via per-tank state.
+            //   Octave (granular pitch shift) → existing implementation.
+            float shimOut;
+            if (shimHfDecay) {
+                // HF Decay mode: feed back HF band of both tanks with a
+                // slower-decaying loop. The state itself is updated in
+                // the per-tank block below (just before the AP stages),
+                // so here we just SUM the existing HF-loop state from
+                // both tanks for the input mix.
+                shimOut = (_hfDecayState_a + _hfDecayState_b) * 0.5f;
+            } else {
+                shimOut = shimRead(shimBuf, _shimReadA, _shimReadB, shimGrainLen, shimGrainPos);
+            }
             float tankIn = preOut + shimOut * shimAmt;
             // ── RESOLUTION: actual TOPOLOGY change, not just gain.
             // Low RES = 2 allpasses (basic, colored, lower CPU
@@ -475,12 +624,25 @@ public final class Crystal
             _damp_a += dampCutoff * (aMid - _damp_a);
             _dampHP_a += dampHpCoef * (_damp_a - _dampHP_a);
             float aDamped = _damp_a - _dampHP_a * damping;
+            // HF Decay shimmer (per-tank): extract the HF band via a
+            // 1-pole HP and recirculate it with its own decay
+            // coefficient closer to 1 → HF dies out shimMul times
+            // slower than the main tank.
+            if (shimHfDecay) {
+                _hfDecayMem_a += shimHpCoef * (aMid - _hfDecayMem_a);
+                float hfInA = aMid - _hfDecayMem_a;
+                _hfDecayState_a = _hfDecayState_a * hfDecayG + hfInA * (1f - hfDecayG);
+            }
             aDamped = ap(aDamped, _ap_a, _ap_a.length, ap_a_w, 0.5f);
             ap_a_w = (ap_a_w + 1) % _ap_a.length;
             _d2_a[d2_a_w] = aDamped;
             int d2arIdx = d2_a_w - d2aLen;
             if (d2arIdx < 0) d2arIdx += _d2_a.length;
             _fb_a = _d2_a[d2arIdx];
+            // Soft limit feedback so freeze (feedbackG=1) can't drift
+            // to NaN over long holds.
+            if (_fb_a >  SOFT_LIMIT) _fb_a = (float) Math.tanh(_fb_a);
+            if (_fb_a < -SOFT_LIMIT) _fb_a = (float) Math.tanh(_fb_a);
             d2_a_w = (d2_a_w + 1) % _d2_a.length;
             _sparkleHP_b += sparkleHpCoef * (_fb_a - _sparkleHP_b);
             float fbAwithSparkle = _fb_a + (_fb_a - _sparkleHP_b) * sparkleAmt;
@@ -495,12 +657,19 @@ public final class Crystal
             _damp_b += dampCutoff * (bMid - _damp_b);
             _dampHP_b += dampHpCoef * (_damp_b - _dampHP_b);
             float bDamped = _damp_b - _dampHP_b * damping;
+            if (shimHfDecay) {
+                _hfDecayMem_b += shimHpCoef * (bMid - _hfDecayMem_b);
+                float hfInB = bMid - _hfDecayMem_b;
+                _hfDecayState_b = _hfDecayState_b * hfDecayG + hfInB * (1f - hfDecayG);
+            }
             bDamped = ap(bDamped, _ap_b, _ap_b.length, ap_b_w, 0.5f);
             ap_b_w = (ap_b_w + 1) % _ap_b.length;
             _d2_b[d2_b_w] = bDamped;
             int d2brIdx = d2_b_w - d2bLen;
             if (d2brIdx < 0) d2brIdx += _d2_b.length;
             _fb_b = _d2_b[d2brIdx];
+            if (_fb_b >  SOFT_LIMIT) _fb_b = (float) Math.tanh(_fb_b);
+            if (_fb_b < -SOFT_LIMIT) _fb_b = (float) Math.tanh(_fb_b);
             d2_b_w = (d2_b_w + 1) % _d2_b.length;
             float wetL = readTap(_d1_a, d1_a_w, scaleLen(TANK_LENS[2], sampleRate) / 3)
                        + readTap(_ap_a, ap_a_w, scaleLen(TANK_LENS[3], sampleRate) / 4)
@@ -509,20 +678,19 @@ public final class Crystal
                        + readTap(_ap_b, ap_b_w, scaleLen(TANK_LENS[8], sampleRate) / 4)
                        - readTap(_d2_a, d2_a_w, scaleLen(TANK_LENS[3], sampleRate) / 2);
             wetL *= 0.18f; wetR *= 0.18f;
-            // SHIMMER cutoff: HP filter on the sum before it goes into
-            // the pitch-shifter ring — so the +octave halo is built
-            // from high-frequency content only (Crystalline behaviour).
-            float wetMono = (wetL + wetR) * 0.5f;
-            shimHP += shimHpCoef * (wetMono - shimHP);
-            float shimIn = wetMono - shimHP * shimmerCut;
-            shimBuf[_shimW] = shimIn;
-            _shimW = (_shimW + 1) % shimBufLen;
-            // SHIMMER multiplier: read rate = 2× / 4× / 6× → +1 / +2 /
-            // +3 octaves shifted feedback.
-            _shimReadA += shimReadRate; _shimReadB += shimReadRate;
-            if (_shimReadA >= shimBufLen) _shimReadA -= shimBufLen;
-            if (_shimReadB >= shimBufLen) _shimReadB -= shimBufLen;
-            shimGrainPos = (shimGrainPos + 1) % shimGrainLen;
+            // OCTAVE mode shimmer ring update — only when active so
+            // the HF Decay path doesn't pay the cost.
+            if (!shimHfDecay) {
+                float wetMono = (wetL + wetR) * 0.5f;
+                shimHP += shimHpCoef * (wetMono - shimHP);
+                float shimIn = wetMono - shimHP * shimmerCut;
+                shimBuf[_shimW] = shimIn;
+                _shimW = (_shimW + 1) % shimBufLen;
+                _shimReadA += shimMul; _shimReadB += shimMul;
+                if (_shimReadA >= shimBufLen) _shimReadA -= shimBufLen;
+                if (_shimReadB >= shimBufLen) _shimReadB -= shimBufLen;
+                shimGrainPos = (shimGrainPos + 1) % shimGrainLen;
+            }
             float mid  = (wetL + wetR) * 0.5f;
             float side = (wetL - wetR) * 0.5f;
             // ── SIDES: 1-pole HP on the side channel — strips low-end
@@ -536,41 +704,94 @@ public final class Crystal
             wetR = mid - side;
             float wet = (wetL + wetR) * 0.5f;
 
-            // ── SMOOTHING: peaking biquad with negative gain at the
-            // algorithm's characteristic resonance band (~2.5 kHz)
-            // tames the metallic ring that algorithmic reverbs can
-            // get at high decay times.
-            if (smoothCoefs != null) {
-                float wetIn = wet;
-                wet = smoothCoefs[0] * wetIn
-                    + smoothCoefs[1] * smoothState[0]
-                    + smoothCoefs[2] * smoothState[1]
-                    - smoothCoefs[3] * smoothState[2]
-                    - smoothCoefs[4] * smoothState[3];
-                smoothState[1] = smoothState[0]; smoothState[0] = wetIn;
-                smoothState[3] = smoothState[2]; smoothState[2] = wet;
+            // ── SMOOTHING: 4-band cascade of peaking biquads with
+            // negative gain. Each band targets a well-known resonance
+            // zone of Dattorro-style tanks (900 / 1.8k / 2.8k / 4.5k).
+            // The 2.8 kHz band carries the strongest cut as that's
+            // where the algorithm's primary ring sits.
+            if (smoothBands != null) {
+                for (int b = 0; b < SMOOTH_BANDS; b++) {
+                    float[] c = smoothBands[b];
+                    int s = b * 4;
+                    float wetIn = wet;
+                    wet = c[0] * wetIn
+                        + c[1] * smoothState[s]
+                        + c[2] * smoothState[s + 1]
+                        - c[3] * smoothState[s + 2]
+                        - c[4] * smoothState[s + 3];
+                    smoothState[s + 1] = smoothState[s];     smoothState[s]     = wetIn;
+                    smoothState[s + 3] = smoothState[s + 2]; smoothState[s + 2] = wet;
+                }
             }
 
             _toneLP += 0.10f * (wet - _toneLP);
             float wetHP = wet - _toneLP;
             wet = wet + toneTilt * (wetHP - _toneLP) * 0.5f;
 
-            // ── REVERSE: when ON, read from the wet ring buffer
-            // BACKWARDS — produces the classic "pre-attack swell" sound
-            // (early Twin Peaks / shoegaze).  Off → pass current sample.
-            revBuf[revBufW] = wet;
-            if (revActive) {
-                int revR = revBufW - revBufLen + 1;
-                if (revR < 0) revR += revBufLen;
-                wet = revBuf[revR];   // oldest sample = current output
+            // ── REVERSE: true segmented reverse playback.  Always
+            // capture the latest wet into the active segment, regardless
+            // of whether reverse is on.  When ON, play back the most
+            // recently FINISHED segment with the read pointer counting
+            // DOWN from segLen-1 to 0, then advance to the next-most-
+            // recent segment.  Hann crossfade between adjacent segments
+            // covers the seam.
+            int writeIdx = revWriteSeg * revSegLen + revWritePos;
+            revSegBuf[writeIdx] = wet;
+            revWritePos++;
+            if (revWritePos >= revSegLen) {
+                revWritePos = 0;
+                // Segment just finished — make it the next read target
+                // when reverse is on.  Older segments fall off
+                // naturally as the write head laps them.
+                int finished = revWriteSeg;
+                revWriteSeg = (revWriteSeg + 1) % REV_N_SEGS;
+                if (revActive) {
+                    // Hand the just-finished segment to playback. If
+                    // there's already an active segment playing, the
+                    // crossfade between it and the new one is driven
+                    // by `revFade` (linearly ramps over the segment).
+                    revReadSeg = finished;
+                    revReadPos = revSegLen - 1;
+                    revFade = 0f;
+                }
             }
-            revBufW++; if (revBufW >= revBufLen) revBufW = 0;
+            if (revActive && revReadSeg >= 0) {
+                int readIdx = revReadSeg * revSegLen + revReadPos;
+                float revSample = revSegBuf[readIdx];
+                // Hann crossfade ramps over the segment so adjacent
+                // reversed segments tile seamlessly.
+                float fadePos = (revSegLen - 1 - revReadPos) / (float) revSegLen;
+                float hann = 0.5f - 0.5f * (float) Math.cos(2.0 * Math.PI * fadePos);
+                wet = revSample * hann + wet * (1f - hann) * 0.15f;
+                revReadPos--;
+                if (revReadPos < 0) {
+                    // Move to the previous segment (one older) — keeps
+                    // the reverse stream flowing until a fresh one is
+                    // captured by the writer.
+                    int prev = (revReadSeg - 1 + REV_N_SEGS) % REV_N_SEGS;
+                    if (prev != revWriteSeg) {
+                        revReadSeg = prev;
+                        revReadPos = revSegLen - 1;
+                    } else {
+                        // Out of old segments — wait for the writer to
+                        // hand us a new one.  In the meantime hold the
+                        // last sample so the stream doesn't drop out.
+                        revReadPos = 0;
+                    }
+                }
+            }
 
             float duckGain = 1f - duckAmt * Math.min(1f, _duckEnv * 6f);
             wet *= duckGain;
+            // DC blocker on the wet path — prevents the infinite
+            // feedback loop from accumulating any DC offset during
+            // long FREEZE holds.  Cutoff ~5 Hz, lifetime in the loop
+            // is forever so even tiny DC bias would otherwise build.
+            _dcBlockState += 0.0007f * (wet - _dcBlockState);
+            wet -= _dcBlockState;
             float wetAbs = wet < 0 ? -wet : wet;
             float gateTarget = wetAbs > gateLin ? 1f : 0f;
-            float gateCoef = gateTarget > _gateGain ? 0.05f : 0.0008f;
+            float gateCoef = gateTarget > _gateGain ? gateAttackCoef : gateReleaseCoef;
             _gateGain += gateCoef * (gateTarget - _gateGain);
             wet *= _gateGain;
             output[i] = dry * dryMix + wet * wetMix;
@@ -591,6 +812,10 @@ public final class Crystal
         shimReadA = _shimReadA; shimReadB = _shimReadB;
         shimW = _shimW;
         sparkleHP_a = _sparkleHP_a; sparkleHP_b = _sparkleHP_b;
+        hfDecayState_a = _hfDecayState_a; hfDecayState_b = _hfDecayState_b;
+        hfDecayMem_a = _hfDecayMem_a; hfDecayMem_b = _hfDecayMem_b;
+        freezeInputGate = _freezeGate;
+        dcBlockState = _dcBlockState;
         sidesHP = _sidesHP;
         warpFastEnv = _warpFastEnv; warpSlowEnv = _warpSlowEnv;
     }

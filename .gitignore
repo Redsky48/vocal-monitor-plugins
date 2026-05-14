@@ -14,6 +14,11 @@ build/
 # manually (`git add -f tools/test-app/test-input.wav`).
 tools/test-app/test-input.wav
 tools/test-app/test-output.wav
+# MeasureIR.java outputs (regenerated on every run).
+tools/test-app/ir.wav
+tools/test-app/ir-spectrogram.png
+tools/test-app/ir-decay.png
+tools/test-app/ir-stats.json
 tools/test-app/test-original.png
 tools/test-app/test-processed.png
 tools/test-app/test-spec-original.png
