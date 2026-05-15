@@ -1,8 +1,35 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-14T22:24:49.720Z",
+  "generatedAt": "2026-05-15T22:13:13.125Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
+    {
+      "id": "balloon-blow",
+      "name": "Balloon Blow",
+      "author": "Vocal Monitor",
+      "category": "Creative",
+      "description": "Voice-driven balloon game. Sustain a note (long 'aaaah') and the balloon inflates; stay loud too long and it pops with confetti. Encourages controlled phonation and breath support — great for kids learning to support a sung tone.",
+      "version": "1.0.0",
+      "tags": [
+        "creative",
+        "kids",
+        "game",
+        "balloon",
+        "breath",
+        "fullscreen",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/creative/balloon-blow/balloon-blow.dex",
+      "sizeBytes": 5984,
+      "className": "com.vocalmonitor.plugin.community.BalloonBlow",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 320
+      },
+      "fullscreen": true
+    },
     {
       "id": "beat-repeat",
       "name": "Beat Repeat",
@@ -120,6 +147,33 @@
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/creative/reverse-looper/reverse-looper.dex",
       "sizeBytes": 3348,
       "className": "com.vocalmonitor.plugin.community.ReverseLooper"
+    },
+    {
+      "id": "rocket-pitch",
+      "name": "Rocket Pitch",
+      "author": "Vocal Monitor",
+      "category": "Creative",
+      "description": "Pitch-controlled rocket game. Sing higher and your rocket flies up; lower and it descends. Volume controls flame size. Use it to explore vocal range — kids love seeing the rocket follow their voice through scales and slides.",
+      "version": "1.0.0",
+      "tags": [
+        "creative",
+        "kids",
+        "game",
+        "pitch",
+        "rocket",
+        "fullscreen",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/creative/rocket-pitch/rocket-pitch.dex",
+      "sizeBytes": 6024,
+      "className": "com.vocalmonitor.plugin.community.RocketPitch",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 320
+      },
+      "fullscreen": true
     },
     {
       "id": "vocal-profile",
@@ -1482,6 +1536,111 @@
       "className": "com.vocalmonitor.plugin.community.SpringReverb"
     },
     {
+      "id": "breath-hold",
+      "name": "Breath Hold",
+      "author": "Vocal Monitor",
+      "category": "Training",
+      "description": "Sustain a tone as long as you can. The stopwatch starts when you sing, stops when you go silent for half a second, and remembers your top three times. Trains breath support and phonation endurance — fun for kids who like beating their own score.",
+      "version": "1.0.0",
+      "tags": [
+        "training",
+        "breath",
+        "endurance",
+        "kids",
+        "fullscreen",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/breath-hold/breath-hold.dex",
+      "sizeBytes": 4700,
+      "className": "com.vocalmonitor.plugin.community.BreathHold",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 280
+      },
+      "fullscreen": true
+    },
+    {
+      "id": "pitch-arrow",
+      "name": "Pitch Arrow",
+      "author": "Vocal Monitor",
+      "category": "Training",
+      "description": "Vocal-training helper. Pick a target note and the plugin shows a giant up/down arrow telling you which way to slide your pitch to hit it. Arrow turns green when you're within ±20 cents. Designed for kids and beginners learning to control pitch.",
+      "version": "1.0.0",
+      "tags": [
+        "training",
+        "pitch",
+        "helper",
+        "kids",
+        "beginner",
+        "fullscreen",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/pitch-arrow/pitch-arrow.dex",
+      "sizeBytes": 6252,
+      "className": "com.vocalmonitor.plugin.community.PitchArrow",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 320
+      },
+      "fullscreen": true
+    },
+    {
+      "id": "scale-runner",
+      "name": "Scale Runner",
+      "author": "Vocal Monitor",
+      "category": "Training",
+      "description": "Walks you up and down a C major scale, one note at a time. Each note plays as a reference tone for ~2 seconds; sing it back and you earn a tick. Repeats forever. Great for kids drilling note-by-note pitch matching.",
+      "version": "1.0.0",
+      "tags": [
+        "training",
+        "scale",
+        "pitch",
+        "kids",
+        "fullscreen",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/scale-runner/scale-runner.dex",
+      "sizeBytes": 7052,
+      "className": "com.vocalmonitor.plugin.community.ScaleRunner",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 320
+      },
+      "fullscreen": true
+    },
+    {
+      "id": "target-tone",
+      "name": "Target Tone",
+      "author": "Vocal Monitor",
+      "category": "Training",
+      "description": "Plays a steady reference tone you sing along with. Shows your pitch vs the target as a horizontal needle that swings left when you're flat and right when you're sharp — like a guitar tuner, but for voice training.",
+      "version": "1.0.0",
+      "tags": [
+        "training",
+        "tuner",
+        "pitch",
+        "reference",
+        "fullscreen",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/target-tone/target-tone.dex",
+      "sizeBytes": 6300,
+      "className": "com.vocalmonitor.plugin.community.TargetTone",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 280
+      },
+      "fullscreen": true
+    },
+    {
       "id": "glow-meter",
       "name": "Glow Meter",
       "author": "Vocal Monitor",
@@ -1883,6 +2042,26 @@
       ]
     },
     {
+      "id": "echo-cave",
+      "name": "Echo Cave",
+      "author": "Vocal Monitor",
+      "category": "Voice FX",
+      "description": "Long echo cave for kids — shout into it and hear yourself bounce back from far away. Feedback knob controls how many echoes; delay sets how far the cave goes (30 ms = closet, 2 s = mountain canyon).",
+      "version": "1.0.0",
+      "tags": [
+        "voice",
+        "kids",
+        "echo",
+        "delay",
+        "fun",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/voice-fx/echo-cave/echo-cave.dex",
+      "sizeBytes": 2620,
+      "className": "com.vocalmonitor.plugin.community.EchoCave"
+    },
+    {
       "id": "megaphone",
       "name": "Megaphone",
       "author": "Vocal Monitor",
@@ -1900,6 +2079,46 @@
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/voice-fx/megaphone/megaphone.dex",
       "sizeBytes": 4608,
       "className": "com.vocalmonitor.plugin.community.Megaphone"
+    },
+    {
+      "id": "monster-voice",
+      "name": "Monster Voice",
+      "author": "Vocal Monitor",
+      "category": "Voice FX",
+      "description": "Turn into a friendly monster — 4-pole low-pass darkens the voice, soft-clip drive adds a growl, and an envelope-modulated 60 Hz sub-oscillator gives it body-shaking rumble. Sing or growl — they both work.",
+      "version": "1.0.0",
+      "tags": [
+        "voice",
+        "kids",
+        "monster",
+        "growl",
+        "fun",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/voice-fx/monster-voice/monster-voice.dex",
+      "sizeBytes": 3348,
+      "className": "com.vocalmonitor.plugin.community.MonsterVoice"
+    },
+    {
+      "id": "robot-voice",
+      "name": "Robot Voice",
+      "author": "Vocal Monitor",
+      "category": "Voice FX",
+      "description": "Ring-modulator robot voice for kids. Sing into it and you become a friendly robot. Tweak the carrier knob between 40 Hz (deep droid) and 800 Hz (squeaky satellite-bot).",
+      "version": "1.0.0",
+      "tags": [
+        "voice",
+        "kids",
+        "robot",
+        "ring-mod",
+        "fun",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/voice-fx/robot-voice/robot-voice.dex",
+      "sizeBytes": 2808,
+      "className": "com.vocalmonitor.plugin.community.RobotVoice"
     },
     {
       "id": "telephone",

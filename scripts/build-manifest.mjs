@@ -100,6 +100,9 @@ async function readPlugin(categoryDir, pluginDir, cfg) {
   if (typeof meta.ui_kind === 'string') entry.ui_kind = meta.ui_kind;
   if (meta.ui && typeof meta.ui === 'object') entry.ui = meta.ui;
   if (Array.isArray(meta.streams)) entry.streams = meta.streams;
+  // Hosts that support fullscreen visualisation (DAW, future slim
+  // "expand" mode) read this flag to add a fullscreen action.
+  if (meta.fullscreen === true) entry.fullscreen = true;
   // Forward author-shipped presets verbatim. The Android app's
   // JsPluginLibrary parses the same shape: `[{name, description?, params}]`.
   // Validate lightly so a malformed presets block doesn't fail the build
