@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-14T22:09:08.997Z",
+  "generatedAt": "2026-05-14T22:24:49.720Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -76,6 +76,34 @@
       "className": "com.vocalmonitor.plugin.community.GranularCloud"
     },
     {
+      "id": "midi-keyboard",
+      "name": "MIDI Keyboard",
+      "author": "Vocal Monitor",
+      "category": "Creative",
+      "description": "On-canvas piano keyboard that generates glottal-pulse excitation (Rosenberg / LF-style pulse train) at the played pitches. Polyphonic up to 6 voices. Audio output is the raw excitation - feed it into voice-instrument with a captured vocal-profile and it becomes a playable vocal synth.",
+      "version": "1.0.0",
+      "tags": [
+        "creative",
+        "voice-instrument",
+        "midi",
+        "keyboard",
+        "synth",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/creative/midi-keyboard/midi-keyboard.dex",
+      "sizeBytes": 9144,
+      "className": "com.vocalmonitor.plugin.community.MidiKeyboard",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 200
+      },
+      "streams": [
+        "waveform"
+      ]
+    },
+    {
       "id": "reverse-looper",
       "name": "Reverse Looper",
       "author": "Vocal Monitor",
@@ -92,6 +120,62 @@
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/creative/reverse-looper/reverse-looper.dex",
       "sizeBytes": 3348,
       "className": "com.vocalmonitor.plugin.community.ReverseLooper"
+    },
+    {
+      "id": "vocal-profile",
+      "name": "Vocal Profile (Capture)",
+      "author": "Vocal Monitor",
+      "category": "Creative",
+      "description": "Captures your vocal-tract LPC envelope across your sung range and stores it in a shared profile that voice-instrument can resynthesise with a MIDI keyboard. Sing up and down a chromatic scale on a single vowel - the plugin tracks which MIDI notes have been captured + how many samples each has. Pair with midi-keyboard + voice-instrument to play your voice as an instrument.",
+      "version": "1.0.0",
+      "tags": [
+        "creative",
+        "voice-instrument",
+        "lpc",
+        "vocoder",
+        "capture",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/creative/vocal-profile/vocal-profile.dex",
+      "sizeBytes": 9732,
+      "className": "com.vocalmonitor.plugin.community.VocalProfile",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 240
+      },
+      "streams": [
+        "waveform"
+      ]
+    },
+    {
+      "id": "voice-instrument",
+      "name": "Voice Instrument",
+      "author": "Vocal Monitor",
+      "category": "Creative",
+      "description": "LPC re-synthesiser that turns any excitation source into 'your voice'. Reads the vocal-profile captured by the vocal-profile plugin and shapes the input (typically a midi-keyboard glottal pulse) through the matching LPC filter for the input's detected pitch. Plug a piano into your vocal cords.",
+      "version": "1.0.0",
+      "tags": [
+        "creative",
+        "voice-instrument",
+        "lpc",
+        "vocoder",
+        "synth",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/creative/voice-instrument/voice-instrument.dex",
+      "sizeBytes": 8812,
+      "className": "com.vocalmonitor.plugin.community.VoiceInstrument",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 220
+      },
+      "streams": [
+        "waveform"
+      ]
     },
     {
       "id": "dub-delay",

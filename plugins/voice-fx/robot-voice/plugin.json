@@ -1,0 +1,10 @@
+{
+  "id": "robot-voice",
+  "name": "Robot Voice",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Ring-modulator robot voice for kids. Sing into it and you become a friendly robot. Tweak the carrier knob between 40 Hz (deep droid) and 800 Hz (squeaky satellite-bot).",
+  "tags": ["voice", "kids", "robot", "ring-mod", "fun", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.RobotVoice"
+}

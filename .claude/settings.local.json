@@ -40,10 +40,44 @@
       "Bash(node scripts/build-native.mjs vocal-spectrum)",
       "Bash(node scripts/build-native.mjs articulation)",
       "Bash(node scripts/build-native.mjs formant-tracker)",
-      "Bash(node scripts/build-native.mjs pitch-accuracy)"
+      "Bash(node scripts/build-native.mjs pitch-accuracy)",
+      "Bash(node scripts/build-native.mjs midi-keyboard)",
+      "Bash(node scripts/build-native.mjs voice-instrument)",
+      "Read(//c/Users/edza/Desktop/git/vocal monitor slim/app/src/main/kotlin/com/vocalmonitor/ui/**)",
+      "Read(//c/Users/edza/Desktop/git/vocal monitor slim/app/src/main/kotlin/com/vocalmonitor/audio/**)",
+      "Read(//c/Users/edza/Desktop/git/vocal monitor slim/**)",
+      "Read(//c/Users/edza/Desktop/git/vocal monitor slim/gradle/**)",
+      "Read(//c/Users/edza/Desktop/git/vocal monitor slim/gradle/wrapper/**)",
+      "Bash(cp \"C:/Users/edza/Desktop/git/vocal monitor slim/gradle/wrapper/gradle-wrapper.properties\" daw/gradle/wrapper/)",
+      "Bash(cp \"C:/Users/edza/Desktop/git/vocal monitor slim/gradle/wrapper/gradle-wrapper.jar\" daw/gradle/wrapper/)",
+      "Bash(cp \"C:/Users/edza/Desktop/git/vocal monitor slim/gradlew\" daw/)",
+      "Bash(cp \"C:/Users/edza/Desktop/git/vocal monitor slim/gradlew.bat\" daw/)",
+      "Bash(chmod +x daw/gradlew)",
+      "Bash([ -f \"$SLIM_AUDIO/$f.kt\" ])",
+      "Bash(cp 'C:/Users/edza/Desktop/git/vocal monitor slim/app/src/main/kotlin/com/vocalmonitor/audio/__TRACKED_VAR__.kt' daw/src/main/kotlin/com/vocalmonitor/audio/__TRACKED_VAR__.kt)",
+      "Bash(./gradlew build *)",
+      "Bash(./gradlew compileKotlin)",
+      "Read(//c/Users/edza/Desktop/git/**)",
+      "Bash(./gradlew run *)",
+      "Bash(tee ../daw-run.log)",
+      "Bash(echo \"Gradle PID: $!\")",
+      "PowerShell(Get-Process java -ErrorAction SilentlyContinue)",
+      "Bash(echo \"started, PID $!\")",
+      "Bash(echo \"started PID $!\")",
+      "Bash(grep -c \" ok$\" daw-run3.log)",
+      "Bash(cp \"C:/Users/edza/Desktop/git/vocal monitor slim/app/src/main/kotlin/com/vocalmonitor/ui/ChainPresetBar.kt\" shared-ui/src/commonMain/kotlin/com/vocalmonitor/ui/ChainPresetBar.kt)",
+      "Bash(sed -i 's/viewModel: MainViewModel/viewModel: AudioGraphViewModel/' shared-ui/src/commonMain/kotlin/com/vocalmonitor/ui/ChainPresetBar.kt)",
+      "Bash(sed -i 's/viewModel: MainViewModel/viewModel: AudioGraphViewModel/g' shared-ui/src/commonMain/kotlin/com/vocalmonitor/ui/AudioGraphSheet.kt)",
+      "Bash(sed -i 's/MainViewModel,/AudioGraphViewModel,/g' shared-ui/src/commonMain/kotlin/com/vocalmonitor/ui/AudioGraphSheet.kt)",
+      "Bash(./gradlew --console=plain compileKotlin)",
+      "Bash(./gradlew --console=plain :daw:run)",
+      "Bash(./gradlew --console=plain run)",
+      "Bash(tasklist)"
     ],
     "additionalDirectories": [
-      "c:\\Users\\edza\\AppData\\Local\\Temp"
+      "c:\\Users\\edza\\AppData\\Local\\Temp",
+      "C:\\Users\\edza\\Desktop\\git\\vocal monitor slim\\app\\src\\main\\kotlin\\com\\vocalmonitor\\ui\\components",
+      "C:\\Users\\edza\\Desktop\\git\\vocal monitor slim\\app\\src\\main\\kotlin\\com\\vocalmonitor\\ui"
     ]
   }
 }

@@ -1,0 +1,13 @@
+{
+  "id": "target-tone",
+  "name": "Target Tone",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Plays a steady reference tone you sing along with. Shows your pitch vs the target as a horizontal needle that swings left when you're flat and right when you're sharp — like a guitar tuner, but for voice training.",
+  "tags": ["training", "tuner", "pitch", "reference", "fullscreen", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.TargetTone",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "16:9", "min_height_dp": 280 },
+  "fullscreen": true
+}

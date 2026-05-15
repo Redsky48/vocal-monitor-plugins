@@ -1,0 +1,13 @@
+{
+  "id": "balloon-blow",
+  "name": "Balloon Blow",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Voice-driven balloon game. Sustain a note (long 'aaaah') and the balloon inflates; stay loud too long and it pops with confetti. Encourages controlled phonation and breath support — great for kids learning to support a sung tone.",
+  "tags": ["creative", "kids", "game", "balloon", "breath", "fullscreen", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.BalloonBlow",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "16:9", "min_height_dp": 320 },
+  "fullscreen": true
+}

@@ -1,0 +1,10 @@
+{
+  "id": "echo-cave",
+  "name": "Echo Cave",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Long echo cave for kids — shout into it and hear yourself bounce back from far away. Feedback knob controls how many echoes; delay sets how far the cave goes (30 ms = closet, 2 s = mountain canyon).",
+  "tags": ["voice", "kids", "echo", "delay", "fun", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.EchoCave"
+}

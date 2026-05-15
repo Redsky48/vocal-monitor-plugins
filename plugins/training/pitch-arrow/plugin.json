@@ -1,0 +1,13 @@
+{
+  "id": "pitch-arrow",
+  "name": "Pitch Arrow",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Vocal-training helper. Pick a target note and the plugin shows a giant up/down arrow telling you which way to slide your pitch to hit it. Arrow turns green when you're within ±20 cents. Designed for kids and beginners learning to control pitch.",
+  "tags": ["training", "pitch", "helper", "kids", "beginner", "fullscreen", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.PitchArrow",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "16:9", "min_height_dp": 320 },
+  "fullscreen": true
+}

@@ -1,0 +1,13 @@
+{
+  "id": "voice-instrument",
+  "name": "Voice Instrument",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "LPC re-synthesiser that turns any excitation source into 'your voice'. Reads the vocal-profile captured by the vocal-profile plugin and shapes the input (typically a midi-keyboard glottal pulse) through the matching LPC filter for the input's detected pitch. Plug a piano into your vocal cords.",
+  "tags": ["creative", "voice-instrument", "lpc", "vocoder", "synth", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.VoiceInstrument",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "16:9", "min_height_dp": 220 },
+  "streams": ["waveform"]
+}

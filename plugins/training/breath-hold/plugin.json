@@ -1,0 +1,13 @@
+{
+  "id": "breath-hold",
+  "name": "Breath Hold",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Sustain a tone as long as you can. The stopwatch starts when you sing, stops when you go silent for half a second, and remembers your top three times. Trains breath support and phonation endurance — fun for kids who like beating their own score.",
+  "tags": ["training", "breath", "endurance", "kids", "fullscreen", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.BreathHold",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "16:9", "min_height_dp": 280 },
+  "fullscreen": true
+}

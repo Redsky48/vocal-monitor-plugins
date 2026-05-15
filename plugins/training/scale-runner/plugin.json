@@ -1,0 +1,13 @@
+{
+  "id": "scale-runner",
+  "name": "Scale Runner",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Walks you up and down a C major scale, one note at a time. Each note plays as a reference tone for ~2 seconds; sing it back and you earn a tick. Repeats forever. Great for kids drilling note-by-note pitch matching.",
+  "tags": ["training", "scale", "pitch", "kids", "fullscreen", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.ScaleRunner",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "16:9", "min_height_dp": 320 },
+  "fullscreen": true
+}

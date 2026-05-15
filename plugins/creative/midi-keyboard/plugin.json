@@ -1,0 +1,13 @@
+{
+  "id": "midi-keyboard",
+  "name": "MIDI Keyboard",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "On-canvas piano keyboard that generates glottal-pulse excitation (Rosenberg / LF-style pulse train) at the played pitches. Polyphonic up to 6 voices. Audio output is the raw excitation - feed it into voice-instrument with a captured vocal-profile and it becomes a playable vocal synth.",
+  "tags": ["creative", "voice-instrument", "midi", "keyboard", "synth", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.MidiKeyboard",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "16:9", "min_height_dp": 200 },
+  "streams": ["waveform"]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "monster-voice",
+  "name": "Monster Voice",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Turn into a friendly monster — 4-pole low-pass darkens the voice, soft-clip drive adds a growl, and an envelope-modulated 60 Hz sub-oscillator gives it body-shaking rumble. Sing or growl — they both work.",
+  "tags": ["voice", "kids", "monster", "growl", "fun", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.MonsterVoice"
+}
