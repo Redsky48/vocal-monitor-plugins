@@ -3,6 +3,9 @@
     "allow": [
       "Bash(echo \"exit=$?\")",
       "Read(//tmp/**)"
+    ],
+    "additionalDirectories": [
+      "\\tmp"
     ]
   }
 }

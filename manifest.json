@@ -1,35 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-15T22:13:13.125Z",
+  "generatedAt": "2026-05-16T21:22:36.667Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
-    {
-      "id": "balloon-blow",
-      "name": "Balloon Blow",
-      "author": "Vocal Monitor",
-      "category": "Creative",
-      "description": "Voice-driven balloon game. Sustain a note (long 'aaaah') and the balloon inflates; stay loud too long and it pops with confetti. Encourages controlled phonation and breath support — great for kids learning to support a sung tone.",
-      "version": "1.0.0",
-      "tags": [
-        "creative",
-        "kids",
-        "game",
-        "balloon",
-        "breath",
-        "fullscreen",
-        "native"
-      ],
-      "engine": "native",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/creative/balloon-blow/balloon-blow.dex",
-      "sizeBytes": 5984,
-      "className": "com.vocalmonitor.plugin.community.BalloonBlow",
-      "ui_kind": "canvas",
-      "ui": {
-        "aspect": "16:9",
-        "min_height_dp": 320
-      },
-      "fullscreen": true
-    },
     {
       "id": "beat-repeat",
       "name": "Beat Repeat",
@@ -147,33 +120,6 @@
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/creative/reverse-looper/reverse-looper.dex",
       "sizeBytes": 3348,
       "className": "com.vocalmonitor.plugin.community.ReverseLooper"
-    },
-    {
-      "id": "rocket-pitch",
-      "name": "Rocket Pitch",
-      "author": "Vocal Monitor",
-      "category": "Creative",
-      "description": "Pitch-controlled rocket game. Sing higher and your rocket flies up; lower and it descends. Volume controls flame size. Use it to explore vocal range — kids love seeing the rocket follow their voice through scales and slides.",
-      "version": "1.0.0",
-      "tags": [
-        "creative",
-        "kids",
-        "game",
-        "pitch",
-        "rocket",
-        "fullscreen",
-        "native"
-      ],
-      "engine": "native",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/creative/rocket-pitch/rocket-pitch.dex",
-      "sizeBytes": 6024,
-      "className": "com.vocalmonitor.plugin.community.RocketPitch",
-      "ui_kind": "canvas",
-      "ui": {
-        "aspect": "16:9",
-        "min_height_dp": 320
-      },
-      "fullscreen": true
     },
     {
       "id": "vocal-profile",
@@ -519,6 +465,184 @@
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/upward-compressor/upward-compressor.dex",
       "sizeBytes": 3820,
       "className": "com.vocalmonitor.plugin.community.UpwardCompressor"
+    },
+    {
+      "id": "balloon-blow",
+      "name": "Balloon Blow",
+      "author": "Vocal Monitor",
+      "category": "Entertainment",
+      "description": "Voice-driven balloon game. Sustain a note (long 'aaaah') and the balloon inflates; stay loud too long and it pops with confetti. Encourages controlled phonation and breath support — great for kids learning to support a sung tone.",
+      "version": "1.0.0",
+      "tags": [
+        "creative",
+        "kids",
+        "game",
+        "balloon",
+        "breath",
+        "fullscreen",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/balloon-blow/balloon-blow.dex",
+      "sizeBytes": 5984,
+      "className": "com.vocalmonitor.plugin.community.BalloonBlow",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 320
+      },
+      "fullscreen": true
+    },
+    {
+      "id": "character-voice",
+      "name": "Character Voice",
+      "author": "Vocal Monitor",
+      "category": "Entertainment",
+      "description": "Tap a character avatar — Robot, Alien, Princess, Smurf, Monster, or Pirate — and your voice gets transformed into theirs in real time. Each character runs a different chain (pitch shift, ring mod, filters, drive). Kids can switch instantly to find the silliest voice.",
+      "version": "1.0.0",
+      "tags": [
+        "entertainment",
+        "kids",
+        "voice-changer",
+        "characters",
+        "fullscreen",
+        "interactive",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/character-voice/character-voice.dex",
+      "sizeBytes": 11236,
+      "className": "com.vocalmonitor.plugin.community.CharacterVoice",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 360
+      },
+      "fullscreen": true
+    },
+    {
+      "id": "echo-cave",
+      "name": "Echo Cave",
+      "author": "Vocal Monitor",
+      "category": "Entertainment",
+      "description": "Long echo cave for kids — shout into it and hear yourself bounce back from far away. Feedback knob controls how many echoes; delay sets how far the cave goes (30 ms = closet, 2 s = mountain canyon).",
+      "version": "1.0.0",
+      "tags": [
+        "voice",
+        "kids",
+        "echo",
+        "delay",
+        "fun",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/echo-cave/echo-cave.dex",
+      "sizeBytes": 2620,
+      "className": "com.vocalmonitor.plugin.community.EchoCave"
+    },
+    {
+      "id": "megaphone",
+      "name": "Megaphone",
+      "author": "Vocal Monitor",
+      "category": "Entertainment",
+      "description": "Bullhorn / drill-sergeant voice. Steep band-pass + 2 kHz honk resonance + asymmetric soft-clip cone distortion + post-LP to tame the fizz. Drop on shouted vocals or radio-comm chatter.",
+      "version": "1.0.0",
+      "tags": [
+        "voice",
+        "megaphone",
+        "bullhorn",
+        "distortion",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/megaphone/megaphone.dex",
+      "sizeBytes": 4608,
+      "className": "com.vocalmonitor.plugin.community.Megaphone"
+    },
+    {
+      "id": "monster-voice",
+      "name": "Monster Voice",
+      "author": "Vocal Monitor",
+      "category": "Entertainment",
+      "description": "Turn into a friendly monster — 4-pole low-pass darkens the voice, soft-clip drive adds a growl, and an envelope-modulated 60 Hz sub-oscillator gives it body-shaking rumble. Sing or growl — they both work.",
+      "version": "1.0.0",
+      "tags": [
+        "voice",
+        "kids",
+        "monster",
+        "growl",
+        "fun",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/monster-voice/monster-voice.dex",
+      "sizeBytes": 3348,
+      "className": "com.vocalmonitor.plugin.community.MonsterVoice"
+    },
+    {
+      "id": "robot-voice",
+      "name": "Robot Voice",
+      "author": "Vocal Monitor",
+      "category": "Entertainment",
+      "description": "Ring-modulator robot voice for kids. Sing into it and you become a friendly robot. Tweak the carrier knob between 40 Hz (deep droid) and 800 Hz (squeaky satellite-bot).",
+      "version": "1.0.0",
+      "tags": [
+        "voice",
+        "kids",
+        "robot",
+        "ring-mod",
+        "fun",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/robot-voice/robot-voice.dex",
+      "sizeBytes": 2808,
+      "className": "com.vocalmonitor.plugin.community.RobotVoice"
+    },
+    {
+      "id": "rocket-pitch",
+      "name": "Rocket Pitch",
+      "author": "Vocal Monitor",
+      "category": "Entertainment",
+      "description": "Pitch-controlled rocket game. Sing higher and your rocket flies up; lower and it descends. Volume controls flame size. Use it to explore vocal range — kids love seeing the rocket follow their voice through scales and slides.",
+      "version": "1.0.0",
+      "tags": [
+        "creative",
+        "kids",
+        "game",
+        "pitch",
+        "rocket",
+        "fullscreen",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/rocket-pitch/rocket-pitch.dex",
+      "sizeBytes": 6024,
+      "className": "com.vocalmonitor.plugin.community.RocketPitch",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 320
+      },
+      "fullscreen": true
+    },
+    {
+      "id": "telephone",
+      "name": "Telephone",
+      "author": "Vocal Monitor",
+      "category": "Entertainment",
+      "description": "Band-pass 300 Hz–3.4 kHz with a touch of soft codec crunch. Classic 'caller on the other end' effect.",
+      "version": "1.0.0",
+      "tags": [
+        "voice",
+        "filter",
+        "bandpass",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/telephone/telephone.dex",
+      "sizeBytes": 3152,
+      "className": "com.vocalmonitor.plugin.community.Telephone"
     },
     {
       "id": "exciter",
@@ -2040,103 +2164,6 @@
       "streams": [
         "waveform"
       ]
-    },
-    {
-      "id": "echo-cave",
-      "name": "Echo Cave",
-      "author": "Vocal Monitor",
-      "category": "Voice FX",
-      "description": "Long echo cave for kids — shout into it and hear yourself bounce back from far away. Feedback knob controls how many echoes; delay sets how far the cave goes (30 ms = closet, 2 s = mountain canyon).",
-      "version": "1.0.0",
-      "tags": [
-        "voice",
-        "kids",
-        "echo",
-        "delay",
-        "fun",
-        "native"
-      ],
-      "engine": "native",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/voice-fx/echo-cave/echo-cave.dex",
-      "sizeBytes": 2620,
-      "className": "com.vocalmonitor.plugin.community.EchoCave"
-    },
-    {
-      "id": "megaphone",
-      "name": "Megaphone",
-      "author": "Vocal Monitor",
-      "category": "Voice FX",
-      "description": "Bullhorn / drill-sergeant voice. Steep band-pass + 2 kHz honk resonance + asymmetric soft-clip cone distortion + post-LP to tame the fizz. Drop on shouted vocals or radio-comm chatter.",
-      "version": "1.0.0",
-      "tags": [
-        "voice",
-        "megaphone",
-        "bullhorn",
-        "distortion",
-        "native"
-      ],
-      "engine": "native",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/voice-fx/megaphone/megaphone.dex",
-      "sizeBytes": 4608,
-      "className": "com.vocalmonitor.plugin.community.Megaphone"
-    },
-    {
-      "id": "monster-voice",
-      "name": "Monster Voice",
-      "author": "Vocal Monitor",
-      "category": "Voice FX",
-      "description": "Turn into a friendly monster — 4-pole low-pass darkens the voice, soft-clip drive adds a growl, and an envelope-modulated 60 Hz sub-oscillator gives it body-shaking rumble. Sing or growl — they both work.",
-      "version": "1.0.0",
-      "tags": [
-        "voice",
-        "kids",
-        "monster",
-        "growl",
-        "fun",
-        "native"
-      ],
-      "engine": "native",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/voice-fx/monster-voice/monster-voice.dex",
-      "sizeBytes": 3348,
-      "className": "com.vocalmonitor.plugin.community.MonsterVoice"
-    },
-    {
-      "id": "robot-voice",
-      "name": "Robot Voice",
-      "author": "Vocal Monitor",
-      "category": "Voice FX",
-      "description": "Ring-modulator robot voice for kids. Sing into it and you become a friendly robot. Tweak the carrier knob between 40 Hz (deep droid) and 800 Hz (squeaky satellite-bot).",
-      "version": "1.0.0",
-      "tags": [
-        "voice",
-        "kids",
-        "robot",
-        "ring-mod",
-        "fun",
-        "native"
-      ],
-      "engine": "native",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/voice-fx/robot-voice/robot-voice.dex",
-      "sizeBytes": 2808,
-      "className": "com.vocalmonitor.plugin.community.RobotVoice"
-    },
-    {
-      "id": "telephone",
-      "name": "Telephone",
-      "author": "Vocal Monitor",
-      "category": "Voice FX",
-      "description": "Band-pass 300 Hz–3.4 kHz with a touch of soft codec crunch. Classic 'caller on the other end' effect.",
-      "version": "1.0.0",
-      "tags": [
-        "voice",
-        "filter",
-        "bandpass",
-        "native"
-      ],
-      "engine": "native",
-      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/voice-fx/telephone/telephone.dex",
-      "sizeBytes": 3152,
-      "className": "com.vocalmonitor.plugin.community.Telephone"
     }
   ]
 }

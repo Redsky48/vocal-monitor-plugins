@@ -31,6 +31,8 @@ const CATEGORY_LABELS = {
   creative: 'Creative',
   visual: 'Visual',
   'vocal-analysis': 'Vocal Analysis',
+  entertainment: 'Entertainment',
+  training: 'Training',
 };
 
 async function repoConfig() {

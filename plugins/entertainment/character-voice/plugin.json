@@ -1,0 +1,13 @@
+{
+  "id": "character-voice",
+  "name": "Character Voice",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Tap a character avatar — Robot, Alien, Princess, Smurf, Monster, or Pirate — and your voice gets transformed into theirs in real time. Each character runs a different chain (pitch shift, ring mod, filters, drive). Kids can switch instantly to find the silliest voice.",
+  "tags": ["entertainment", "kids", "voice-changer", "characters", "fullscreen", "interactive", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.CharacterVoice",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "16:9", "min_height_dp": 360 },
+  "fullscreen": true
+}

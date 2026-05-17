@@ -65,32 +65,57 @@ class DesktopGraphViewModel(
     override fun newVisualInstance(pluginId: String): VocalMonitorVisualPlugin? =
         pluginEngine.newVisualInstance(pluginId)
 
-    // ── Stable per-node visual-plugin cache ───────────────────
-    // Created lazily on first ask; the audio loop reads a snapshot
-    // each block and feeds samples in via plugin.process().  Lives
-    // on a CHM so the audio thread can iterate without locking.
-    private val visualPluginCache =
-        java.util.concurrent.ConcurrentHashMap<NodeId, VocalMonitorVisualPlugin>()
+    // ── Stable per-node native-plugin cache ───────────────────
+    // Holds ONE instance per Effect node, regardless of whether the
+    // plugin is visual or pure-audio.  The audio loop iterates the
+    // values and calls process() on every block.  Visual plugins are
+    // returned via a downcast to VocalMonitorVisualPlugin so the same
+    // instance backs both the UI canvas and the audio dispatch.
+    //
+    // Live on a CHM so the audio thread can iterate without locking.
+    private val pluginCache =
+        java.util.concurrent.ConcurrentHashMap<NodeId, com.vocalmonitor.plugin.VocalMonitorNativePlugin>()
+    // Track which label produced each cached instance so a relabel
+    // (rare) drops the stale instance.
+    private val pluginCacheLabel =
+        java.util.concurrent.ConcurrentHashMap<NodeId, String>()
 
     override fun visualPluginFor(nodeId: NodeId): VocalMonitorVisualPlugin? {
-        val n = _graph.value.nodes.firstOrNull { it.id == nodeId } ?: return null
-        if (n.kind != com.vocalmonitor.audio.NodeKind.Effect) return null
-        visualPluginCache[nodeId]?.let { return it }
-        val fresh = pluginEngine.newVisualInstance(n.label) ?: return null
-        visualPluginCache[nodeId] = fresh
-        return fresh
+        syncPluginInstances()
+        return pluginCache[nodeId] as? VocalMonitorVisualPlugin
     }
 
-    /** Drop cached plugin instances for nodes that no longer exist
-     *  or whose labels changed (so a relabel re-mints the instance).
-     *  Called after every graph mutation. */
-    private fun pruneVisualPluginCache() {
-        val liveNodes = _graph.value.nodes.associateBy { it.id }
-        visualPluginCache.keys.toList().forEach { id ->
-            val node = liveNodes[id]
-            if (node == null || node.kind != com.vocalmonitor.audio.NodeKind.Effect) {
-                visualPluginCache.remove(id)
+    /**
+     * Make the cache match the current graph: every Effect-kind node
+     * with a non-blank label gets an instantiated plugin (audio or
+     * visual — same class, same instance), instances for vanished
+     * nodes are removed, and a label change forces a fresh instance.
+     *
+     * Cheap when the graph hasn't changed: hashmap reads only.
+     * Reflection happens only on newly added nodes — keep this off
+     * the audio thread.
+     */
+    @Synchronized
+    private fun syncPluginInstances() {
+        val live = _graph.value.nodes
+            .filter { it.kind == com.vocalmonitor.audio.NodeKind.Effect }
+            .associateBy { it.id }
+        // Evict cache entries whose node disappeared or got relabelled.
+        pluginCache.keys.toList().forEach { id ->
+            val n = live[id]
+            val oldLabel = pluginCacheLabel[id]
+            if (n == null || n.label.isBlank() || n.label != oldLabel) {
+                pluginCache.remove(id)
+                pluginCacheLabel.remove(id)
             }
+        }
+        // Add instances for new / relabelled nodes.
+        for ((id, n) in live) {
+            if (n.label.isBlank()) continue
+            if (pluginCache.containsKey(id)) continue
+            val inst = pluginEngine.newInstance(n.label) ?: continue
+            pluginCache[id] = inst
+            pluginCacheLabel[id] = n.label
         }
     }
 
@@ -107,6 +132,7 @@ class DesktopGraphViewModel(
             gridY = 2f,
         )
         _graph.value = g.copy(nodes = g.nodes + node)
+        syncPluginInstances()
     }
 
     override fun addJsPluginToChain(pluginId: String) {
@@ -121,6 +147,7 @@ class DesktopGraphViewModel(
             gridY = 2f,
         )
         _graph.value = g.copy(nodes = g.nodes + node)
+        syncPluginInstances()
     }
 
     // ── Connections ───────────────────────────────────────────
@@ -167,7 +194,7 @@ class DesktopGraphViewModel(
         )
         _expanded.value = _expanded.value - id
         _pinned.value   = _pinned.value - id
-        pruneVisualPluginCache()
+        syncPluginInstances()
     }
 
     override fun duplicateNode(id: NodeId) {
@@ -180,12 +207,14 @@ class DesktopGraphViewModel(
                 gridY = n.gridY + 0.4f,
             ),
         )
+        syncPluginInstances()
     }
 
     override fun resetGraphToDefault() {
         _graph.value = defaultGraph()
         _expanded.value = emptySet()
         _pinned.value = emptySet()
+        syncPluginInstances()
     }
 
     override fun setNodePositions(positions: Map<NodeId, Pair<Float, Float>>) {
@@ -203,6 +232,7 @@ class DesktopGraphViewModel(
         _graph.value = g.copy(
             nodes = g.nodes.map { if (it.id == node.id) node else it },
         )
+        syncPluginInstances()
     }
 
     override fun setNodeBypass(id: NodeId, bypass: Boolean) {
@@ -262,12 +292,13 @@ class DesktopGraphViewModel(
             deviceName = normalised,
             onLevel = { lvl -> _micLevel.value = lvl },
             onSamples = { samples ->
-                // Fan-out to every cached visual-plugin instance.  Each
-                // call updates the plugin's internal state which the
-                // PluginVisualSurface then reads at the next paint frame.
-                // Output buffer is discarded — we're not playing back
-                // anything yet (audio engine routing is Phase C+).
-                val snapshot = visualPluginCache.values
+                // Fan-out to every cached native-plugin instance — both
+                // audio-only effects (robot-voice, echo-cave, …) and
+                // visual plugins (glow-meter, balloon-blow, …).  The
+                // visual ones happen to also paint, but they all read
+                // their state out of process() input.  Output buffer is
+                // discarded for now (no audio playback yet).
+                val snapshot = pluginCache.values
                 if (snapshot.isEmpty()) return@MicLevelMonitor
                 for (p in snapshot) {
                     runCatching { p.process(samples, scratchOut) }
@@ -285,6 +316,10 @@ class DesktopGraphViewModel(
     }
 
     init {
+        // Materialise plugin instances for whatever's already in the
+        // initial graph (e.g. the demo preset).  Without this, the
+        // audio loop would only feed plugins added *after* boot.
+        syncPluginInstances()
         // Boot the always-on audio capture using the system default
         // input device.  Picker can hot-swap to a specific mic later
         // — startMicMonitoring no-ops when device matches.
