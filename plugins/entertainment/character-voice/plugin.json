@@ -9,5 +9,6 @@
   "className": "com.vocalmonitor.plugin.community.CharacterVoice",
   "ui_kind": "canvas",
   "ui": { "aspect": "16:9", "min_height_dp": 360 },
-  "fullscreen": true
+  "fullscreen": true,
+  "streams": ["waveform"]
 }

@@ -56,44 +56,47 @@ public final class RocketPitch implements VocalMonitorVisualPlugin {
 
     @Override
     public void process(float[] input, float[] output) {
+        // Passthrough — slim's live monitor doesn't drive visual state
+        // through here; render() pulls streams["waveform"] instead.
+        int n = Math.min(input.length, output.length);
+        for (int i = 0; i < n; i++) output[i] = input[i];
+    }
+
+    /** Pull live mic chunk and update pitch + rms + rocket position. */
+    private void feedLive(Map<String, float[]> streams) {
+        float[] wave = streams != null ? streams.get("waveform") : null;
+        if (wave == null || wave.length < 16) {
+            smoothedPitchHz += 0.01f * (200f - smoothedPitchHz);
+            return;
+        }
         int upwardZc = 0;
         boolean wasPositive = lpPrev >= 0f;
         double sumSq = 0.0;
-        for (int i = 0; i < input.length; i++) {
-            lpPrev += lpAlpha * (input[i] - lpPrev);
+        for (int i = 0; i < wave.length; i++) {
+            lpPrev += lpAlpha * (wave[i] - lpPrev);
             boolean isPositive = lpPrev >= 0f;
             if (isPositive && !wasPositive) upwardZc++;
             wasPositive = isPositive;
-            sumSq += input[i] * input[i];
-            output[i] = input[i];   // passthrough
+            sumSq += wave[i] * wave[i];
         }
-        float rms = (float) Math.sqrt(sumSq / input.length);
-        // Smoothed RMS for the flame.
-        smoothedRms += 0.20f * (rms - smoothedRms);
-
-        // Only update pitch when the signal is loud enough; otherwise
-        // drift slowly back toward the middle.
+        float rms = (float) Math.sqrt(sumSq / wave.length);
+        smoothedRms += 0.30f * (rms - smoothedRms);
         if (rms > 0.008f) {
-            float duration = input.length / (float) sampleRate;
+            float duration = wave.length / (float) sampleRate;
             float p = upwardZc / duration;
             if (p < 60f)  p = 60f;
             if (p > 800f) p = 800f;
-            smoothedPitchHz += 0.18f * (p - smoothedPitchHz);
+            smoothedPitchHz += 0.25f * (p - smoothedPitchHz);
         } else {
-            // Idle: glide toward neutral 200 Hz.
             smoothedPitchHz += 0.01f * (200f - smoothedPitchHz);
         }
-
-        // Map 80…500 Hz → screen-Y 0.85…0.10 (low pitch = bottom).
         float norm = (smoothedPitchHz - 80f) / (500f - 80f);
         if (norm < 0f) norm = 0f;
         if (norm > 1f) norm = 1f;
         float targetY = 0.85f - norm * 0.75f;
         rocketY += 0.20f * (targetY - rocketY);
-
-        // Flame target: scale smoothedRms (which is ~0..0.5) up to 0..1.
         float flameTarget = Math.min(1f, smoothedRms * 6f);
-        flame += 0.18f * (flameTarget - flame);
+        flame += 0.25f * (flameTarget - flame);
     }
 
     @Override
@@ -104,6 +107,7 @@ public final class RocketPitch implements VocalMonitorVisualPlugin {
         Map<String, Float> params,
         Map<String, float[]> streams
     ) {
+        feedLive(streams);
         float dt = (lastRenderMs < 0) ? 0.016f : Math.min(0.05f, (timeMs - lastRenderMs) / 1000f);
         lastRenderMs = timeMs;
         scroll += dt * 60f;                  // pixels/sec

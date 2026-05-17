@@ -230,6 +230,21 @@ public final class CharacterVoice implements VocalMonitorVisualPlugin {
         }
     }
 
+    /** Update the output-level meter envelope from the live mic ring
+     *  exposed by slim via streams["waveform"].  Cheap RMS-over-chunk. */
+    private void feedLiveMeter(Map<String, float[]> streams) {
+        float[] wave = streams != null ? streams.get("waveform") : null;
+        if (wave == null || wave.length == 0) {
+            envelope *= 0.95f;
+            return;
+        }
+        double sumSq = 0.0;
+        for (int i = 0; i < wave.length; i++) sumSq += wave[i] * wave[i];
+        float rms = (float) Math.sqrt(sumSq / wave.length);
+        if (rms > envelope) envelope += 0.30f * (rms - envelope);
+        else                envelope += 0.06f * (rms - envelope);
+    }
+
     // ── Render ─────────────────────────────────────────────────
     @Override
     public void render(
@@ -239,6 +254,11 @@ public final class CharacterVoice implements VocalMonitorVisualPlugin {
         Map<String, Float> params,
         Map<String, float[]> streams
     ) {
+        // Drive the output-level meter from the live mic ring (slim's
+        // monitor path bypasses process()).  Save-time render still
+        // runs the full transform chain in process(), so this is purely
+        // a UI feedback hook.
+        feedLiveMeter(streams);
         // Sunset-purple gradient background.
         PluginPaint bg = canvas.newPaint();
         bg.setLinearGradient(0, 0, 0, height,

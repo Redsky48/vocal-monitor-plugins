@@ -48,6 +48,7 @@ public final class ScaleRunner implements VocalMonitorVisualPlugin {
     private float stepSec = 2.0f;
     private float toneLevel = 0.12f;
     private final boolean[] ticked = new boolean[N_STEPS];
+    private long lastRenderMs = -1L;
 
     @Override
     public void init(int sr) {
@@ -106,40 +107,56 @@ public final class ScaleRunner implements VocalMonitorVisualPlugin {
 
     @Override
     public void process(float[] input, float[] output) {
+        // Audio effect: emit the reference tone mixed with dry signal.
+        // Pitch detection + step advance live in feedLive(), driven by
+        // the host's wall-clock dt so slim's live monitor behaves the
+        // same as DAW playback.
         final double twoPi    = 2.0 * Math.PI;
         final float t = targetHz();
         final double phaseInc = twoPi * t / sampleRate;
-        int upwardZc = 0;
-        boolean wasPositive = lpPrev >= 0f;
-        double sumSq = 0.0;
-        for (int i = 0; i < input.length; i++) {
-            lpPrev += lpAlpha * (input[i] - lpPrev);
-            boolean isPositive = lpPrev >= 0f;
-            if (isPositive && !wasPositive) upwardZc++;
-            wasPositive = isPositive;
-            sumSq += input[i] * input[i];
+        int n = Math.min(input.length, output.length);
+        for (int i = 0; i < n; i++) {
             float tone = (float) (Math.sin(tonePhase) * toneLevel);
             tonePhase += phaseInc;
             if (tonePhase > twoPi) tonePhase -= twoPi;
             output[i] = (float) Math.tanh(tone + input[i] * 0.6f);
         }
-        float rms = (float) Math.sqrt(sumSq / input.length);
-        smoothedRms += 0.2f * (rms - smoothedRms);
-        if (rms > 0.008f) {
-            float duration = input.length / (float) sampleRate;
-            float p = upwardZc / duration;
-            if (p < 60f)  p = 60f;
-            if (p > 800f) p = 800f;
-            smoothedPitchHz += 0.25f * (p - smoothedPitchHz);
+    }
+
+    private void feedLive(Map<String, float[]> streams, long timeMs) {
+        float dt = (lastRenderMs < 0) ? 0.016f
+            : Math.min(0.10f, (timeMs - lastRenderMs) / 1000f);
+        lastRenderMs = timeMs;
+        final float t = targetHz();
+
+        float[] wave = streams != null ? streams.get("waveform") : null;
+        if (wave != null && wave.length >= 16) {
+            int upwardZc = 0;
+            boolean wasPositive = lpPrev >= 0f;
+            double sumSq = 0.0;
+            for (int i = 0; i < wave.length; i++) {
+                lpPrev += lpAlpha * (wave[i] - lpPrev);
+                boolean isPositive = lpPrev >= 0f;
+                if (isPositive && !wasPositive) upwardZc++;
+                wasPositive = isPositive;
+                sumSq += wave[i] * wave[i];
+            }
+            float rms = (float) Math.sqrt(sumSq / wave.length);
+            smoothedRms += 0.30f * (rms - smoothedRms);
+            if (rms > 0.008f) {
+                float duration = wave.length / (float) sampleRate;
+                float p = upwardZc / duration;
+                if (p < 60f)  p = 60f;
+                if (p > 800f) p = 800f;
+                smoothedPitchHz += 0.30f * (p - smoothedPitchHz);
+            } else {
+                smoothedPitchHz *= 0.85f;
+            }
         } else {
             smoothedPitchHz *= 0.85f;
         }
 
-        // Per-block time accumulators.
-        float dt = input.length / (float) sampleRate;
         stepTime += dt;
-
-        // Match check: ±50 cents and voiced.
         if (smoothedPitchHz > 50f && smoothedRms > 0.005f) {
             float cents = (float)(1200.0 * Math.log(smoothedPitchHz / t) / Math.log(2.0));
             if (Math.abs(cents) <= 50f) matchTime += dt;
@@ -147,15 +164,12 @@ public final class ScaleRunner implements VocalMonitorVisualPlugin {
         if (matchTime > 0.25f) {
             ticked[stepIdx] = true;
         }
-
-        // Advance step.
         if (stepTime >= stepSec) {
             stepTime = 0f;
             matchTime = 0f;
             stepIdx++;
             if (stepIdx >= N_STEPS) {
                 stepIdx = 0;
-                // New lap — clear ticks so the player can score again.
                 for (int i = 0; i < N_STEPS; i++) ticked[i] = false;
             }
         }
@@ -169,6 +183,7 @@ public final class ScaleRunner implements VocalMonitorVisualPlugin {
         Map<String, Float> params,
         Map<String, float[]> streams
     ) {
+        feedLive(streams, timeMs);
         PluginPaint bg = canvas.newPaint();
         bg.setColor(0xFF101418);
         canvas.drawRect(0, 0, width, height, bg);

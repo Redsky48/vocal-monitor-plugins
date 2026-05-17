@@ -9,5 +9,6 @@
   "className": "com.vocalmonitor.plugin.community.RocketPitch",
   "ui_kind": "canvas",
   "ui": { "aspect": "16:9", "min_height_dp": 320 },
-  "fullscreen": true
+  "fullscreen": true,
+  "streams": ["waveform"]
 }

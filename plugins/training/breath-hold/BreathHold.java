@@ -31,6 +31,7 @@ public final class BreathHold implements VocalMonitorVisualPlugin {
     private float lastFinalRun = 0f;
     private final float[] topThree = new float[] { 0f, 0f, 0f };
     private float threshold = 0.012f;   // RMS-ish trigger
+    private long lastRenderMs = -1L;
 
     @Override
     public void init(int sr) {
@@ -41,6 +42,7 @@ public final class BreathHold implements VocalMonitorVisualPlugin {
         runTime = 0f;
         lastFinalRun = 0f;
         topThree[0] = topThree[1] = topThree[2] = 0f;
+        lastRenderMs = -1L;
     }
 
     @Override public String[] parameterNames() {
@@ -56,14 +58,29 @@ public final class BreathHold implements VocalMonitorVisualPlugin {
 
     @Override
     public void process(float[] input, float[] output) {
-        float att = 0.05f, rel = 0.0008f;
-        for (int i = 0; i < input.length; i++) {
-            float a = Math.abs(input[i]);
-            if (a > envelope) envelope += att * (a - envelope);
-            else              envelope += rel * (a - envelope);
-            output[i] = input[i];
+        // Passthrough — slim's live monitor doesn't drive visual state
+        // through here; see feedLive() called from render().
+        int n = Math.min(input.length, output.length);
+        for (int i = 0; i < n; i++) output[i] = input[i];
+    }
+
+    /** Live-mic feed: update envelope + timer using wall-clock dt
+     *  computed from `timeMs`.  Called from render() at ~60 Hz. */
+    private void feedLive(Map<String, float[]> streams, long timeMs) {
+        float dt = (lastRenderMs < 0) ? 0.016f
+            : Math.min(0.10f, (timeMs - lastRenderMs) / 1000f);
+        lastRenderMs = timeMs;
+        float[] wave = streams != null ? streams.get("waveform") : null;
+        if (wave != null && wave.length > 0) {
+            double sumSq = 0.0;
+            for (int i = 0; i < wave.length; i++) sumSq += wave[i] * wave[i];
+            float rms = (float) Math.sqrt(sumSq / wave.length);
+            float att = 0.5f, rel = 0.05f;
+            if (rms > envelope) envelope += att * (rms - envelope);
+            else                envelope += rel * (rms - envelope);
+        } else {
+            envelope *= 0.95f;
         }
-        float dt = input.length / (float) sampleRate;
         boolean loud = envelope > threshold;
         if (loud) {
             if (!voicing) {
@@ -102,6 +119,7 @@ public final class BreathHold implements VocalMonitorVisualPlugin {
         Map<String, Float> params,
         Map<String, float[]> streams
     ) {
+        feedLive(streams, timeMs);
         PluginPaint bg = canvas.newPaint();
         bg.setColor(0xFF101418);
         canvas.drawRect(0, 0, width, height, bg);

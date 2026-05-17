@@ -78,27 +78,37 @@ public final class PitchArrow implements VocalMonitorVisualPlugin {
 
     @Override
     public void process(float[] input, float[] output) {
+        // Passthrough — slim's live monitor delivers the mic to
+        // render() via streams["waveform"], not through here.
+        int n = Math.min(input.length, output.length);
+        for (int i = 0; i < n; i++) output[i] = input[i];
+    }
+
+    private void feedLive(Map<String, float[]> streams) {
+        float[] wave = streams != null ? streams.get("waveform") : null;
+        if (wave == null || wave.length < 16) {
+            smoothedPitchHz *= 0.85f;
+            return;
+        }
         int upwardZc = 0;
         boolean wasPositive = lpPrev >= 0f;
         double sumSq = 0.0;
-        for (int i = 0; i < input.length; i++) {
-            lpPrev += lpAlpha * (input[i] - lpPrev);
+        for (int i = 0; i < wave.length; i++) {
+            lpPrev += lpAlpha * (wave[i] - lpPrev);
             boolean isPositive = lpPrev >= 0f;
             if (isPositive && !wasPositive) upwardZc++;
             wasPositive = isPositive;
-            sumSq += input[i] * input[i];
-            output[i] = input[i];
+            sumSq += wave[i] * wave[i];
         }
-        float rms = (float) Math.sqrt(sumSq / input.length);
-        smoothedRms += 0.2f * (rms - smoothedRms);
+        float rms = (float) Math.sqrt(sumSq / wave.length);
+        smoothedRms += 0.30f * (rms - smoothedRms);
         if (rms > 0.008f) {
-            float duration = input.length / (float) sampleRate;
+            float duration = wave.length / (float) sampleRate;
             float p = upwardZc / duration;
             if (p < 60f)  p = 60f;
             if (p > 800f) p = 800f;
-            smoothedPitchHz += 0.25f * (p - smoothedPitchHz);
+            smoothedPitchHz += 0.30f * (p - smoothedPitchHz);
         } else {
-            // Decay toward zero so the arrow goes neutral on silence.
             smoothedPitchHz *= 0.85f;
         }
     }
@@ -111,6 +121,7 @@ public final class PitchArrow implements VocalMonitorVisualPlugin {
         Map<String, Float> params,
         Map<String, float[]> streams
     ) {
+        feedLive(streams);
         // Background.
         PluginPaint bg = canvas.newPaint();
         bg.setColor(0xFF101418);

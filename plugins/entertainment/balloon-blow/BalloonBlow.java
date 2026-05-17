@@ -72,19 +72,33 @@ public final class BalloonBlow implements VocalMonitorVisualPlugin {
 
     @Override
     public void process(float[] input, float[] output) {
-        // Fast-attack / slow-release envelope follower.
-        float att = 0.05f;
-        float rel = 0.0005f;
-        for (int i = 0; i < input.length; i++) {
-            float a = Math.abs(input[i]);
-            if (a > envelope) envelope = envelope + att * (a - envelope);
-            else              envelope = envelope + rel * (a - envelope);
-            output[i] = input[i];  // pass-through
+        // Pure pass-through.  Slim's live-monitor path doesn't call
+        // this with the mic — visual state is driven from render() via
+        // streams["waveform"].  Save-time export does call process(),
+        // so we just pass the signal through untouched (game plugin,
+        // no audio effect).
+        int n = Math.min(input.length, output.length);
+        for (int i = 0; i < n; i++) output[i] = input[i];
+    }
+
+    /** Pull the latest mic chunk and step envelope + balloon size.
+     *  Called once per render frame (~60 Hz) — perceptually fine for
+     *  an inflation game. */
+    private void feedLive(Map<String, float[]> streams) {
+        float[] wave = streams != null ? streams.get("waveform") : null;
+        if (wave == null || wave.length == 0) {
+            size *= 0.995f;
+            return;
         }
-        // Drive inflation by envelope × sensitivity, deflate slowly.
+        double sumSq = 0.0;
+        for (int i = 0; i < wave.length; i++) sumSq += wave[i] * wave[i];
+        float rms = (float) Math.sqrt(sumSq / wave.length);
+        float att = 0.25f, rel = 0.06f;
+        if (rms > envelope) envelope += att * (rms - envelope);
+        else                envelope += rel * (rms - envelope);
         float target = Math.min(1f, envelope * sensitivity);
-        if (target > size) size += (target - size) * 0.15f;
-        else               size *= 0.995f;
+        if (target > size) size += (target - size) * 0.18f;
+        else               size *= 0.985f;
     }
 
     @Override
@@ -95,6 +109,7 @@ public final class BalloonBlow implements VocalMonitorVisualPlugin {
         Map<String, Float> params,
         Map<String, float[]> streams
     ) {
+        feedLive(streams);
         float dt = (lastRenderMs < 0) ? 0.016f : Math.min(0.05f, (timeMs - lastRenderMs) / 1000f);
         lastRenderMs = timeMs;
 

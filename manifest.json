@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-16T21:22:36.667Z",
+  "generatedAt": "2026-05-17T16:13:05.536Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -484,13 +484,16 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/balloon-blow/balloon-blow.dex",
-      "sizeBytes": 5984,
+      "sizeBytes": 6244,
       "className": "com.vocalmonitor.plugin.community.BalloonBlow",
       "ui_kind": "canvas",
       "ui": {
         "aspect": "16:9",
         "min_height_dp": 320
       },
+      "streams": [
+        "waveform"
+      ],
       "fullscreen": true
     },
     {
@@ -511,13 +514,16 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/character-voice/character-voice.dex",
-      "sizeBytes": 11236,
+      "sizeBytes": 11596,
       "className": "com.vocalmonitor.plugin.community.CharacterVoice",
       "ui_kind": "canvas",
       "ui": {
         "aspect": "16:9",
         "min_height_dp": 360
       },
+      "streams": [
+        "waveform"
+      ],
       "fullscreen": true
     },
     {
@@ -617,13 +623,16 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/rocket-pitch/rocket-pitch.dex",
-      "sizeBytes": 6024,
+      "sizeBytes": 6296,
       "className": "com.vocalmonitor.plugin.community.RocketPitch",
       "ui_kind": "canvas",
       "ui": {
         "aspect": "16:9",
         "min_height_dp": 320
       },
+      "streams": [
+        "waveform"
+      ],
       "fullscreen": true
     },
     {
@@ -1676,13 +1685,16 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/breath-hold/breath-hold.dex",
-      "sizeBytes": 4700,
+      "sizeBytes": 5136,
       "className": "com.vocalmonitor.plugin.community.BreathHold",
       "ui_kind": "canvas",
       "ui": {
         "aspect": "16:9",
         "min_height_dp": 280
       },
+      "streams": [
+        "waveform"
+      ],
       "fullscreen": true
     },
     {
@@ -1703,13 +1715,16 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/pitch-arrow/pitch-arrow.dex",
-      "sizeBytes": 6252,
+      "sizeBytes": 6504,
       "className": "com.vocalmonitor.plugin.community.PitchArrow",
       "ui_kind": "canvas",
       "ui": {
         "aspect": "16:9",
         "min_height_dp": 320
       },
+      "streams": [
+        "waveform"
+      ],
       "fullscreen": true
     },
     {
@@ -1729,13 +1744,16 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/scale-runner/scale-runner.dex",
-      "sizeBytes": 7052,
+      "sizeBytes": 7432,
       "className": "com.vocalmonitor.plugin.community.ScaleRunner",
       "ui_kind": "canvas",
       "ui": {
         "aspect": "16:9",
         "min_height_dp": 320
       },
+      "streams": [
+        "waveform"
+      ],
       "fullscreen": true
     },
     {
@@ -1755,13 +1773,16 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/target-tone/target-tone.dex",
-      "sizeBytes": 6300,
+      "sizeBytes": 6576,
       "className": "com.vocalmonitor.plugin.community.TargetTone",
       "ui_kind": "canvas",
       "ui": {
         "aspect": "16:9",
         "min_height_dp": 280
       },
+      "streams": [
+        "waveform"
+      ],
       "fullscreen": true
     },
     {

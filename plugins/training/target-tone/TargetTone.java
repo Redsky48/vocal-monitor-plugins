@@ -84,39 +84,52 @@ public final class TargetTone implements VocalMonitorVisualPlugin {
 
     @Override
     public void process(float[] input, float[] output) {
+        // Audio effect: reference tone mixed with the dry signal.
+        // Used at save-time / DAW playback.  Pitch detection for the
+        // tuner display happens in feedLive() (read from streams in
+        // render) since slim's live monitor bypasses this path.
         final double twoPi    = 2.0 * Math.PI;
         final double phaseInc = twoPi * targetHz / sampleRate;
-        int upwardZc = 0;
-        boolean wasPositive = lpPrev >= 0f;
-        double sumSq = 0.0;
-        for (int i = 0; i < input.length; i++) {
-            lpPrev += lpAlpha * (input[i] - lpPrev);
-            boolean isPositive = lpPrev >= 0f;
-            if (isPositive && !wasPositive) upwardZc++;
-            wasPositive = isPositive;
-            sumSq += input[i] * input[i];
+        int n = Math.min(input.length, output.length);
+        for (int i = 0; i < n; i++) {
             float tone = (float) (Math.sin(tonePhase) * toneLevel);
             tonePhase += phaseInc;
             if (tonePhase > twoPi) tonePhase -= twoPi;
-            // Output = reference tone + scaled dry — soft-clip the sum
-            // so a loud dry signal doesn't clip the speakers.
             output[i] = (float) Math.tanh(tone + input[i] * mix);
         }
-        float rms = (float) Math.sqrt(sumSq / input.length);
-        smoothedRms += 0.2f * (rms - smoothedRms);
+    }
+
+    private void feedLive(Map<String, float[]> streams) {
+        float[] wave = streams != null ? streams.get("waveform") : null;
+        if (wave == null || wave.length < 16) {
+            smoothedPitchHz *= 0.85f;
+            return;
+        }
+        int upwardZc = 0;
+        boolean wasPositive = lpPrev >= 0f;
+        double sumSq = 0.0;
+        for (int i = 0; i < wave.length; i++) {
+            lpPrev += lpAlpha * (wave[i] - lpPrev);
+            boolean isPositive = lpPrev >= 0f;
+            if (isPositive && !wasPositive) upwardZc++;
+            wasPositive = isPositive;
+            sumSq += wave[i] * wave[i];
+        }
+        float rms = (float) Math.sqrt(sumSq / wave.length);
+        smoothedRms += 0.30f * (rms - smoothedRms);
         if (rms > 0.008f) {
-            float duration = input.length / (float) sampleRate;
+            float duration = wave.length / (float) sampleRate;
             float p = upwardZc / duration;
             if (p < 60f)  p = 60f;
             if (p > 800f) p = 800f;
-            smoothedPitchHz += 0.25f * (p - smoothedPitchHz);
+            smoothedPitchHz += 0.30f * (p - smoothedPitchHz);
         } else {
             smoothedPitchHz *= 0.85f;
         }
         float cents = (smoothedPitchHz > 50f)
             ? (float) (1200.0 * Math.log(smoothedPitchHz / targetHz) / Math.log(2.0))
             : 0f;
-        smoothedCents += 0.30f * (cents - smoothedCents);
+        smoothedCents += 0.35f * (cents - smoothedCents);
     }
 
     @Override
@@ -127,6 +140,7 @@ public final class TargetTone implements VocalMonitorVisualPlugin {
         Map<String, Float> params,
         Map<String, float[]> streams
     ) {
+        feedLive(streams);
         PluginPaint bg = canvas.newPaint();
         bg.setColor(0xFF101418);
         canvas.drawRect(0, 0, width, height, bg);
