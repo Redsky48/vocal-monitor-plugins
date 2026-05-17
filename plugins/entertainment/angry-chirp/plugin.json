@@ -1,0 +1,14 @@
+{
+  "id": "angry-chirp",
+  "name": "Angry Chirp",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Voice-controlled Flappy Bird. Chirp / clap / 'pa!' into the mic and the bird flaps. Stay silent and gravity wins. Dodge the pipes; each one you clear is a point. Trains short, controlled bursts of voicing — chirp too quietly and the bird falls.",
+  "tags": ["entertainment", "kids", "game", "flappy", "chirp", "voice-control", "fullscreen", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.AngryChirp",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "9:16", "min_height_dp": 480 },
+  "fullscreen": true,
+  "streams": ["waveform"]
+}

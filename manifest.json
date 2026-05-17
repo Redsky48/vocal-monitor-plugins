@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-17T16:13:05.536Z",
+  "generatedAt": "2026-05-17T16:33:26.024Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -465,6 +465,37 @@
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/upward-compressor/upward-compressor.dex",
       "sizeBytes": 3820,
       "className": "com.vocalmonitor.plugin.community.UpwardCompressor"
+    },
+    {
+      "id": "angry-chirp",
+      "name": "Angry Chirp",
+      "author": "Vocal Monitor",
+      "category": "Entertainment",
+      "description": "Voice-controlled Flappy Bird. Chirp / clap / 'pa!' into the mic and the bird flaps. Stay silent and gravity wins. Dodge the pipes; each one you clear is a point. Trains short, controlled bursts of voicing — chirp too quietly and the bird falls.",
+      "version": "1.0.0",
+      "tags": [
+        "entertainment",
+        "kids",
+        "game",
+        "flappy",
+        "chirp",
+        "voice-control",
+        "fullscreen",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/angry-chirp/angry-chirp.dex",
+      "sizeBytes": 10920,
+      "className": "com.vocalmonitor.plugin.community.AngryChirp",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "9:16",
+        "min_height_dp": 480
+      },
+      "streams": [
+        "waveform"
+      ],
+      "fullscreen": true
     },
     {
       "id": "balloon-blow",
