@@ -1,0 +1,1176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-Zx1rizy00kuT+Q5GhrXquA=='; style-src 'nonce-Zx1rizy00kuT+Q5GhrXquA=='; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<meta name="referrer" content="no-referrer">
+<title>DepAudit — vocal-monitor-plugins</title>
+<style nonce="Zx1rizy00kuT+Q5GhrXquA==">
+:root {
+  color-scheme: dark light;
+  --bg: #0c0e13;
+  --bg-elev: #15181f;
+  --bg-card: #1a1d24;
+  --bg-soft: #20242c;
+  --fg: #e8ebef;
+  --muted: #888d97;
+  --line: #262a33;
+  --accent: #5b9dff;
+  --accent-soft: rgba(91,157,255,.16);
+  --good: #4ade80;
+  --good-soft: rgba(74,222,128,.14);
+  --warn: #fbbf24;
+  --warn-soft: rgba(251,191,36,.14);
+  --bad: #f87171;
+  --bad-soft: rgba(248,113,113,.16);
+  --crit: #e0314f;
+  --crit-soft: rgba(224,49,79,.18);
+  --mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font: 13px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  overflow: hidden;
+}
+
+/* ─── topbar ─── */
+.topbar {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 0 1rem; height: 50px;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: .5rem; font-weight: 600; color: var(--accent); }
+.project-chip {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: 4px 12px; border-radius: 999px;
+  background: var(--bg-soft); border: 1px solid var(--line);
+  font-family: var(--mono); font-size: .8rem;
+}
+.project-chip .muted { color: var(--muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; }
+.topbar-spacer { flex: 1; }
+.scan-status { display: inline-flex; align-items: center; gap: .5rem; font-size: .8rem; color: var(--muted); }
+.scan-status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.scan-status.active .dot { background: var(--accent); }
+.scan-status.done .dot { background: var(--good); }
+.scan-status.error .dot { background: var(--bad); }
+
+/* ─── layout ─── */
+.grid {
+  display: grid;
+  grid-template-columns: 260px 1fr 340px;
+  height: calc(100vh - 50px - 28px);
+  gap: 0;
+}
+.sidebar-left, .sidebar-right {
+  background: var(--bg);
+  padding: .75rem;
+  overflow-y: auto;
+  border-right: 1px solid var(--line);
+}
+.sidebar-right { border-right: 0; border-left: 1px solid var(--line); }
+.graph-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative; }
+
+/* ─── cards ─── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: .75rem;
+  margin-bottom: .75rem;
+}
+.card-title {
+  font-size: .68rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+  margin: 0 0 .5rem;
+  font-weight: 600;
+}
+
+dl.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: .85rem; }
+dl.kv dt { color: var(--muted); }
+dl.kv dd { margin: 0; font-family: var(--mono); }
+dl.kv dd.bad  { color: var(--bad); }
+dl.kv dd.good { color: var(--good); }
+
+/* ─── severity bar ─── */
+.sev-bar {
+  display: flex; height: 8px; border-radius: 999px; overflow: hidden;
+  background: var(--bg-soft); margin-bottom: .5rem;
+}
+.sev-bar > span { display: block; transition: width .4s ease; }
+.sev-bar .crit { background: var(--crit); }
+.sev-bar .high { background: var(--bad); }
+.sev-bar .med  { background: var(--warn); }
+.sev-bar .low  { background: var(--accent); }
+.sev-bar .none { background: var(--good); }
+
+.sev-legend { list-style: none; margin: 0; padding: 0; font-size: .8rem; }
+.sev-legend li { display: flex; justify-content: space-between; padding: 2px 0; }
+.sev-legend .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 6px; vertical-align: middle; }
+
+/* ─── filters ─── */
+#q {
+  width: 100%; padding: 6px 10px;
+  background: var(--bg-soft); border: 1px solid var(--line); border-radius: 6px;
+  color: var(--fg); font: inherit; margin-bottom: .5rem;
+}
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: .5rem; }
+.chip {
+  font-size: .72rem; padding: 3px 8px; border-radius: 999px;
+  background: var(--bg-soft); border: 1px solid var(--line); cursor: pointer;
+  color: var(--fg);
+}
+.chip.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.toggle-row { display: flex; flex-direction: column; gap: 4px; font-size: .82rem; }
+.toggle-row label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+
+/* ─── data sources ─── */
+.sources-list { list-style: none; margin: 0; padding: 0; font-size: .78rem; }
+.sources-list li { padding: 4px 0; border-bottom: 1px dashed var(--line); }
+.sources-list li:last-child { border-bottom: 0; }
+.sources-list .src-name { font-family: var(--mono); }
+.sources-list .src-meta { color: var(--muted); font-size: .72rem; }
+.sources-list .src-on  { color: var(--good); }
+.sources-list .src-off { color: var(--muted); }
+
+/* ─── graph ─── */
+.graph-toolbar {
+  display: flex; gap: 1rem; align-items: center;
+  padding: .5rem .75rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-elev);
+}
+.toolbar-group { display: flex; gap: .25rem; align-items: center; }
+.toolbar-group button {
+  background: var(--bg-soft); border: 1px solid var(--line); color: var(--fg);
+  padding: 4px 10px; border-radius: 6px; cursor: pointer; font: inherit;
+}
+.toolbar-group button:hover { border-color: var(--accent); }
+.toolbar-group label { font-size: .8rem; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
+.zoom-readout { font-family: var(--mono); font-size: .8rem; color: var(--muted); min-width: 44px; text-align: right; }
+
+.graph-host {
+  flex: 1; position: relative; overflow: hidden;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(91,157,255,.04), transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(74,222,128,.03), transparent 40%),
+    var(--bg);
+}
+#graph { width: 100%; height: 100%; display: block; }
+.empty-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted); font-size: .9rem;
+  pointer-events: none;
+}
+.empty-overlay.hidden { display: none; }
+
+.discovery-toast {
+  position: absolute; bottom: 1rem; left: 50%; transform: translateX(-50%);
+  background: var(--bg-card); border: 1px solid var(--line);
+  border-radius: 999px; padding: 6px 14px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: .82rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,.35);
+}
+.discovery-toast .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.discovery-toast .dot.pulse {
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: .55; }
+}
+
+/* ─── SVG node styling ─── */
+.node-rect {
+  fill: var(--bg-card);
+  stroke: var(--line);
+  stroke-width: 1;
+  transition: stroke .25s ease, fill .25s ease, transform .35s ease;
+}
+.node.dim .node-rect { opacity: .25; }
+.node.selected .node-rect { stroke: var(--accent); stroke-width: 2; }
+.node.sev-none     .node-rect { stroke: rgba(74,222,128,.5); }
+.node.sev-low      .node-rect { stroke: rgba(91,157,255,.7); }
+.node.sev-medium   .node-rect { stroke: var(--warn); }
+.node.sev-high     .node-rect { stroke: var(--bad); }
+.node.sev-critical .node-rect { stroke: var(--crit); stroke-width: 2; }
+
+.node-name { font-family: var(--mono); font-size: 11px; fill: var(--fg); font-weight: 600; pointer-events: none; }
+.node-version { font-family: var(--mono); font-size: 10px; fill: var(--muted); pointer-events: none; }
+.node-eco { font-size: 9px; fill: var(--muted); text-transform: uppercase; letter-spacing: .05em; pointer-events: none; }
+
+.sev-dot { stroke: var(--bg-card); stroke-width: 1.5; pointer-events: none; }
+.sev-dot.sev-none     { fill: var(--good); }
+.sev-dot.sev-low      { fill: var(--accent); }
+.sev-dot.sev-medium   { fill: var(--warn); }
+.sev-dot.sev-high     { fill: var(--bad); }
+.sev-dot.sev-critical { fill: var(--crit); }
+
+.edge {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1.2;
+  transition: stroke .25s ease, stroke-width .25s ease, opacity .25s ease;
+}
+.edge.danger { stroke: var(--bad); }
+.edge.crit { stroke: var(--crit); }
+.edge.highlight { stroke: var(--accent); stroke-width: 2; }
+.edge.dim { opacity: .15; }
+
+.column-label {
+  font-size: 10px; fill: var(--muted); text-transform: uppercase; letter-spacing: .06em;
+  font-family: var(--mono);
+}
+
+/* node entrance animation */
+@keyframes nodePop {
+  from { transform: scale(.6); opacity: 0; }
+  to   { transform: scale(1);  opacity: 1; }
+}
+.node.entering { animation: nodePop .35s cubic-bezier(.18,.89,.32,1.28) both; transform-box: fill-box; transform-origin: center; }
+
+/* ─── details panel ─── */
+.details-head { display: flex; justify-content: space-between; gap: .5rem; align-items: flex-start; margin-bottom: .5rem; }
+.pkg-name { font-family: var(--mono); font-weight: 600; font-size: 1rem; word-break: break-all; }
+.pkg-version { color: var(--accent); font-family: var(--mono); font-size: .85rem; }
+.risk-badge {
+  padding: 3px 9px; border-radius: 999px; font-size: .7rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .04em;
+  background: var(--good-soft); color: var(--good); border: 1px solid currentColor;
+}
+.risk-badge.sev-low      { background: var(--accent-soft); color: var(--accent); }
+.risk-badge.sev-medium   { background: var(--warn-soft);   color: var(--warn); }
+.risk-badge.sev-high     { background: var(--bad-soft);    color: var(--bad); }
+.risk-badge.sev-critical { background: var(--crit-soft);   color: var(--crit); }
+
+ul.paths { list-style: none; margin: 0 0 .5rem; padding: 0; font-family: var(--mono); font-size: .78rem; }
+ul.paths li { padding: 2px 0; color: var(--muted); }
+
+ul.vulns { list-style: none; margin: 0 0 .5rem; padding: 0; }
+ul.vulns li { padding: 6px 0; border-top: 1px dashed var(--line); font-size: .82rem; }
+ul.vulns li:first-child { border-top: 0; }
+.vuln-id { font-family: var(--mono); font-weight: 600; }
+.vuln-id.sev-low      { color: var(--accent); }
+.vuln-id.sev-medium   { color: var(--warn); }
+.vuln-id.sev-high     { color: var(--bad); }
+.vuln-id.sev-critical { color: var(--crit); }
+.vuln-summary { color: var(--fg); margin-top: 2px; }
+.vuln-fixed { color: var(--good); font-family: var(--mono); font-size: .75rem; margin-top: 3px; }
+.vuln-refs { color: var(--muted); font-size: .72rem; margin-top: 3px; word-break: break-all; }
+
+.ai-block {
+  padding: .5rem; border-radius: 4px;
+  background: var(--accent-soft);
+  border-left: 2px solid var(--accent);
+  font-size: .82rem; line-height: 1.45;
+}
+.fix-block {
+  padding: .5rem; border-radius: 4px;
+  background: var(--good-soft);
+  border-left: 2px solid var(--good);
+  font-size: .82rem;
+}
+.fix-block .fix-diff { font-family: var(--mono); font-size: .75rem; margin-top: .35rem; white-space: pre-wrap; }
+.fix-block .fix-diff .minus { color: var(--bad); }
+.fix-block .fix-diff .plus  { color: var(--good); }
+
+.muted { color: var(--muted); }
+.bad   { color: var(--bad); }
+.good  { color: var(--good); }
+
+.footer {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0 1rem; height: 28px;
+  background: var(--bg-elev); border-top: 1px solid var(--line);
+  font-size: .72rem; color: var(--muted);
+}
+
+</style>
+</head>
+<body data-project="vocal-monitor-plugins">
+
+<header class="topbar">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path fill="currentColor" d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Zm-1 14-4-4 1.4-1.4L11 13.2l4.6-4.6L17 10l-6 6Z"/>
+    </svg>
+    <span>DepAudit</span>
+  </div>
+  <div class="project-chip">
+    <span class="muted">project</span>
+    <span class="project-name">vocal-monitor-plugins</span>
+  </div>
+  <div class="topbar-spacer"></div>
+  <div id="scan-status" class="scan-status">
+    <span class="dot" id="scan-dot"></span>
+    <span id="scan-label">Idle</span>
+  </div>
+</header>
+
+<main class="grid">
+
+  <aside class="sidebar-left">
+    <section class="card">
+      <div class="card-title">Summary</div>
+      <dl class="kv">
+        <dt>Total</dt>      <dd id="s-total">0</dd>
+        <dt>Direct</dt>     <dd id="s-direct">0</dd>
+        <dt>Transitive</dt> <dd id="s-trans">0</dd>
+        <dt>Vulnerable</dt> <dd id="s-vuln" class="bad">0</dd>
+        <dt>Clean</dt>      <dd id="s-clean" class="good">0</dd>
+      </dl>
+    </section>
+
+    <section class="card">
+      <div class="card-title">Severity</div>
+      <div id="sev-bar" class="sev-bar"></div>
+      <ul class="sev-legend" id="sev-legend"></ul>
+    </section>
+
+    <section class="card">
+      <div class="card-title">Filters</div>
+      <input id="q" type="search" placeholder="Search package, CVE…" autocomplete="off">
+      <div class="chips" id="eco-chips"></div>
+      <div class="toggle-row">
+        <label><input type="checkbox" id="f-vuln-only"> Vulnerable only</label>
+        <label><input type="checkbox" id="f-direct-only"> Direct only</label>
+      </div>
+    </section>
+
+    <section class="card sources-card">
+      <div class="card-title">Data sources</div>
+      <ul id="sources-list" class="sources-list"></ul>
+    </section>
+  </aside>
+
+  <section class="graph-pane">
+    <div class="graph-toolbar">
+      <div class="toolbar-group">
+        <button id="t-fit"  title="Fit view">Fit</button>
+        <button id="t-zin"  title="Zoom in">+</button>
+        <button id="t-zout" title="Zoom out">−</button>
+        <span class="zoom-readout" id="zoom-readout">100%</span>
+      </div>
+      <div class="toolbar-group">
+        <label><input type="checkbox" id="t-collapse-safe"> Collapse safe</label>
+        <label><input type="checkbox" id="t-highlight"> Highlight branch</label>
+      </div>
+      <div class="toolbar-group">
+        <button id="t-replay">Replay scan</button>
+      </div>
+    </div>
+    <div class="graph-host">
+      <svg id="graph" tabindex="0" aria-label="Dependency graph"></svg>
+      <div class="empty-overlay" id="empty-overlay">
+        <div>Waiting for scan to start…</div>
+      </div>
+    </div>
+    <div class="discovery-toast" id="discovery-toast" hidden>
+      <span class="dot pulse"></span>
+      <span id="toast-text">Discovering packages…</span>
+    </div>
+  </section>
+
+  <aside class="sidebar-right">
+    <div class="card empty" id="details-empty">
+      <div class="card-title">Package details</div>
+      <p class="muted">Click a node in the graph to inspect it.</p>
+    </div>
+    <div class="card" id="details" hidden>
+      <div class="details-head">
+        <div>
+          <div class="pkg-name" id="d-name"></div>
+          <div class="pkg-version" id="d-version"></div>
+        </div>
+        <div class="risk-badge" id="d-risk"></div>
+      </div>
+      <dl class="kv">
+        <dt>Ecosystem</dt> <dd id="d-eco"></dd>
+        <dt>Depth</dt>     <dd id="d-depth"></dd>
+        <dt>Direct?</dt>   <dd id="d-direct"></dd>
+      </dl>
+
+      <div class="card-title">Declared in</div>
+      <ul id="d-declared" class="paths"></ul>
+
+      <div id="d-vulns-wrap" hidden>
+        <div class="card-title">Vulnerabilities <span id="d-vuln-count" class="muted"></span></div>
+        <ul id="d-vulns" class="vulns"></ul>
+      </div>
+
+      <div id="d-fix-wrap" hidden>
+        <div class="card-title">AI fix plan</div>
+        <div id="d-fix" class="fix-block"></div>
+      </div>
+
+      <div id="d-ai-wrap" hidden>
+        <div class="card-title">AI analysis</div>
+        <div id="d-ai" class="ai-block"></div>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<footer class="footer">
+  <span id="foot-tally" class="muted"></span>
+  <span class="muted">Localhost-only · No external resources · CSP-locked</span>
+</footer>
+
+<script type="application/json" id="bootstrap" nonce="Zx1rizy00kuT+Q5GhrXquA==">{"live":false,"project":"vocal-monitor-plugins","sources":[{"name":"OSV.dev","used":true,"detail":"Open Source Vulnerability database — queried for GitHub Actions:2, Maven:8, Gradle:1.","url":"https://osv.dev"},{"name":"GitHub Advisory Database","used":true,"detail":"OSV ingests GHSA — every GitHub security advisory is included in the OSV query above.","url":"https://github.com/advisories"},{"name":"NVD / CVE","used":true,"detail":"OSV cross-references CVE IDs and CVSS scores from the National Vulnerability Database.","url":"https://nvd.nist.gov"},{"name":"Local lockfiles","used":true,"detail":"Parsed package-lock.json / pnpm-lock.yaml / yarn.lock / Cargo.lock / go.mod / requirements.txt for transitives. Detected ecosystems: npm, github-actions."},{"name":"Anthropic Claude API","used":false,"detail":"Pass --ai or --fix and export ANTHROPIC_API_KEY to enable."}],"dependencies":[{"ecosystem":"GitHub Actions","name":"actions/checkout","version":"v4","file":".github/workflows/build-manifest.yml","line":21,"direct":true,"depth":0,"declaredIn":[".github/workflows/build-manifest.yml:21",".github/workflows/validate.yml:19"],"vulnerabilities":[],"severity":"none"},{"ecosystem":"GitHub Actions","name":"actions/setup-node","version":"v4","file":".github/workflows/build-manifest.yml","line":25,"direct":true,"depth":0,"declaredIn":[".github/workflows/build-manifest.yml:25",".github/workflows/validate.yml:20"],"vulnerabilities":[],"severity":"none"},{"ecosystem":"Maven","name":"org.jetbrains.kotlinx:kotlinx-coroutines-core","version":"1.8.1","file":"daw/build.gradle.kts","line":58,"direct":true,"depth":0,"declaredIn":["daw/build.gradle.kts:58","shared/build.gradle.kts:33","shared-ui/build.gradle.kts:45"],"vulnerabilities":[],"severity":"none"},{"ecosystem":"Maven","name":"org.jetbrains.kotlinx:kotlinx-coroutines-swing","version":"1.8.1","file":"daw/build.gradle.kts","line":59,"direct":true,"depth":0,"declaredIn":["daw/build.gradle.kts:59"],"vulnerabilities":[],"severity":"none"},{"ecosystem":"Maven","name":"org.jetbrains.kotlin.jvm","version":"2.0.20","file":"daw/build.gradle.kts","line":25,"direct":true,"depth":0,"kind":"gradle-plugin","declaredIn":["daw/build.gradle.kts:25","shared/build.gradle.kts:17"],"vulnerabilities":[],"severity":"none"},{"ecosystem":"Maven","name":"org.jetbrains.compose","version":"1.7.0","file":"daw/build.gradle.kts","line":26,"direct":true,"depth":0,"kind":"gradle-plugin","declaredIn":["daw/build.gradle.kts:26","shared-ui/build.gradle.kts:22"],"vulnerabilities":[],"severity":"none"},{"ecosystem":"Maven","name":"org.jetbrains.kotlin.plugin.compose","version":"2.0.20","file":"daw/build.gradle.kts","line":27,"direct":true,"depth":0,"kind":"gradle-plugin","declaredIn":["daw/build.gradle.kts:27","shared-ui/build.gradle.kts:23"],"vulnerabilities":[],"severity":"none"},{"ecosystem":"Gradle","name":"gradle","version":"8.9","file":"daw/gradle/wrapper/gradle-wrapper.properties","line":1,"direct":true,"depth":0,"declaredIn":["daw/gradle/wrapper/gradle-wrapper.properties:1"],"vulnerabilities":[],"severity":"none"},{"ecosystem":"Maven","name":"org.jetbrains.kotlinx:kotlinx-serialization-json","version":"1.7.1","file":"shared/build.gradle.kts","line":36,"direct":true,"depth":0,"declaredIn":["shared/build.gradle.kts:36"],"vulnerabilities":[],"severity":"none"},{"ecosystem":"Maven","name":"org.mozilla:rhino","version":"1.7.14.1","file":"shared/build.gradle.kts","line":42,"direct":true,"depth":0,"declaredIn":["shared/build.gradle.kts:42"],"vulnerabilities":[],"severity":"none"},{"ecosystem":"Maven","name":"org.jetbrains.kotlin.multiplatform","version":"2.0.20","file":"shared-ui/build.gradle.kts","line":21,"direct":true,"depth":0,"kind":"gradle-plugin","declaredIn":["shared-ui/build.gradle.kts:21"],"vulnerabilities":[],"severity":"none"}]}</script>
+<script nonce="Zx1rizy00kuT+Q5GhrXquA==">
+// SVG chain-graph for the dependency audit.
+//
+// Reuses the rendering pattern from aura-designer's event-graph:
+//   - Node = rounded rect with name + version + severity dot
+//   - Edge = cubic bezier between parent's right edge and child's left
+//   - Pan  = middle-button drag, or alt-drag, or empty-area drag
+//   - Zoom = mouse wheel anchored to cursor
+//   - Move = drag a node body (updates its graphX/Y)
+//   - Click node = selection event (host wires this to details panel)
+//
+// Layout: nodes positioned in columns by `depth` (Direct → L1 → L2 …),
+// vertically stacked. Long columns wrap to a second sub-column so the
+// chain stays readable at any project size.
+
+(function () {
+  const NS = 'http://www.w3.org/2000/svg';
+  const NODE_W = 170;
+  const NODE_H = 56;
+  const COL_GAP = 220;
+  const ROW_GAP = 14;
+  const COL_PAD = 80;
+  const ROW_PAD = 60;
+  const ROW_LIMIT = 18;
+
+  function el(tag, attrs, children) {
+    const e = document.createElementNS(NS, tag);
+    if (attrs) for (const k in attrs) if (attrs[k] !== null && attrs[k] !== undefined) e.setAttribute(k, attrs[k]);
+    if (children) for (const c of children) if (c) e.appendChild(c);
+    return e;
+  }
+
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+  // ─── DepGraph: public class ──────────────────────────────────────
+
+  class DepGraph {
+    constructor(svgEl) {
+      this.svg = svgEl;
+      this.view = { zoom: 0.85, panX: 40, panY: 40 };
+      this.nodes = new Map();    // key → { dep, x, y, dom }
+      this.edges = [];           // { from, to, dom, severity }
+      this.selectedKey = null;
+      this.highlightBranch = false;
+      this.collapseSafe = false;
+      this.dimAll = false;
+      this.listeners = { select: [] };
+
+      // Layer groups (z-order: edges below nodes; labels above).
+      this.root = el('g', { class: 'world' });
+      this.edgeLayer = el('g', { class: 'edges' });
+      this.colLayer = el('g', { class: 'col-labels' });
+      this.nodeLayer = el('g', { class: 'nodes' });
+      this.root.append(this.edgeLayer, this.colLayer, this.nodeLayer);
+      this.svg.append(this.root);
+
+      this._bindInput();
+      this._applyTransform();
+      this._resize();
+      new ResizeObserver(() => this._resize()).observe(this.svg);
+    }
+
+    on(ev, fn) { (this.listeners[ev] || (this.listeners[ev] = [])).push(fn); return this; }
+    _emit(ev, payload) { for (const fn of (this.listeners[ev] || [])) fn(payload); }
+
+    _resize() {
+      const r = this.svg.getBoundingClientRect();
+      this.svg.setAttribute('viewBox', `0 0 ${r.width} ${r.height}`);
+    }
+
+    _applyTransform() {
+      this.root.setAttribute('transform',
+        `translate(${this.view.panX} ${this.view.panY}) scale(${this.view.zoom})`);
+      const z = Math.round(this.view.zoom * 100) + '%';
+      const out = document.getElementById('zoom-readout');
+      if (out) out.textContent = z;
+    }
+
+    _screenToWorld(cx, cy) {
+      const r = this.svg.getBoundingClientRect();
+      return {
+        x: (cx - r.left - this.view.panX) / this.view.zoom,
+        y: (cy - r.top  - this.view.panY) / this.view.zoom,
+      };
+    }
+
+    setZoom(z, anchor) {
+      const a = anchor || { x: this.svg.clientWidth / 2, y: this.svg.clientHeight / 2 };
+      const before = this._screenToWorld(a.x, a.y);
+      this.view.zoom = clamp(z, 0.2, 3);
+      const after = this._screenToWorld(a.x, a.y);
+      this.view.panX += (after.x - before.x) * this.view.zoom;
+      this.view.panY += (after.y - before.y) * this.view.zoom;
+      this._applyTransform();
+    }
+
+    fit() {
+      if (this.nodes.size === 0) return;
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const n of this.nodes.values()) {
+        minX = Math.min(minX, n.x);
+        minY = Math.min(minY, n.y);
+        maxX = Math.max(maxX, n.x + NODE_W);
+        maxY = Math.max(maxY, n.y + NODE_H);
+      }
+      const w = maxX - minX, h = maxY - minY;
+      const r = this.svg.getBoundingClientRect();
+      const margin = 40;
+      const zx = (r.width - margin * 2) / w;
+      const zy = (r.height - margin * 2) / h;
+      this.view.zoom = clamp(Math.min(zx, zy), 0.2, 1.5);
+      this.view.panX = margin - minX * this.view.zoom;
+      this.view.panY = margin - minY * this.view.zoom;
+      this._applyTransform();
+    }
+
+    // ─── public data ops ───
+
+    /** Add or update a single node. Returns the layout position. */
+    upsertNode(dep, opts = {}) {
+      const key = depKey(dep);
+      if (this.nodes.has(key)) {
+        const n = this.nodes.get(key);
+        n.dep = dep;
+        this._restyleNode(n);
+        return n;
+      }
+      const pos = this._allocatePosition(dep);
+      const node = { dep, x: pos.x, y: pos.y, dom: null };
+      node.dom = this._buildNodeDom(node, opts.animate);
+      this.nodes.set(key, node);
+      this.nodeLayer.appendChild(node.dom);
+      this._renderColumnLabel(dep.depth || 0);
+      return node;
+    }
+
+    /** Add an edge between two existing keys. */
+    addEdge(fromKey, toKey) {
+      if (!this.nodes.has(fromKey) || !this.nodes.has(toKey)) return;
+      if (this.edges.some(e => e.from === fromKey && e.to === toKey)) return;
+      const e = { from: fromKey, to: toKey, dom: null, severity: 'none' };
+      e.dom = el('path', { class: 'edge', d: this._edgePath(fromKey, toKey) });
+      this.edgeLayer.appendChild(e.dom);
+      this.edges.push(e);
+      this._restyleEdge(e);
+    }
+
+    /** Replace the entire data set in one call (used for static reports). */
+    setData(deps) {
+      this.nodeLayer.textContent = '';
+      this.edgeLayer.textContent = '';
+      this.colLayer.textContent = '';
+      this.nodes.clear();
+      this.edges = [];
+      this._colMaxRow = new Map();
+      for (const d of deps) this.upsertNode(d);
+      for (const d of deps) {
+        const childKey = depKey(d);
+        for (const parentKey of (d.parents || [])) {
+          if (this.nodes.has(parentKey)) this.addEdge(parentKey, childKey);
+        }
+      }
+      this.fit();
+    }
+
+    selectKey(key) {
+      if (this.selectedKey) {
+        const prev = this.nodes.get(this.selectedKey);
+        if (prev) prev.dom.classList.remove('selected');
+      }
+      this.selectedKey = key;
+      if (key) {
+        const n = this.nodes.get(key);
+        if (n) n.dom.classList.add('selected');
+      }
+      this._applyDim();
+      this._emit('select', key);
+    }
+
+    setHighlightBranch(on) { this.highlightBranch = on; this._applyDim(); }
+    setCollapseSafe(on)    { this.collapseSafe = on; this._applyVisibility(); }
+    setFilter(predicate)   { this._filter = predicate; this._applyVisibility(); }
+
+    // ─── layout ───
+
+    _allocatePosition(dep) {
+      if (!this._colMaxRow) this._colMaxRow = new Map();
+      const depth = dep.depth || 0;
+      const row = this._colMaxRow.get(depth) || 0;
+      this._colMaxRow.set(depth, row + 1);
+      const subCol = Math.floor(row / ROW_LIMIT);
+      const inSub = row % ROW_LIMIT;
+      const x = COL_PAD + depth * COL_GAP + subCol * (NODE_W + 12);
+      const y = ROW_PAD + inSub * (NODE_H + ROW_GAP);
+      return { x, y };
+    }
+
+    _renderColumnLabel(depth) {
+      const id = 'col-label-' + depth;
+      if (document.getElementById(id)) return;
+      const x = COL_PAD + depth * COL_GAP;
+      const txt = el('text', {
+        id, class: 'column-label',
+        x, y: ROW_PAD - 22, 'data-depth': depth,
+      });
+      txt.textContent = depth === 0 ? 'Direct' : 'Level ' + depth;
+      this.colLayer.appendChild(txt);
+    }
+
+    // ─── nodes ───
+
+    _buildNodeDom(node, animate) {
+      const { dep, x, y } = node;
+      const sev = dep.severity || 'none';
+      const g = el('g', {
+        class: 'node sev-' + sev + (animate ? ' entering' : ''),
+        transform: `translate(${x} ${y})`,
+        'data-key': depKey(dep),
+        tabindex: '0',
+      });
+      g.appendChild(el('rect', { class: 'node-rect', x: 0, y: 0, width: NODE_W, height: NODE_H, rx: 8, ry: 8 }));
+      // Severity dot (right side).
+      g.appendChild(el('circle', {
+        class: 'sev-dot sev-' + sev,
+        cx: NODE_W - 14, cy: 14, r: 5,
+      }));
+      const ecoT = el('text', { class: 'node-eco', x: 10, y: 14 });
+      ecoT.textContent = (dep.ecosystem || '').toUpperCase();
+      const nameT = el('text', { class: 'node-name', x: 10, y: 30 });
+      nameT.textContent = truncate(dep.name, 22);
+      const verT = el('text', { class: 'node-version', x: 10, y: 46 });
+      verT.textContent = '@' + truncate(dep.version, 18);
+      g.append(ecoT, nameT, verT);
+
+      g.addEventListener('mousedown', (ev) => this._beginNodeDrag(ev, node));
+      g.addEventListener('click', (ev) => {
+        if (this._suppressClick) { this._suppressClick = false; return; }
+        ev.stopPropagation();
+        this.selectKey(depKey(node.dep));
+      });
+      g.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault();
+          this.selectKey(depKey(node.dep));
+        }
+      });
+      return g;
+    }
+
+    _restyleNode(node) {
+      const sev = node.dep.severity || 'none';
+      node.dom.setAttribute('class', 'node sev-' + sev + (this.selectedKey === depKey(node.dep) ? ' selected' : ''));
+      const dot = node.dom.querySelector('.sev-dot');
+      if (dot) dot.setAttribute('class', 'sev-dot sev-' + sev);
+    }
+
+    _restyleEdge(e) {
+      const child = this.nodes.get(e.to);
+      const sev = child?.dep?.severity || 'none';
+      let cls = 'edge';
+      if (sev === 'critical') cls += ' crit';
+      else if (sev === 'high' || sev === 'medium') cls += ' danger';
+      e.dom.setAttribute('class', cls);
+      e.severity = sev;
+    }
+
+    _edgePath(fromKey, toKey) {
+      const a = this.nodes.get(fromKey);
+      const b = this.nodes.get(toKey);
+      if (!a || !b) return '';
+      const x1 = a.x + NODE_W, y1 = a.y + NODE_H / 2;
+      const x2 = b.x,         y2 = b.y + NODE_H / 2;
+      const dx = Math.max(40, (x2 - x1) * 0.5);
+      return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+    }
+
+    _updateEdgesFor(nodeKey) {
+      for (const e of this.edges) {
+        if (e.from !== nodeKey && e.to !== nodeKey) continue;
+        e.dom.setAttribute('d', this._edgePath(e.from, e.to));
+      }
+    }
+
+    // ─── highlighting / filtering ───
+
+    _applyDim() {
+      if (!this.highlightBranch || !this.selectedKey) {
+        for (const n of this.nodes.values()) n.dom.classList.remove('dim');
+        for (const e of this.edges) e.dom.classList.remove('highlight', 'dim');
+        return;
+      }
+      const lineage = this._collectLineage(this.selectedKey);
+      for (const [key, n] of this.nodes) {
+        n.dom.classList.toggle('dim', !lineage.has(key));
+      }
+      for (const e of this.edges) {
+        const onPath = lineage.has(e.from) && lineage.has(e.to);
+        e.dom.classList.toggle('highlight', onPath);
+        e.dom.classList.toggle('dim', !onPath);
+      }
+    }
+
+    _collectLineage(rootKey) {
+      const result = new Set([rootKey]);
+      // ancestors
+      const stack = [rootKey];
+      while (stack.length) {
+        const k = stack.pop();
+        for (const e of this.edges) {
+          if (e.to === k && !result.has(e.from)) { result.add(e.from); stack.push(e.from); }
+        }
+      }
+      // descendants
+      stack.push(rootKey);
+      while (stack.length) {
+        const k = stack.pop();
+        for (const e of this.edges) {
+          if (e.from === k && !result.has(e.to)) { result.add(e.to); stack.push(e.to); }
+        }
+      }
+      return result;
+    }
+
+    _applyVisibility() {
+      const f = this._filter;
+      for (const [key, n] of this.nodes) {
+        let visible = true;
+        if (this.collapseSafe && (n.dep.severity || 'none') === 'none') visible = false;
+        if (f && !f(n.dep)) visible = false;
+        n.dom.style.display = visible ? '' : 'none';
+      }
+      for (const e of this.edges) {
+        const a = this.nodes.get(e.from);
+        const b = this.nodes.get(e.to);
+        e.dom.style.display = (a && b && a.dom.style.display !== 'none' && b.dom.style.display !== 'none') ? '' : 'none';
+      }
+    }
+
+    // ─── input: pan, zoom, drag ───
+
+    _bindInput() {
+      let panStart = null;
+      let dragging = null;
+      let dragMoved = false;
+
+      this.svg.addEventListener('mousedown', (ev) => {
+        const isMiddle = ev.button === 1;
+        const isAlt = ev.altKey;
+        if (isMiddle || isAlt || ev.target === this.svg || ev.target === this.root) {
+          panStart = { x: ev.clientX, y: ev.clientY, px: this.view.panX, py: this.view.panY };
+          ev.preventDefault();
+        }
+      });
+      window.addEventListener('mousemove', (ev) => {
+        if (panStart) {
+          this.view.panX = panStart.px + (ev.clientX - panStart.x);
+          this.view.panY = panStart.py + (ev.clientY - panStart.y);
+          this._applyTransform();
+        }
+        if (this._activeDrag) {
+          const wp = this._screenToWorld(ev.clientX, ev.clientY);
+          this._activeDrag.node.x = wp.x - this._activeDrag.dx;
+          this._activeDrag.node.y = wp.y - this._activeDrag.dy;
+          this._activeDrag.node.dom.setAttribute('transform', `translate(${this._activeDrag.node.x} ${this._activeDrag.node.y})`);
+          this._updateEdgesFor(depKey(this._activeDrag.node.dep));
+          this._activeDrag.moved = true;
+        }
+      });
+      window.addEventListener('mouseup', (ev) => {
+        if (this._activeDrag?.moved) this._suppressClick = true;
+        panStart = null;
+        this._activeDrag = null;
+      });
+      this.svg.addEventListener('wheel', (ev) => {
+        ev.preventDefault();
+        const factor = ev.deltaY < 0 ? 1.12 : 1 / 1.12;
+        this.setZoom(this.view.zoom * factor, { x: ev.offsetX, y: ev.offsetY });
+      }, { passive: false });
+      this.svg.addEventListener('click', () => {
+        // click on empty space clears selection
+        this.selectKey(null);
+      });
+    }
+
+    _beginNodeDrag(ev, node) {
+      if (ev.button !== 0 || ev.altKey) return;
+      ev.stopPropagation();
+      const wp = this._screenToWorld(ev.clientX, ev.clientY);
+      this._activeDrag = { node, dx: wp.x - node.x, dy: wp.y - node.y, moved: false };
+    }
+  }
+
+  function depKey(d) { return d.ecosystem + '|' + d.name + '|' + d.version; }
+  function truncate(s, n) { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
+
+  // Expose to window for the app script.
+  window.DepGraph = DepGraph;
+  window.depKey = depKey;
+})();
+
+</script>
+<script nonce="Zx1rizy00kuT+Q5GhrXquA==">
+// DepAudit single-page app.
+//
+// Reads bootstrap JSON from #bootstrap. The bootstrap can either contain
+// a complete report (static mode) or a "live: true" flag plus an SSE
+// endpoint to stream phase/dep/vuln events from the server.
+(function () {
+  const bootstrap = JSON.parse(document.getElementById('bootstrap').textContent);
+  const svg = document.getElementById('graph');
+  const graph = new window.DepGraph(svg);
+
+  const state = {
+    deps: [],
+    depByKey: new Map(),
+    severity: { critical: 0, high: 0, medium: 0, low: 0, none: 0 },
+    sources: bootstrap.sources || [],
+    project: bootstrap.project,
+    filters: {
+      ecosystem: new Set(),
+      query: '',
+      vulnOnly: false,
+      directOnly: false,
+    },
+  };
+
+  // ─── source-of-truth refresh ───────────────────────────────────────
+
+  function recomputeSeverity() {
+    const c = { critical: 0, high: 0, medium: 0, low: 0, none: 0 };
+    let direct = 0, trans = 0, vuln = 0;
+    for (const d of state.deps) {
+      c[d.severity || 'none'] = (c[d.severity || 'none'] || 0) + 1;
+      if (d.direct) direct++; else trans++;
+      if ((d.vulnerabilities || []).length) vuln++;
+    }
+    state.severity = c;
+    document.getElementById('s-total').textContent = state.deps.length;
+    document.getElementById('s-direct').textContent = direct;
+    document.getElementById('s-trans').textContent = trans;
+    document.getElementById('s-vuln').textContent = vuln;
+    document.getElementById('s-clean').textContent = state.deps.length - vuln;
+    document.getElementById('foot-tally').textContent =
+      `${state.deps.length} packages · ${vuln} vulnerable · ${state.sources.length} data sources`;
+    renderSeverityBar();
+  }
+
+  function renderSeverityBar() {
+    const total = state.deps.length || 1;
+    const bar = document.getElementById('sev-bar');
+    bar.textContent = '';
+    const order = [
+      ['crit', 'critical', 'Critical', state.severity.critical],
+      ['high', 'high',     'High',     state.severity.high],
+      ['med',  'medium',   'Medium',   state.severity.medium],
+      ['low',  'low',      'Low',      state.severity.low],
+      ['none', 'none',     'Clean',    state.severity.none],
+    ];
+    for (const [cls, , , n] of order) {
+      const seg = document.createElement('span');
+      seg.className = cls;
+      seg.style.width = (n / total * 100) + '%';
+      bar.appendChild(seg);
+    }
+    const legend = document.getElementById('sev-legend');
+    legend.textContent = '';
+    for (const [cls, key, label, n] of order) {
+      const li = document.createElement('li');
+      const left = document.createElement('span');
+      const sw = document.createElement('span'); sw.className = 'swatch ' + cls; sw.style.background = swatchColor(key);
+      left.appendChild(sw); left.appendChild(document.createTextNode(label));
+      const right = document.createElement('span'); right.textContent = n;
+      li.append(left, right);
+      legend.appendChild(li);
+    }
+  }
+  function swatchColor(key) {
+    return { critical: 'var(--crit)', high: 'var(--bad)', medium: 'var(--warn)', low: 'var(--accent)', none: 'var(--good)' }[key] || 'var(--muted)';
+  }
+
+  // ─── filters ──────────────────────────────────────────────────────
+
+  function renderEcoChips() {
+    const wrap = document.getElementById('eco-chips');
+    wrap.textContent = '';
+    const ecos = new Set(state.deps.map(d => d.ecosystem));
+    for (const eco of ecos) {
+      const b = document.createElement('button');
+      b.className = 'chip' + (state.filters.ecosystem.has(eco) ? ' active' : '');
+      b.textContent = eco;
+      b.addEventListener('click', () => {
+        if (state.filters.ecosystem.has(eco)) state.filters.ecosystem.delete(eco);
+        else state.filters.ecosystem.add(eco);
+        renderEcoChips();
+        applyFilter();
+      });
+      wrap.appendChild(b);
+    }
+  }
+
+  function applyFilter() {
+    graph.setFilter((d) => {
+      if (state.filters.ecosystem.size && !state.filters.ecosystem.has(d.ecosystem)) return false;
+      if (state.filters.vulnOnly && !(d.vulnerabilities || []).length) return false;
+      if (state.filters.directOnly && !d.direct) return false;
+      if (state.filters.query) {
+        const q = state.filters.query.toLowerCase();
+        const hay = [
+          d.name, d.version, d.ecosystem,
+          ...(d.declaredIn || []),
+          ...(d.vulnerabilities || []).flatMap(v => [v.id, v.summary]),
+        ].join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }
+
+  document.getElementById('q').addEventListener('input', (ev) => {
+    state.filters.query = ev.target.value;
+    applyFilter();
+  });
+  document.getElementById('f-vuln-only').addEventListener('change', (ev) => {
+    state.filters.vulnOnly = ev.target.checked; applyFilter();
+  });
+  document.getElementById('f-direct-only').addEventListener('change', (ev) => {
+    state.filters.directOnly = ev.target.checked; applyFilter();
+  });
+
+  document.getElementById('t-fit').addEventListener('click', () => graph.fit());
+  document.getElementById('t-zin').addEventListener('click', () => graph.setZoom(graph.view.zoom * 1.2));
+  document.getElementById('t-zout').addEventListener('click', () => graph.setZoom(graph.view.zoom / 1.2));
+  document.getElementById('t-collapse-safe').addEventListener('change', (e) => graph.setCollapseSafe(e.target.checked));
+  document.getElementById('t-highlight').addEventListener('change', (e) => graph.setHighlightBranch(e.target.checked));
+  document.getElementById('t-replay').addEventListener('click', () => replayAnimation());
+
+  // ─── details panel ────────────────────────────────────────────────
+
+  graph.on('select', (key) => {
+    const empty = document.getElementById('details-empty');
+    const card = document.getElementById('details');
+    if (!key) { empty.hidden = false; card.hidden = true; return; }
+    const dep = state.depByKey.get(key);
+    if (!dep) return;
+    empty.hidden = true; card.hidden = false;
+    document.getElementById('d-name').textContent = dep.name;
+    document.getElementById('d-version').textContent = '@' + dep.version;
+    const risk = document.getElementById('d-risk');
+    risk.className = 'risk-badge sev-' + (dep.severity || 'none');
+    risk.textContent = (dep.severity || 'none').toUpperCase();
+    document.getElementById('d-eco').textContent = dep.ecosystem;
+    document.getElementById('d-depth').textContent = dep.depth ?? 0;
+    document.getElementById('d-direct').textContent = dep.direct ? 'yes' : 'no';
+    const decl = document.getElementById('d-declared'); decl.textContent = '';
+    for (const p of (dep.declaredIn || [])) {
+      const li = document.createElement('li');
+      li.textContent = p;
+      decl.appendChild(li);
+    }
+    const vulnsBox = document.getElementById('d-vulns');
+    vulnsBox.textContent = '';
+    const vulnsList = dep.vulnerabilities || [];
+    document.getElementById('d-vulns-wrap').hidden = vulnsList.length === 0;
+    document.getElementById('d-vuln-count').textContent = vulnsList.length ? `(${vulnsList.length})` : '';
+    for (const v of vulnsList) {
+      const li = document.createElement('li');
+      const id = document.createElement('div');
+      id.className = 'vuln-id sev-' + (v.severityLabel || 'unknown');
+      id.textContent = v.id + (v.severityLabel ? ` [${v.severityLabel}]` : '');
+      li.appendChild(id);
+      if (v.summary) {
+        const s = document.createElement('div'); s.className = 'vuln-summary'; s.textContent = v.summary;
+        li.appendChild(s);
+      }
+      if (v.fixedIn && v.fixedIn.length) {
+        const f = document.createElement('div'); f.className = 'vuln-fixed';
+        f.textContent = 'fixed in: ' + v.fixedIn.join(', ');
+        li.appendChild(f);
+      }
+      if (v.references && v.references.length) {
+        const r = document.createElement('div'); r.className = 'vuln-refs';
+        r.textContent = v.references.join('  ');
+        li.appendChild(r);
+      }
+      vulnsBox.appendChild(li);
+    }
+    const aiW = document.getElementById('d-ai-wrap');
+    if (dep.aiExplanation) {
+      aiW.hidden = false;
+      document.getElementById('d-ai').textContent = dep.aiExplanation;
+    } else aiW.hidden = true;
+    const fixW = document.getElementById('d-fix-wrap');
+    if (dep.fixPlan) {
+      fixW.hidden = false;
+      const fx = document.getElementById('d-fix'); fx.textContent = '';
+      const meta = document.createElement('div');
+      meta.innerHTML = '';
+      const tgt = document.createElement('div');
+      tgt.innerHTML = '';
+      tgt.appendChild(document.createTextNode('Target: '));
+      const tv = document.createElement('strong'); tv.textContent = dep.fixPlan.targetVersion;
+      tgt.appendChild(tv);
+      const reason = document.createElement('div'); reason.textContent = dep.fixPlan.reasoning;
+      const diff = document.createElement('div'); diff.className = 'fix-diff';
+      const minus = document.createElement('div'); minus.className = 'minus'; minus.textContent = '- ' + dep.fixPlan.oldString;
+      const plus = document.createElement('div'); plus.className = 'plus';  plus.textContent = '+ ' + dep.fixPlan.newString;
+      diff.append(minus, plus);
+      fx.append(tgt, reason, diff);
+    } else fixW.hidden = true;
+  });
+
+  // ─── data sources panel ───────────────────────────────────────────
+
+  function renderSources() {
+    const ul = document.getElementById('sources-list');
+    ul.textContent = '';
+    for (const s of state.sources) {
+      const li = document.createElement('li');
+      const head = document.createElement('div');
+      const name = document.createElement('span'); name.className = 'src-name'; name.textContent = s.name;
+      const status = document.createElement('span'); status.className = s.used ? 'src-on' : 'src-off';
+      status.textContent = '  ' + (s.used ? '✓ used' : '◌ skipped');
+      head.append(name, status);
+      const meta = document.createElement('div'); meta.className = 'src-meta'; meta.textContent = s.detail || '';
+      li.append(head, meta);
+      ul.appendChild(li);
+    }
+  }
+
+  // ─── ingest ──────────────────────────────────────────────────────
+
+  function ingestDep(dep) {
+    const key = window.depKey(dep);
+    const existing = state.depByKey.get(key);
+    if (existing) {
+      Object.assign(existing, dep);
+      graph.upsertNode(existing);
+      return existing;
+    }
+    state.depByKey.set(key, dep);
+    state.deps.push(dep);
+    const node = graph.upsertNode(dep, { animate: true });
+    for (const parentKey of (dep.parents || [])) {
+      if (state.depByKey.has(parentKey)) graph.addEdge(parentKey, key);
+    }
+    return dep;
+  }
+
+  function ingestVulnUpdate(key, vulnerabilities, severity) {
+    const dep = state.depByKey.get(key);
+    if (!dep) return;
+    dep.vulnerabilities = vulnerabilities;
+    dep.severity = severity;
+    graph.upsertNode(dep);
+    recomputeSeverity();
+    if (graph.selectedKey === key) graph._emit && graph._emit('select', key);
+  }
+
+  // ─── static vs live boot ──────────────────────────────────────────
+
+  function bootStatic(report) {
+    document.getElementById('empty-overlay').classList.add('hidden');
+    document.getElementById('discovery-toast').hidden = true;
+    state.sources = report.sources || state.sources;
+    for (const d of report.dependencies) ingestDep(d);
+    recomputeSeverity();
+    renderEcoChips();
+    renderSources();
+    graph.fit();
+    setScanStatus('done', `Scan complete — ${report.dependencies.length} packages`);
+  }
+
+  function setScanStatus(cls, label) {
+    const s = document.getElementById('scan-status');
+    s.className = 'scan-status ' + cls;
+    document.getElementById('scan-label').textContent = label;
+  }
+
+  function bootLive() {
+    setScanStatus('active', 'Scanning…');
+    const toast = document.getElementById('discovery-toast');
+    toast.hidden = false;
+    const evt = new EventSource(bootstrap.eventsUrl || '/events');
+    evt.addEventListener('project', (m) => {
+      const p = JSON.parse(m.data);
+      state.sources = p.sources || [];
+      renderSources();
+    });
+    evt.addEventListener('progress', (m) => {
+      const p = JSON.parse(m.data);
+      if (p.message) document.getElementById('toast-text').textContent = p.message;
+    });
+    evt.addEventListener('dep', (m) => {
+      const dep = JSON.parse(m.data);
+      ingestDep(dep);
+      document.getElementById('empty-overlay').classList.add('hidden');
+      document.getElementById('toast-text').textContent = 'Adding ' + dep.name + '@' + dep.version;
+      recomputeSeverity();
+      renderEcoChips();
+    });
+    evt.addEventListener('vuln', (m) => {
+      const u = JSON.parse(m.data);
+      ingestVulnUpdate(u.key, u.vulnerabilities, u.severity);
+      document.getElementById('toast-text').textContent =
+        'Checking vulnerabilities · ' + (u.dep || '');
+    });
+    evt.addEventListener('done', (m) => {
+      const r = JSON.parse(m.data);
+      setScanStatus('done', `Scan complete — ${state.deps.length} packages, ${r.vulnerable || 0} vulnerable`);
+      toast.hidden = true;
+      graph.fit();
+      evt.close();
+    });
+    evt.addEventListener('error', () => {
+      setScanStatus('error', 'Connection lost');
+    });
+  }
+
+  function replayAnimation() {
+    // Re-add nodes one-by-one with animation for visual effect.
+    const snap = [...state.deps];
+    graph.setData([]);
+    state.depByKey.clear();
+    state.deps = [];
+    let i = 0;
+    const interval = setInterval(() => {
+      if (i >= snap.length) { clearInterval(interval); graph.fit(); recomputeSeverity(); return; }
+      const dep = snap[i++];
+      state.depByKey.set(window.depKey(dep), dep);
+      state.deps.push(dep);
+      graph.upsertNode(dep, { animate: true });
+      for (const pk of (dep.parents || [])) {
+        if (state.depByKey.has(pk)) graph.addEdge(pk, window.depKey(dep));
+      }
+    }, 35);
+  }
+
+  // ─── boot ─────────────────────────────────────────────────────────
+
+  renderSources();
+  renderEcoChips();
+  if (bootstrap.live) bootLive();
+  else if (bootstrap.dependencies) bootStatic(bootstrap);
+  else setScanStatus('idle', 'No data');
+})();
+
+</script>
+</body>
+</html>

@@ -10,5 +10,6 @@
   "ui_kind": "canvas",
   "ui": { "aspect": "9:16", "min_height_dp": 480 },
   "fullscreen": true,
-  "streams": ["waveform"]
+  "streams": ["waveform"],
+  "assets": ["bird.svg", "pipe-top.svg", "pipe-bottom.svg", "cloud.svg"]
 }

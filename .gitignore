@@ -8,6 +8,14 @@ node_modules/
 build/
 *.class
 
+# Gradle daemon state — per-machine, regenerated on every build,
+# would constantly show as "modified" in commits otherwise.
+.gradle/
+
+# Kotlin compiler session files — same story, per-machine state.
+.kotlin/
+*.salive
+
 # RunTest.java I/O. test-input.wav is gitignored too because it
 # typically contains the contributor's own voice — if you want to share
 # a sample recording for reproducible plugin testing, force-add it

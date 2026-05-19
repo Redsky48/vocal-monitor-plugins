@@ -26,6 +26,8 @@ PluginGameKit is a tiny Java library that sits on top of `PluginCanvas` and the 
 | `ui.Slider` | horizontal value slider 0..1, drag-to-set | yes |
 | `ui.Knob` | rotary knob, vertical-drag to change, 270° sweep | yes |
 | `dev.Profiler` | per-section ms timer with on-screen averaged readout | yes |
+| `svg.PluginShape` | parsed SVG drawable; `draw(canvas, x, y, scale)` + tint variant | yes |
+| `svg.Svg` | SVG-text → `PluginShape` parser (subset: paths, rects, circles, polys, groups) | no |
 
 Everything lives under `com.vocalmonitor.plugin.gamekit`. The stubs are at `shared/src/main/java/com/vocalmonitor/plugin/gamekit/` (canonical) and mirrored to `scripts/native-stub/com/vocalmonitor/plugin/gamekit/` for the dex build.
 
@@ -219,6 +221,49 @@ prof.drawOverlay(c, w, h, scale);   // small bottom-right table
 ```
 
 `prof.totalMs()` reads the averaged frame time.  Disable shipping with `prof.enabled(false)`.
+
+## SVG vector assets
+
+Plugins can ship `.svg` files alongside the Java source and load them at runtime through the host. The parser turns the SVG into a `PluginShape` — an opaque packed-path object that draws to any `PluginCanvas` with one call.
+
+```java
+public final class MyPlugin extends GamePluginBase {
+    private PluginShape bird;
+
+    @Override public void render(PluginCanvas c, int w, int h, long timeMs, ...) {
+        beginFrame(w, h, timeMs, streams);
+        if (bird == null && host != null) {
+            String svg = host.loadAssetText("bird.svg");
+            if (svg != null) bird = Svg.parse(svg);
+        }
+        if (bird != null && !bird.isEmpty()) {
+            float fit = Math.min(w / bird.viewBoxWidth(),
+                                 h / bird.viewBoxHeight()) * 0.8f;
+            bird.draw(c, w / 2f - bird.viewBoxWidth() * fit / 2f,
+                          h / 2f - bird.viewBoxHeight() * fit / 2f, fit);
+        }
+    }
+}
+```
+
+**Authoring rules:**
+
+1. **Drop the file in `plugins/<cat>/<id>/` or `plugins/<cat>/<id>/assets/`.** Either location works; the host tries both.
+2. **Declare it in `plugin.json`:** `"assets": ["bird.svg"]` — the manifest builder fails the build if you reference a file that isn't there.
+3. **Always null-check `host` and the parse result.** Older hosts won't implement `loadAssetText` and return `null`; SVGs with unsupported features parse to an empty shape (`bird.isEmpty()`).
+
+**Supported SVG subset** (v1): viewBox, `<rect>` `<circle>` `<ellipse>` `<line>` `<polygon>` `<polyline>` `<path>`, path commands `MLHVCQTSZ` (absolute + relative), groups `<g>` inheriting `fill` / `stroke` / `stroke-width` / `opacity`. Color formats: `#rgb` `#rrggbb` `rgb(r,g,b)` `none` + common named colors.
+
+**NOT supported** — pre-process with Inkscape "Save As → Optimized SVG" or `svgo` to flatten:
+- arcs (`A`/`a` commands)
+- transforms on individual elements
+- gradients, filters, masks, `<use>` / `<defs>`
+- `<style>` blocks (CSS)
+- text-as-text (convert to paths)
+
+**Reference plugin:** `plugins/visual/svg-demo/` — loads `assets/bird.svg`, draws it bobbing + scaling with mic level. Read its `SvgDemo.java` for the lazy-load pattern.
+
+**Tinting:** `shape.drawTinted(c, x, y, scale, color)` replaces every fill colour in the shape with `color` — load one neutral icon, render it in many palette colours.
 
 ## Mic detection tuning cheat sheet
 

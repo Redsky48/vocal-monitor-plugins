@@ -5,6 +5,8 @@ import com.vocalmonitor.plugin.PluginPaint;
 import com.vocalmonitor.plugin.PluginStyle;
 import com.vocalmonitor.plugin.VocalMonitorNativePlugin;
 import com.vocalmonitor.plugin.VocalMonitorVisualPlugin;
+import com.vocalmonitor.plugin.gamekit.audio.NoteName;
+import com.vocalmonitor.plugin.gamekit.audio.PitchTracker;
 
 import java.util.Map;
 
@@ -17,15 +19,15 @@ import java.util.Map;
  * by `toneLevel`.
  *
  * Visual: horizontal needle deflects left/right as cents-error; green
- * stripe in the centre is the "in tune" band (±10 cents).
+ * stripe in the centre is the "in tune" band (±10 cents).  Pitch
+ * detection uses gamekit's {@link PitchTracker} so the algorithm
+ * stays in one place — see plugins/training/pitch-arrow/ for the
+ * reference usage.
  */
 public final class TargetTone implements VocalMonitorVisualPlugin {
 
     private int sampleRate = 44100;
-    private float lpAlpha;
-    private float lpPrev = 0f;
-    private float smoothedPitchHz = 0f;
-    private float smoothedRms = 0f;
+    private final PitchTracker pitch = new PitchTracker();
     private float smoothedCents = 0f;
     private float targetHz = 440f;
     private float toneLevel = 0.15f;
@@ -35,10 +37,7 @@ public final class TargetTone implements VocalMonitorVisualPlugin {
     @Override
     public void init(int sr) {
         this.sampleRate = sr;
-        this.lpAlpha = (float) (1.0 - Math.exp(-2.0 * Math.PI * 800.0 / sr));
-        lpPrev = 0f;
-        smoothedPitchHz = 0f;
-        smoothedRms = 0f;
+        pitch.setSampleRate(sr).reset();
         smoothedCents = 0f;
         tonePhase = 0.0;
     }
@@ -100,35 +99,8 @@ public final class TargetTone implements VocalMonitorVisualPlugin {
     }
 
     private void feedLive(Map<String, float[]> streams) {
-        float[] wave = streams != null ? streams.get("waveform") : null;
-        if (wave == null || wave.length < 16) {
-            smoothedPitchHz *= 0.85f;
-            return;
-        }
-        int upwardZc = 0;
-        boolean wasPositive = lpPrev >= 0f;
-        double sumSq = 0.0;
-        for (int i = 0; i < wave.length; i++) {
-            lpPrev += lpAlpha * (wave[i] - lpPrev);
-            boolean isPositive = lpPrev >= 0f;
-            if (isPositive && !wasPositive) upwardZc++;
-            wasPositive = isPositive;
-            sumSq += wave[i] * wave[i];
-        }
-        float rms = (float) Math.sqrt(sumSq / wave.length);
-        smoothedRms += 0.30f * (rms - smoothedRms);
-        if (rms > 0.008f) {
-            float duration = wave.length / (float) sampleRate;
-            float p = upwardZc / duration;
-            if (p < 60f)  p = 60f;
-            if (p > 800f) p = 800f;
-            smoothedPitchHz += 0.30f * (p - smoothedPitchHz);
-        } else {
-            smoothedPitchHz *= 0.85f;
-        }
-        float cents = (smoothedPitchHz > 50f)
-            ? (float) (1200.0 * Math.log(smoothedPitchHz / targetHz) / Math.log(2.0))
-            : 0f;
+        pitch.feed(streams, 0.016f);
+        float cents = pitch.voiced() ? pitch.centsFrom(targetHz) : 0f;
         smoothedCents += 0.35f * (cents - smoothedCents);
     }
 
@@ -151,7 +123,7 @@ public final class TargetTone implements VocalMonitorVisualPlugin {
         titleP.setColor(0xFFFFFFFF);
         titleP.setTextSize(28f * scale);
         titleP.setTextAlign(1);
-        canvas.drawText("Target: " + noteName(targetHz) +
+        canvas.drawText("Target: " + NoteName.of(targetHz) +
             "  (" + Math.round(targetHz) + " Hz)",
             width / 2f, 44f, titleP);
 
@@ -191,7 +163,7 @@ public final class TargetTone implements VocalMonitorVisualPlugin {
         canvas.drawText("0",    cx,    gaugeY + thickness + 32, lbl);
         canvas.drawText("+50¢", right, gaugeY + thickness + 32, lbl);
 
-        boolean voiced = smoothedPitchHz > 50f && smoothedRms > 0.005f;
+        boolean voiced = pitch.voiced();
         if (voiced) {
             // Needle position from cents.
             float c = smoothedCents;
@@ -220,7 +192,7 @@ public final class TargetTone implements VocalMonitorVisualPlugin {
             sub.setTextSize(16f * scale);
             sub.setTextAlign(1);
             canvas.drawText(
-                "You: " + Math.round(smoothedPitchHz) + " Hz · " + noteName(smoothedPitchHz),
+                "You: " + Math.round(pitch.hz()) + " Hz · " + NoteName.of(pitch.hz()),
                 cx, height * 0.91f, sub);
         } else {
             PluginPaint hint = canvas.newPaint();
@@ -231,13 +203,4 @@ public final class TargetTone implements VocalMonitorVisualPlugin {
         }
     }
 
-    private static String noteName(float hz) {
-        if (hz < 20f) return "—";
-        double midi = 69.0 + 12.0 * Math.log(hz / 440.0) / Math.log(2.0);
-        int m = (int) Math.round(midi);
-        int octave = (m / 12) - 1;
-        String[] names = { "C","C#","D","D#","E","F","F#","G","G#","A","A#","B" };
-        int idx = ((m % 12) + 12) % 12;
-        return names[idx] + octave;
-    }
 }

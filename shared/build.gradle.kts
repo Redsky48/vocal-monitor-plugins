@@ -39,7 +39,7 @@ dependencies {
     // standard Mozilla build (the Android fork adds DEX hooks we
     // don't need on the JVM).  Used by JsPluginEngine + NativeDspHost
     // to host the JavaScript-engine plugin family.
-    api("org.mozilla:rhino:1.7.14")
+    api("org.mozilla:rhino:1.7.14.1")
 
     testImplementation(kotlin("test"))
 }

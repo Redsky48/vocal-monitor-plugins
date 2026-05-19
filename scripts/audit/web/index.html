@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="{{CSP}}">
+<meta name="referrer" content="no-referrer">
+<title>DepAudit — {{PROJECT}}</title>
+<style nonce="{{NONCE}}">
+{{CSS}}
+</style>
+</head>
+<body data-project="{{PROJECT}}">
+
+<header class="topbar">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path fill="currentColor" d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Zm-1 14-4-4 1.4-1.4L11 13.2l4.6-4.6L17 10l-6 6Z"/>
+    </svg>
+    <span>DepAudit</span>
+  </div>
+  <div class="project-chip">
+    <span class="muted">project</span>
+    <span class="project-name" id="project-name">{{PROJECT}}</span>
+    <button class="chip-btn" id="open-picker" title="Audit another folder" aria-label="Change project">⇄</button>
+  </div>
+  <div class="root-picker" id="root-picker" hidden>
+    <button id="browse-btn" class="ghost" title="Open folder picker">📁 Browse…</button>
+    <input type="text" id="root-input" placeholder="C:\path\to\project  or  /home/you/project" autocomplete="off" spellcheck="false">
+    <button id="start-audit">Audit</button>
+    <button id="cancel-picker" class="ghost">Cancel</button>
+  </div>
+  <div class="topbar-spacer"></div>
+  <div id="scan-status" class="scan-status">
+    <span class="dot" id="scan-dot"></span>
+    <span id="scan-label">Idle</span>
+  </div>
+</header>
+
+<main class="grid">
+
+  <aside class="sidebar-left">
+    <section class="card audit-card">
+      <div class="card-title">Audit folder</div>
+      <button id="browse-btn-sidebar" class="primary-btn" style="margin-bottom:.4rem">📁 Browse for folder…</button>
+      <input type="text" id="root-input-sidebar" placeholder="Or paste a path…" autocomplete="off" spellcheck="false">
+      <button id="start-audit-sidebar" class="primary-btn ghost-primary">+ Start audit</button>
+      <div class="card-title" style="margin-top:.75rem">Recent</div>
+      <ul id="recent-list" class="recent-list"></ul>
+    </section>
+
+    <section class="card">
+      <div class="card-title">Summary</div>
+      <dl class="kv">
+        <dt>Total</dt>      <dd id="s-total">0</dd>
+        <dt>Direct</dt>     <dd id="s-direct">0</dd>
+        <dt>Transitive</dt> <dd id="s-trans">0</dd>
+        <dt>Vulnerable</dt> <dd id="s-vuln" class="bad">0</dd>
+        <dt>Clean</dt>      <dd id="s-clean" class="good">0</dd>
+      </dl>
+    </section>
+
+    <section class="card">
+      <div class="card-title">Severity</div>
+      <div id="sev-bar" class="sev-bar"></div>
+      <ul class="sev-legend" id="sev-legend"></ul>
+    </section>
+
+    <section class="card">
+      <div class="card-title">Filters</div>
+      <input id="q" type="search" placeholder="Search package, CVE…" autocomplete="off">
+      <div class="chips" id="eco-chips"></div>
+      <div class="toggle-row">
+        <label><input type="checkbox" id="f-vuln-only"> Vulnerable only</label>
+        <label><input type="checkbox" id="f-direct-only"> Direct only</label>
+      </div>
+    </section>
+
+    <section class="card sources-card">
+      <div class="card-title">Data sources</div>
+      <ul id="sources-list" class="sources-list"></ul>
+    </section>
+  </aside>
+
+  <section class="graph-pane">
+    <div class="graph-toolbar">
+      <div class="toolbar-group">
+        <button id="t-fit"  title="Fit view">Fit</button>
+        <button id="t-zin"  title="Zoom in">+</button>
+        <button id="t-zout" title="Zoom out">−</button>
+        <span class="zoom-readout" id="zoom-readout">100%</span>
+      </div>
+      <div class="toolbar-group">
+        <label><input type="checkbox" id="t-collapse-safe"> Collapse safe</label>
+        <label><input type="checkbox" id="t-highlight"> Highlight branch</label>
+      </div>
+      <div class="toolbar-group">
+        <button id="t-replay">Replay scan</button>
+      </div>
+    </div>
+    <div class="graph-host">
+      <svg id="eventGraph" tabindex="0" aria-label="Dependency graph"></svg>
+      <div class="empty-overlay" id="empty-overlay">
+        <div>Waiting for scan to start…</div>
+      </div>
+    </div>
+    <div class="eg-inspector" id="eventInspector"></div>
+    <div class="discovery-toast" id="discovery-toast" hidden>
+      <span class="dot pulse"></span>
+      <span id="toast-text">Discovering packages…</span>
+    </div>
+  </section>
+
+  <aside class="sidebar-right">
+    <div class="card empty" id="details-empty">
+      <div class="card-title">Package details</div>
+      <p class="muted">Click a node in the graph to inspect it.</p>
+    </div>
+    <div class="card" id="details" hidden>
+      <div class="details-head">
+        <div>
+          <div class="pkg-name" id="d-name"></div>
+          <div class="pkg-version" id="d-version"></div>
+        </div>
+        <div class="risk-badge" id="d-risk"></div>
+      </div>
+      <dl class="kv">
+        <dt>Ecosystem</dt> <dd id="d-eco"></dd>
+        <dt>Depth</dt>     <dd id="d-depth"></dd>
+        <dt>Direct?</dt>   <dd id="d-direct"></dd>
+      </dl>
+
+      <div class="card-title">Declared in</div>
+      <ul id="d-declared" class="paths"></ul>
+
+      <div id="d-vulns-wrap" hidden>
+        <div class="card-title">Vulnerabilities <span id="d-vuln-count" class="muted"></span></div>
+        <ul id="d-vulns" class="vulns"></ul>
+      </div>
+
+      <div id="d-fix-wrap" hidden>
+        <div class="card-title">AI fix plan</div>
+        <div id="d-fix" class="fix-block"></div>
+      </div>
+
+      <div id="d-ai-wrap" hidden>
+        <div class="card-title">AI analysis</div>
+        <div id="d-ai" class="ai-block"></div>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<footer class="footer">
+  <span id="foot-tally" class="muted"></span>
+  <span class="muted">Localhost-only · No external resources · CSP-locked</span>
+</footer>
+
+<script type="application/json" id="bootstrap" nonce="{{NONCE}}">{{DATA}}</script>
+<script nonce="{{NONCE}}">
+{{SHIM_JS}}
+</script>
+<script nonce="{{NONCE}}">
+{{EG_JS}}
+</script>
+<script nonce="{{NONCE}}">
+{{APP_JS}}
+</script>
+</body>
+</html>

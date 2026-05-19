@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-17T23:11:55.425Z",
+  "generatedAt": "2026-05-19T08:49:11.274Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -485,7 +485,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/angry-chirp/angry-chirp.dex",
-      "sizeBytes": 10632,
+      "sizeBytes": 11516,
       "className": "com.vocalmonitor.plugin.community.AngryChirp",
       "ui_kind": "canvas",
       "ui": {
@@ -495,7 +495,29 @@
       "streams": [
         "waveform"
       ],
-      "fullscreen": true
+      "fullscreen": true,
+      "assets": [
+        {
+          "name": "bird.svg",
+          "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/angry-chirp/assets/bird.svg",
+          "sizeBytes": 1843
+        },
+        {
+          "name": "pipe-top.svg",
+          "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/angry-chirp/assets/pipe-top.svg",
+          "sizeBytes": 961
+        },
+        {
+          "name": "pipe-bottom.svg",
+          "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/angry-chirp/assets/pipe-bottom.svg",
+          "sizeBytes": 851
+        },
+        {
+          "name": "cloud.svg",
+          "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/angry-chirp/assets/cloud.svg",
+          "sizeBytes": 488
+        }
+      ]
     },
     {
       "id": "balloon-blow",
@@ -1775,7 +1797,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/scale-runner/scale-runner.dex",
-      "sizeBytes": 7452,
+      "sizeBytes": 7040,
       "className": "com.vocalmonitor.plugin.community.ScaleRunner",
       "ui_kind": "canvas",
       "ui": {
@@ -1804,7 +1826,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/target-tone/target-tone.dex",
-      "sizeBytes": 6624,
+      "sizeBytes": 5904,
       "className": "com.vocalmonitor.plugin.community.TargetTone",
       "ui_kind": "canvas",
       "ui": {
@@ -1861,6 +1883,40 @@
         "aspect": "5:3",
         "min_height_dp": 220
       }
+    },
+    {
+      "id": "svg-demo",
+      "name": "SVG Demo",
+      "author": "Vocal Monitor",
+      "category": "Visual",
+      "description": "Demonstrates loading an SVG vector asset via PluginHost.loadAssetText() and rendering it through gamekit.svg.PluginShape. The bird flaps with the mic level and tints to the user's vocal energy.",
+      "version": "1.0.0",
+      "tags": [
+        "visual",
+        "demo",
+        "svg",
+        "asset",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/visual/svg-demo/svg-demo.dex",
+      "sizeBytes": 2680,
+      "className": "com.vocalmonitor.plugin.community.SvgDemo",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "1:1",
+        "min_height_dp": 240
+      },
+      "streams": [
+        "waveform"
+      ],
+      "assets": [
+        {
+          "name": "bird.svg",
+          "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/visual/svg-demo/assets/bird.svg",
+          "sizeBytes": 808
+        }
+      ]
     },
     {
       "id": "vocal-tuner",

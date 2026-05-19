@@ -1,0 +1,219 @@
+{
+  "auditDate": "2026-05-18",
+  "project": "vocal-monitor-plugins",
+  "ecosystems": [
+    "npm",
+    "github-actions"
+  ],
+  "sources": [
+    {
+      "name": "OSV.dev",
+      "used": true,
+      "detail": "Open Source Vulnerability database — queried for GitHub Actions:2, Maven:8, Gradle:1.",
+      "url": "https://osv.dev"
+    },
+    {
+      "name": "GitHub Advisory Database",
+      "used": true,
+      "detail": "OSV ingests GHSA — every GitHub security advisory is included in the OSV query above.",
+      "url": "https://github.com/advisories"
+    },
+    {
+      "name": "NVD / CVE",
+      "used": true,
+      "detail": "OSV cross-references CVE IDs and CVSS scores from the National Vulnerability Database.",
+      "url": "https://nvd.nist.gov"
+    },
+    {
+      "name": "Local lockfiles",
+      "used": true,
+      "detail": "Parsed package-lock.json / pnpm-lock.yaml / yarn.lock / Cargo.lock / go.mod / requirements.txt for transitives. Detected ecosystems: npm, github-actions."
+    },
+    {
+      "name": "Anthropic Claude API",
+      "used": false,
+      "detail": "Pass --ai or --fix and export ANTHROPIC_API_KEY to enable."
+    }
+  ],
+  "summary": {
+    "totalDependencies": 11,
+    "direct": 11,
+    "transitive": 0,
+    "withKnownVulnerabilities": 0,
+    "bySeverity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 11,
+      "unknown": 0
+    }
+  },
+  "dependencies": [
+    {
+      "ecosystem": "GitHub Actions",
+      "name": "actions/checkout",
+      "version": "v4",
+      "file": ".github/workflows/build-manifest.yml",
+      "line": 21,
+      "direct": true,
+      "depth": 0,
+      "declaredIn": [
+        ".github/workflows/build-manifest.yml:21",
+        ".github/workflows/validate.yml:19"
+      ],
+      "vulnerabilities": [],
+      "severity": "none"
+    },
+    {
+      "ecosystem": "GitHub Actions",
+      "name": "actions/setup-node",
+      "version": "v4",
+      "file": ".github/workflows/build-manifest.yml",
+      "line": 25,
+      "direct": true,
+      "depth": 0,
+      "declaredIn": [
+        ".github/workflows/build-manifest.yml:25",
+        ".github/workflows/validate.yml:20"
+      ],
+      "vulnerabilities": [],
+      "severity": "none"
+    },
+    {
+      "ecosystem": "Maven",
+      "name": "org.jetbrains.kotlinx:kotlinx-coroutines-core",
+      "version": "1.8.1",
+      "file": "daw/build.gradle.kts",
+      "line": 58,
+      "direct": true,
+      "depth": 0,
+      "declaredIn": [
+        "daw/build.gradle.kts:58",
+        "shared/build.gradle.kts:33",
+        "shared-ui/build.gradle.kts:45"
+      ],
+      "vulnerabilities": [],
+      "severity": "none"
+    },
+    {
+      "ecosystem": "Maven",
+      "name": "org.jetbrains.kotlinx:kotlinx-coroutines-swing",
+      "version": "1.8.1",
+      "file": "daw/build.gradle.kts",
+      "line": 59,
+      "direct": true,
+      "depth": 0,
+      "declaredIn": [
+        "daw/build.gradle.kts:59"
+      ],
+      "vulnerabilities": [],
+      "severity": "none"
+    },
+    {
+      "ecosystem": "Maven",
+      "name": "org.jetbrains.kotlin.jvm",
+      "version": "2.0.20",
+      "file": "daw/build.gradle.kts",
+      "line": 25,
+      "direct": true,
+      "depth": 0,
+      "kind": "gradle-plugin",
+      "declaredIn": [
+        "daw/build.gradle.kts:25",
+        "shared/build.gradle.kts:17"
+      ],
+      "vulnerabilities": [],
+      "severity": "none"
+    },
+    {
+      "ecosystem": "Maven",
+      "name": "org.jetbrains.compose",
+      "version": "1.7.0",
+      "file": "daw/build.gradle.kts",
+      "line": 26,
+      "direct": true,
+      "depth": 0,
+      "kind": "gradle-plugin",
+      "declaredIn": [
+        "daw/build.gradle.kts:26",
+        "shared-ui/build.gradle.kts:22"
+      ],
+      "vulnerabilities": [],
+      "severity": "none"
+    },
+    {
+      "ecosystem": "Maven",
+      "name": "org.jetbrains.kotlin.plugin.compose",
+      "version": "2.0.20",
+      "file": "daw/build.gradle.kts",
+      "line": 27,
+      "direct": true,
+      "depth": 0,
+      "kind": "gradle-plugin",
+      "declaredIn": [
+        "daw/build.gradle.kts:27",
+        "shared-ui/build.gradle.kts:23"
+      ],
+      "vulnerabilities": [],
+      "severity": "none"
+    },
+    {
+      "ecosystem": "Gradle",
+      "name": "gradle",
+      "version": "8.9",
+      "file": "daw/gradle/wrapper/gradle-wrapper.properties",
+      "line": 1,
+      "direct": true,
+      "depth": 0,
+      "declaredIn": [
+        "daw/gradle/wrapper/gradle-wrapper.properties:1"
+      ],
+      "vulnerabilities": [],
+      "severity": "none"
+    },
+    {
+      "ecosystem": "Maven",
+      "name": "org.jetbrains.kotlinx:kotlinx-serialization-json",
+      "version": "1.7.1",
+      "file": "shared/build.gradle.kts",
+      "line": 36,
+      "direct": true,
+      "depth": 0,
+      "declaredIn": [
+        "shared/build.gradle.kts:36"
+      ],
+      "vulnerabilities": [],
+      "severity": "none"
+    },
+    {
+      "ecosystem": "Maven",
+      "name": "org.mozilla:rhino",
+      "version": "1.7.14.1",
+      "file": "shared/build.gradle.kts",
+      "line": 42,
+      "direct": true,
+      "depth": 0,
+      "declaredIn": [
+        "shared/build.gradle.kts:42"
+      ],
+      "vulnerabilities": [],
+      "severity": "none"
+    },
+    {
+      "ecosystem": "Maven",
+      "name": "org.jetbrains.kotlin.multiplatform",
+      "version": "2.0.20",
+      "file": "shared-ui/build.gradle.kts",
+      "line": 21,
+      "direct": true,
+      "depth": 0,
+      "kind": "gradle-plugin",
+      "declaredIn": [
+        "shared-ui/build.gradle.kts:21"
+      ],
+      "vulnerabilities": [],
+      "severity": "none"
+    }
+  ]
+}

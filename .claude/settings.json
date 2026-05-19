@@ -12,7 +12,9 @@
       "Bash(node scripts/build-native.mjs pitch-arrow)",
       "Bash(node scripts/new-plugin.mjs visual voice-knobs --native pickerui)",
       "Bash(node scripts/build-native.mjs voice-knobs)",
-      "Bash(xargs javac *)"
+      "Bash(xargs javac *)",
+      "WebFetch(domain:security.snyk.io)",
+      "WebFetch(domain:security.gradle.com)"
     ],
     "additionalDirectories": [
       "\\tmp"

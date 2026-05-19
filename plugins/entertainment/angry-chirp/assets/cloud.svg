@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60">
+  <!-- Soft fluffy cloud — five overlapping circles -->
+  <circle cx="30"  cy="38" r="20" fill="#FFFFFF"/>
+  <circle cx="55"  cy="28" r="22" fill="#FFFFFF"/>
+  <circle cx="80"  cy="30" r="20" fill="#FFFFFF"/>
+  <circle cx="98"  cy="40" r="16" fill="#FFFFFF"/>
+  <circle cx="14"  cy="44" r="14" fill="#FFFFFF"/>
+  <!-- Subtle bottom shading -->
+  <ellipse cx="60" cy="52" rx="50" ry="5" fill="#D0E8F2" opacity="0.8"/>
+</svg>

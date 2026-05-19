@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 300">
+  <!-- Pipe body shaft (drawn first) -->
+  <rect x="6" y="0" width="88" height="260" fill="#7BC95B" stroke="#2A6B28" stroke-width="2"/>
+  <!-- Vertical highlight stripe (left) -->
+  <rect x="14" y="0" width="6" height="260" fill="#A8E27D"/>
+  <!-- Vertical shadow stripe (right) -->
+  <rect x="76" y="0" width="8" height="260" fill="#5BA340"/>
+  <!-- Cap (wider band at bottom of top-pipe) -->
+  <rect x="0" y="240" width="100" height="50" fill="#7BC95B" stroke="#2A6B28" stroke-width="2"/>
+  <!-- Cap highlight -->
+  <rect x="6" y="246" width="8" height="38" fill="#A8E27D"/>
+  <!-- Cap shadow -->
+  <rect x="84" y="246" width="10" height="38" fill="#5BA340"/>
+  <!-- Cap bolts -->
+  <circle cx="16" cy="264" r="3" fill="#2A6B28"/>
+  <circle cx="84" cy="264" r="3" fill="#2A6B28"/>
+  <!-- Bottom shadow line -->
+  <line x1="0" y1="290" x2="100" y2="290" stroke="#1A4A1A" stroke-width="3"/>
+</svg>

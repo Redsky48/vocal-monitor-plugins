@@ -6,6 +6,8 @@ import com.vocalmonitor.plugin.PluginPath;
 import com.vocalmonitor.plugin.PluginStyle;
 import com.vocalmonitor.plugin.VocalMonitorNativePlugin;
 import com.vocalmonitor.plugin.VocalMonitorVisualPlugin;
+import com.vocalmonitor.plugin.gamekit.audio.NoteName;
+import com.vocalmonitor.plugin.gamekit.audio.PitchTracker;
 
 import java.util.Map;
 
@@ -37,10 +39,7 @@ public final class ScaleRunner implements VocalMonitorVisualPlugin {
     };
 
     private int sampleRate = 44100;
-    private float lpAlpha;
-    private float lpPrev = 0f;
-    private float smoothedPitchHz = 0f;
-    private float smoothedRms = 0f;
+    private final PitchTracker pitch = new PitchTracker();
     private double tonePhase = 0.0;
     private int stepIdx = 0;
     private float stepTime = 0f;
@@ -53,10 +52,7 @@ public final class ScaleRunner implements VocalMonitorVisualPlugin {
     @Override
     public void init(int sr) {
         this.sampleRate = sr;
-        this.lpAlpha = (float) (1.0 - Math.exp(-2.0 * Math.PI * 800.0 / sr));
-        lpPrev = 0f;
-        smoothedPitchHz = 0f;
-        smoothedRms = 0f;
+        pitch.setSampleRate(sr).reset();
         tonePhase = 0.0;
         stepIdx = 0;
         stepTime = 0f;
@@ -128,42 +124,13 @@ public final class ScaleRunner implements VocalMonitorVisualPlugin {
             : Math.min(0.10f, (timeMs - lastRenderMs) / 1000f);
         lastRenderMs = timeMs;
         final float t = targetHz();
-
-        float[] wave = streams != null ? streams.get("waveform") : null;
-        if (wave != null && wave.length >= 16) {
-            int upwardZc = 0;
-            boolean wasPositive = lpPrev >= 0f;
-            double sumSq = 0.0;
-            for (int i = 0; i < wave.length; i++) {
-                lpPrev += lpAlpha * (wave[i] - lpPrev);
-                boolean isPositive = lpPrev >= 0f;
-                if (isPositive && !wasPositive) upwardZc++;
-                wasPositive = isPositive;
-                sumSq += wave[i] * wave[i];
-            }
-            float rms = (float) Math.sqrt(sumSq / wave.length);
-            smoothedRms += 0.30f * (rms - smoothedRms);
-            if (rms > 0.008f) {
-                float duration = wave.length / (float) sampleRate;
-                float p = upwardZc / duration;
-                if (p < 60f)  p = 60f;
-                if (p > 800f) p = 800f;
-                smoothedPitchHz += 0.30f * (p - smoothedPitchHz);
-            } else {
-                smoothedPitchHz *= 0.85f;
-            }
-        } else {
-            smoothedPitchHz *= 0.85f;
-        }
-
+        pitch.feed(streams, dt);
         stepTime += dt;
-        if (smoothedPitchHz > 50f && smoothedRms > 0.005f) {
-            float cents = (float)(1200.0 * Math.log(smoothedPitchHz / t) / Math.log(2.0));
+        if (pitch.voiced()) {
+            float cents = pitch.centsFrom(t);
             if (Math.abs(cents) <= 50f) matchTime += dt;
         }
-        if (matchTime > 0.25f) {
-            ticked[stepIdx] = true;
-        }
+        if (matchTime > 0.25f) ticked[stepIdx] = true;
         if (stepTime >= stepSec) {
             stepTime = 0f;
             matchTime = 0f;
@@ -255,16 +222,16 @@ public final class ScaleRunner implements VocalMonitorVisualPlugin {
         canvas.drawText("Now: " + NAME_SEQ[stepIdx < 8 ? stepIdx : (15 - stepIdx)] +
             "  (" + Math.round(tHz) + " Hz)", width / 2f, height * 0.72f, sub);
 
-        boolean voiced = smoothedPitchHz > 50f && smoothedRms > 0.005f;
+        boolean voiced = pitch.voiced();
         if (voiced) {
-            float cents = (float)(1200.0 * Math.log(smoothedPitchHz / tHz) / Math.log(2.0));
+            float cents = pitch.centsFrom(tHz);
             boolean inTune = Math.abs(cents) <= 50f;
             PluginPaint you = canvas.newPaint();
             you.setColor(inTune ? 0xFF66DD66 : 0xFFE25656);
             you.setTextSize(20f * scale);
             you.setTextAlign(1);
             canvas.drawText(
-                "You: " + Math.round(smoothedPitchHz) + " Hz  (" +
+                "You: " + Math.round(pitch.hz()) + " Hz  (" +
                     (cents > 0 ? "+" : "") + Math.round(cents) + " cents)",
                 width / 2f, height * 0.82f, you);
         } else {

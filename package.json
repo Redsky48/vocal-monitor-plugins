@@ -7,7 +7,11 @@
   "scripts": {
     "validate": "node scripts/validate-plugins.mjs",
     "build": "node scripts/build-manifest.mjs",
-    "new": "node scripts/new-plugin.mjs"
+    "new": "node scripts/new-plugin.mjs",
+    "audit": "node scripts/audit-deps.mjs",
+    "audit:ai": "node scripts/audit-deps.mjs --ai",
+    "audit:fix": "node scripts/audit-deps.mjs --fix",
+    "audit:serve": "node scripts/audit-deps.mjs --serve"
   },
   "engines": {
     "node": ">=20"
