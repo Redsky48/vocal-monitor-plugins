@@ -1,0 +1,22 @@
+{
+  "id": "voice-knobs",
+  "name": "Voice Knobs",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Voice Knobs — replace this description in plugin.json before publishing.",
+  "tags": [
+    "visual",
+    "native"
+  ],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.VoiceKnobs",
+  "ui_kind": "canvas",
+  "ui": {
+    "aspect": "16:9",
+    "min_height_dp": 320
+  },
+  "fullscreen": true,
+  "streams": [
+    "waveform"
+  ]
+}

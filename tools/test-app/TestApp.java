@@ -193,12 +193,15 @@ public class TestApp extends JFrame {
         if (compiler == null) {
             throw new RuntimeException("No JavaCompiler available — need JDK, not just JRE.");
         }
-        // Compile EVERY stub .java in the package alongside the plugin
+        // Compile EVERY stub .java in the package tree alongside the plugin
         // source so canvas-mode plugins (which import PluginCanvas etc.)
-        // resolve their visual interfaces too.
+        // resolve their visual interfaces, AND so plugins built on top of
+        // PluginGameKit (com.vocalmonitor.plugin.gamekit.*) pick up the
+        // kit sources too.  Walk recursively — every subpackage counts.
         List<File> sources = new ArrayList<>();
-        try (var ds = Files.newDirectoryStream(stubDir, "*.java")) {
-            for (Path p : ds) sources.add(p.toFile());
+        try (var stream = Files.walk(stubDir)) {
+            stream.filter(p -> p.toString().endsWith(".java"))
+                  .forEach(p -> sources.add(p.toFile()));
         }
         sources.add(entry.javaSrc.toFile());
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();

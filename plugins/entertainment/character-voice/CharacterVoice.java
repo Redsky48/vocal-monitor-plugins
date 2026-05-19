@@ -87,6 +87,11 @@ public final class CharacterVoice implements VocalMonitorVisualPlugin {
     // Envelope for the meter.
     private float envelope = 0f;
 
+    // Cached canvas-relative scale (1 == 360 dp reference).  Set at the
+    // top of render() so every helper can pick it up without changing
+    // method signatures.
+    private float scaleField = 1f;
+
     private int selectedCharacter = 0;
     private PluginHost host = null;
 
@@ -259,6 +264,7 @@ public final class CharacterVoice implements VocalMonitorVisualPlugin {
         // runs the full transform chain in process(), so this is purely
         // a UI feedback hook.
         feedLiveMeter(streams);
+        scaleField = Math.min(width, height) / 360f;
         // Sunset-purple gradient background.
         PluginPaint bg = canvas.newPaint();
         bg.setLinearGradient(0, 0, 0, height,
@@ -269,7 +275,7 @@ public final class CharacterVoice implements VocalMonitorVisualPlugin {
         // Title.
         PluginPaint title = canvas.newPaint();
         title.setColor(0xFFFFFFFF);
-        title.setTextSize(24f);
+        title.setTextSize(24f * scaleField);
         title.setTextAlign(1);
         canvas.drawText("Pick a character — sing to become them!",
             width / 2f, 36f, title);
@@ -294,7 +300,7 @@ public final class CharacterVoice implements VocalMonitorVisualPlugin {
             // Name label below.
             PluginPaint nm = canvas.newPaint();
             nm.setColor(i == selectedCharacter ? 0xFFFFD66B : 0xFFCFCFCF);
-            nm.setTextSize(15f);
+            nm.setTextSize(15f * scaleField);
             nm.setTextAlign(1);
             canvas.drawText(NAMES[i], cx, cy + avR + 24f, nm);
         }
@@ -324,7 +330,7 @@ public final class CharacterVoice implements VocalMonitorVisualPlugin {
             ring.setColor(0xFFFFD66B);
             ring.setGlow(0xFFFFD66B, 20f);
             ring.setStyle(PluginStyle.STROKE);
-            ring.setStrokeWidth(4f);
+            ring.setStrokeWidth(4f * scaleField);
             float pulse = 1f + 0.04f * (float) Math.sin(timeMs * 0.005);
             canvas.drawCircle(cx, cy, r * 1.12f * pulse, ring);
         }
@@ -348,7 +354,7 @@ public final class CharacterVoice implements VocalMonitorVisualPlugin {
         PluginPaint ant = c.newPaint();
         ant.setColor(0xFF808088);
         ant.setStyle(PluginStyle.STROKE);
-        ant.setStrokeWidth(3f);
+        ant.setStrokeWidth(3f * scaleField);
         c.drawLine(cx, cy - r*0.85f, cx, cy - r*1.20f, ant);
         PluginPaint bulb = c.newPaint();
         bulb.setColor(0xFFE25656);
@@ -383,7 +389,7 @@ public final class CharacterVoice implements VocalMonitorVisualPlugin {
         PluginPaint stalk = c.newPaint();
         stalk.setColor(0xFF2A6B28);
         stalk.setStyle(PluginStyle.STROKE);
-        stalk.setStrokeWidth(3f);
+        stalk.setStrokeWidth(3f * scaleField);
         float wob = (float) Math.sin(timeMs * 0.004) * r * 0.10f;
         c.drawLine(cx - r*0.35f, cy - r*0.80f, cx - r*0.30f + wob, cy - r*1.15f, stalk);
         c.drawLine(cx + r*0.35f, cy - r*0.80f, cx + r*0.30f - wob, cy - r*1.15f, stalk);
@@ -473,7 +479,7 @@ public final class CharacterVoice implements VocalMonitorVisualPlugin {
         PluginPaint smile = c.newPaint();
         smile.setColor(0xFF101018);
         smile.setStyle(PluginStyle.STROKE);
-        smile.setStrokeWidth(3f);
+        smile.setStrokeWidth(3f * scaleField);
         PluginPath sm = c.newPath();
         sm.moveTo(cx - r*0.30f, cy + r*0.25f);
         sm.quadTo(cx, cy + r*0.55f, cx + r*0.30f, cy + r*0.25f);
@@ -551,7 +557,7 @@ public final class CharacterVoice implements VocalMonitorVisualPlugin {
         PluginPaint strap = c.newPaint();
         strap.setColor(0xFF101018);
         strap.setStyle(PluginStyle.STROKE);
-        strap.setStrokeWidth(3f);
+        strap.setStrokeWidth(3f * scaleField);
         c.drawLine(cx - r*0.85f, cy - r*0.20f, cx - r*0.05f, cy + r*0.15f, strap);
         // Right eye.
         PluginPaint eye = c.newPaint();
@@ -565,7 +571,7 @@ public final class CharacterVoice implements VocalMonitorVisualPlugin {
         PluginPaint mouth = c.newPaint();
         mouth.setColor(0xFFFAFAFA);
         mouth.setStyle(PluginStyle.STROKE);
-        mouth.setStrokeWidth(2f);
+        mouth.setStrokeWidth(2f * scaleField);
         PluginPath grin = c.newPath();
         grin.moveTo(cx - r*0.20f, cy + r*0.35f);
         grin.quadTo(cx, cy + r*0.50f, cx + r*0.20f, cy + r*0.35f);

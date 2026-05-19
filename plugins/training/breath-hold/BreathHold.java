@@ -120,6 +120,7 @@ public final class BreathHold implements VocalMonitorVisualPlugin {
         Map<String, float[]> streams
     ) {
         feedLive(streams, timeMs);
+        float scale = Math.min(width, height) / 360f;
         PluginPaint bg = canvas.newPaint();
         bg.setColor(0xFF101418);
         canvas.drawRect(0, 0, width, height, bg);
@@ -127,7 +128,7 @@ public final class BreathHold implements VocalMonitorVisualPlugin {
         // Heading.
         PluginPaint title = canvas.newPaint();
         title.setColor(0xFFCFCFCF);
-        title.setTextSize(20f);
+        title.setTextSize(20f * scale);
         title.setTextAlign(1);
         canvas.drawText("BREATH HOLD", width / 2f, 36f, title);
 
@@ -137,14 +138,14 @@ public final class BreathHold implements VocalMonitorVisualPlugin {
         PluginPaint clock = canvas.newPaint();
         clock.setColor(voicing ? 0xFF66DD66 : 0xFFFFFFFF);
         clock.setGlow(voicing ? 0x66DD66 : 0, voicing ? 14f : 0f);
-        clock.setTextSize(96f);
+        clock.setTextSize(96f * scale);
         clock.setTextAlign(1);
         canvas.drawText(formatTime(displayTime), width / 2f, height * 0.50f, clock);
 
         // Sub-label.
         PluginPaint sub = canvas.newPaint();
         sub.setColor(0xFFAAAAAA);
-        sub.setTextSize(16f);
+        sub.setTextSize(16f * scale);
         sub.setTextAlign(1);
         canvas.drawText(
             voicing ? "Hold the note…" :
@@ -154,7 +155,7 @@ public final class BreathHold implements VocalMonitorVisualPlugin {
         // Top-3 leaderboard.
         PluginPaint hdr = canvas.newPaint();
         hdr.setColor(0xFFCFCFCF);
-        hdr.setTextSize(14f);
+        hdr.setTextSize(14f * scale);
         hdr.setTextAlign(0);
         canvas.drawText("BEST", 24f, height * 0.50f - 20, hdr);
         String[] medals = { "1st", "2nd", "3rd" };
@@ -162,7 +163,7 @@ public final class BreathHold implements VocalMonitorVisualPlugin {
         for (int i = 0; i < 3; i++) {
             PluginPaint p = canvas.newPaint();
             p.setColor(medalColors[i]);
-            p.setTextSize(18f);
+            p.setTextSize(18f * scale);
             p.setTextAlign(0);
             canvas.drawText(
                 medals[i] + "  " + formatTime(topThree[i]),

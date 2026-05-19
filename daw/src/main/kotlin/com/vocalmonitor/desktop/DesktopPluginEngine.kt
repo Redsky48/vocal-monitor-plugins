@@ -53,6 +53,9 @@ class DesktopPluginEngine(
         val loader: URLClassLoader,
         val fullscreen: Boolean = false,
         val uiKind: String = "canvas",
+        /** Repo folder the plugin source lives in — used by the
+         *  injected PluginHost to resolve asset paths. */
+        val pluginDir: File? = null,
     )
 
     private val loaded = mutableMapOf<String, Loaded>()
@@ -142,7 +145,10 @@ class DesktopPluginEngine(
         @Suppress("UNCHECKED_CAST")
         val klass = raw as Class<out VocalMonitorNativePlugin>
         loaded[pluginId]?.loader?.close()
-        loaded[pluginId] = Loaded(pluginId, className, klass, loader, fullscreen, uiKind)
+        loaded[pluginId] = Loaded(
+            pluginId, className, klass, loader,
+            fullscreen, uiKind, pluginSrcFile.parentFile,
+        )
         klass
     }
 
@@ -172,15 +178,40 @@ class DesktopPluginEngine(
         } catch (_: Throwable) { null }
     }
 
-    /** Visual-side instance (separate from audio per slim's pattern). */
+    /** Visual-side instance (separate from audio per slim's pattern).
+     *  Also wires up a [PluginHost] so plugins can call host.loadAssetText
+     *  to read SVG / text assets shipped alongside the plugin source. */
     fun newVisualInstance(pluginId: String): VocalMonitorVisualPlugin? {
         val l = loaded[pluginId] ?: return null
         if (!VocalMonitorVisualPlugin::class.java.isAssignableFrom(l.klass)) return null
         return try {
-            val obj = l.klass.getDeclaredConstructor().newInstance()
+            val obj = l.klass.getDeclaredConstructor().newInstance() as VocalMonitorVisualPlugin
             obj.init(sampleRate)
-            obj as VocalMonitorVisualPlugin
+            runCatching { obj.setHost(hostFor(l)) }
+            obj
         } catch (_: Throwable) { null }
+    }
+
+    /** Build the host wrapper handed to plugins via setHost.  Captures
+     *  the plugin's source folder so loadAssetText can resolve
+     *  `assets/<name>` paths.  setParameter is a no-op for now — DAW
+     *  parameter persistence lives in the graph, not in PluginHost. */
+    private fun hostFor(l: Loaded): com.vocalmonitor.plugin.PluginHost {
+        val dir = l.pluginDir
+        return object : com.vocalmonitor.plugin.PluginHost {
+            override fun setParameter(name: String, value: Float) { /* TODO */ }
+            override fun loadAssetText(name: String): String? {
+                if (dir == null || name.isNullOrBlank()) return null
+                // Prefer `assets/<name>`, fall back to a bare `<name>` so
+                // plugins can ship single-file assets without a subfolder.
+                val candidates = listOf(
+                    File(dir, "assets/$name"),
+                    File(dir, name),
+                )
+                val f = candidates.firstOrNull { it.isFile } ?: return null
+                return runCatching { f.readText(Charsets.UTF_8) }.getOrNull()
+            }
+        }
     }
 
     /**

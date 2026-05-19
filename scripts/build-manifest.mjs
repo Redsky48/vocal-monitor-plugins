@@ -105,6 +105,44 @@ async function readPlugin(categoryDir, pluginDir, cfg) {
   // Hosts that support fullscreen visualisation (DAW, future slim
   // "expand" mode) read this flag to add a fullscreen action.
   if (meta.fullscreen === true) entry.fullscreen = true;
+
+  // Per-plugin assets — SVG / text resources the plugin loads at
+  // runtime via PluginHost.loadAssetText().  Declared in plugin.json as
+  // `"assets": ["bird.svg", "logo.svg"]`; the file must exist in the
+  // plugin folder (or in plugin-folder/assets/).  Each gets its own
+  // CDN URL + sizeBytes baked into the manifest so hosts can fetch
+  // them in one batch alongside the plugin payload.
+  if (Array.isArray(meta.assets)) {
+    const assets = [];
+    for (const a of meta.assets) {
+      if (typeof a !== 'string' || a.length === 0) continue;
+      // Look for the asset next to plugin.json OR inside an assets/
+      // subdir — whichever exists.  The slim/DAW host resolves the
+      // same way, so authors can ship single files at the top level
+      // for tiny plugins, or organise everything in assets/ for
+      // bigger ones.
+      const candidates = [a, `assets/${a}`];
+      let resolved = null;
+      let sizeBytes = 0;
+      for (const c of candidates) {
+        const candidate = join(folder, c);
+        try {
+          const st = await stat(candidate);
+          if (st.isFile()) { resolved = c; sizeBytes = st.size; break; }
+        } catch { /* try next */ }
+      }
+      if (resolved == null) {
+        throw new Error(`${categoryDir}/${pluginDir}/plugin.json: declared asset "${a}" not found ` +
+          `(looked in plugin folder and in assets/)`);
+      }
+      assets.push({
+        name: a,
+        source: `https://raw.githubusercontent.com/${cfg.repository}/${cfg.branch}/plugins/${categoryDir}/${pluginDir}/${resolved}`,
+        sizeBytes,
+      });
+    }
+    if (assets.length > 0) entry.assets = assets;
+  }
   // Forward author-shipped presets verbatim. The Android app's
   // JsPluginLibrary parses the same shape: `[{name, description?, params}]`.
   // Validate lightly so a malformed presets block doesn't fail the build

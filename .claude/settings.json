@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "Bash(echo \"exit=$?\")",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(javac --release 8 -d /tmp/gk-test shared/src/main/java/com/vocalmonitor/plugin/*.java shared/src/main/java/com/vocalmonitor/plugin/gamekit/*.java)",
+      "Bash(./gradlew --stop)",
+      "Bash(javac --release 17 -encoding UTF-8 -d /tmp/testapp-check tools/test-app/TestApp.java tools/test-app/MeasureIR.java tools/test-app/RunTest.java)",
+      "Bash(cp /c/Users/edza/Desktop/git/vocal-monitor-plugins/shared/src/main/java/com/vocalmonitor/plugin/gamekit/audio/*.java /c/Users/edza/Desktop/git/vocal-monitor-plugins/scripts/native-stub/com/vocalmonitor/plugin/gamekit/audio/)",
+      "Bash(cp /c/Users/edza/Desktop/git/vocal-monitor-plugins/shared/src/main/java/com/vocalmonitor/plugin/gamekit/ui/*.java /c/Users/edza/Desktop/git/vocal-monitor-plugins/scripts/native-stub/com/vocalmonitor/plugin/gamekit/ui/)",
+      "Bash(cp /c/Users/edza/Desktop/git/vocal-monitor-plugins/shared/src/main/java/com/vocalmonitor/plugin/gamekit/dev/*.java /c/Users/edza/Desktop/git/vocal-monitor-plugins/scripts/native-stub/com/vocalmonitor/plugin/gamekit/dev/)",
+      "Bash(node scripts/build-native.mjs pitch-arrow)",
+      "Bash(node scripts/new-plugin.mjs visual voice-knobs --native pickerui)",
+      "Bash(node scripts/build-native.mjs voice-knobs)",
+      "Bash(xargs javac *)"
     ],
     "additionalDirectories": [
       "\\tmp"

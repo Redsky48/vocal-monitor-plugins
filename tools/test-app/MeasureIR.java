@@ -79,8 +79,9 @@ public class MeasureIR {
         Files.createDirectories(buildDir);
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         List<File> sources = new ArrayList<>();
-        try (var ds = Files.newDirectoryStream(stubDir, "*.java")) {
-            for (Path p : ds) sources.add(p.toFile());
+        try (var stream = Files.walk(stubDir)) {
+            stream.filter(p -> p.toString().endsWith(".java"))
+                  .forEach(p -> sources.add(p.toFile()));
         }
         sources.add(entry.javaSrc.toFile());
         try (StandardJavaFileManager fm = compiler.getStandardFileManager(null, null, null)) {

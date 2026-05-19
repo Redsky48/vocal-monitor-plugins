@@ -112,6 +112,9 @@ public final class BalloonBlow implements VocalMonitorVisualPlugin {
         feedLive(streams);
         float dt = (lastRenderMs < 0) ? 0.016f : Math.min(0.05f, (timeMs - lastRenderMs) / 1000f);
         lastRenderMs = timeMs;
+        // Scale text / stroke / padding sizes to the canvas (positions
+        // are already width / height-relative).
+        float scale = Math.min(width, height) / 360f;
 
         // Sky-gradient background.
         PluginPaint bg = canvas.newPaint();
@@ -130,7 +133,7 @@ public final class BalloonBlow implements VocalMonitorVisualPlugin {
             float sy = (((sStar >>> 16) & 0xFFFF) / 65535f) * height * 0.6f;
             float twinkle = 0.5f + 0.5f * (float) Math.sin(timeMs * 0.003 + i);
             star.setColor(0x66FFFFFF | ((int)(0x99 * twinkle) << 24));
-            canvas.drawCircle(sx, sy, 1.5f, star);
+            canvas.drawCircle(sx, sy, 1.5f * scale, star);
         }
 
         float cxBal = width / 2f;
@@ -146,9 +149,9 @@ public final class BalloonBlow implements VocalMonitorVisualPlugin {
                 cx[i] += vx[i] * dt;
                 cy[i] += vy[i] * dt;
                 dot.setColor(cc[i]);
-                canvas.drawCircle(cx[i], cy[i], 4f, dot);
+                canvas.drawCircle(cx[i], cy[i], 4f * scale, dot);
             }
-            drawHud(canvas, width, height, true);
+            drawHud(canvas, width, height, true, scale);
             return;
         }
 
@@ -202,7 +205,7 @@ public final class BalloonBlow implements VocalMonitorVisualPlugin {
         PluginPaint strP = canvas.newPaint();
         strP.setColor(0xFFBBBBBB);
         strP.setStyle(PluginStyle.STROKE);
-        strP.setStrokeWidth(1.5f);
+        strP.setStrokeWidth(1.5f * scale);
         canvas.drawPath(string, strP);
 
         // Cute face — eyes + smile.
@@ -213,7 +216,7 @@ public final class BalloonBlow implements VocalMonitorVisualPlugin {
         PluginPaint smile = canvas.newPaint();
         smile.setColor(0xFF221122);
         smile.setStyle(PluginStyle.STROKE);
-        smile.setStrokeWidth(2.5f);
+        smile.setStrokeWidth(2.5f * scale);
         PluginPath smilePath = canvas.newPath();
         smilePath.moveTo(cxBal - r * 0.18f, cyBal + r * 0.12f);
         smilePath.quadTo(cxBal, cyBal + r * 0.30f, cxBal + r * 0.18f, cyBal + r * 0.12f);
@@ -224,28 +227,28 @@ public final class BalloonBlow implements VocalMonitorVisualPlugin {
         hi.setColor(0x99FFFFFF);
         canvas.drawCircle(cxBal - r * 0.4f, cyBal - r * 0.45f, r * 0.18f, hi);
 
-        drawHud(canvas, width, height, false);
+        drawHud(canvas, width, height, false, scale);
     }
 
-    private void drawHud(PluginCanvas canvas, int width, int height, boolean popping) {
-        // Bottom inflation meter.
-        float pad = 24f;
-        float barX0 = pad, barY0 = height - 40f, barX1 = width - pad, barY1 = height - 24f;
+    private void drawHud(PluginCanvas canvas, int width, int height, boolean popping, float scale) {
+        float pad = 24f * scale;
+        float barH = 16f * scale;
+        float barY0 = height - 40f * scale, barY1 = barY0 + barH;
+        float barX0 = pad, barX1 = width - pad;
         PluginPaint barBg = canvas.newPaint();
         barBg.setColor(0xFF223344);
-        canvas.drawRoundRect(barX0, barY0, barX1, barY1, 8f, barBg);
+        canvas.drawRoundRect(barX0, barY0, barX1, barY1, 8f * scale, barBg);
         float fillX = barX0 + (barX1 - barX0) * size;
         int barColor = size > 0.85f ? 0xFFE25656 : (size > 0.6f ? 0xFFE3B544 : 0xFF66CC66);
         PluginPaint barFg = canvas.newPaint();
         barFg.setColor(barColor);
-        canvas.drawRoundRect(barX0, barY0, fillX, barY1, 8f, barFg);
+        canvas.drawRoundRect(barX0, barY0, fillX, barY1, 8f * scale, barFg);
 
-        // Status text.
         PluginPaint label = canvas.newPaint();
         label.setColor(0xFFFFFFFF);
-        label.setTextSize(20f);
-        label.setTextAlign(1);  // centered
+        label.setTextSize(20f * scale);
+        label.setTextAlign(1);
         String msg = popping ? "POP!" : (size > 0.85f ? "Easy…" : "Sing!");
-        canvas.drawText(msg, width / 2f, 36f, label);
+        canvas.drawText(msg, width / 2f, 36f * scale, label);
     }
 }

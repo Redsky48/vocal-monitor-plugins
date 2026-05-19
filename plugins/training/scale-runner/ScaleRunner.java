@@ -184,6 +184,7 @@ public final class ScaleRunner implements VocalMonitorVisualPlugin {
         Map<String, float[]> streams
     ) {
         feedLive(streams, timeMs);
+        float scale = Math.min(width, height) / 360f;
         PluginPaint bg = canvas.newPaint();
         bg.setColor(0xFF101418);
         canvas.drawRect(0, 0, width, height, bg);
@@ -191,7 +192,7 @@ public final class ScaleRunner implements VocalMonitorVisualPlugin {
         // Heading + step progress bar.
         PluginPaint title = canvas.newPaint();
         title.setColor(0xFFCFCFCF);
-        title.setTextSize(20f);
+        title.setTextSize(20f * scale);
         title.setTextAlign(1);
         canvas.drawText("SCALE RUNNER  ·  C major", width / 2f, 32f, title);
 
@@ -226,7 +227,7 @@ public final class ScaleRunner implements VocalMonitorVisualPlugin {
             // Name.
             PluginPaint nm = canvas.newPaint();
             nm.setColor(isCurrent || isTicked ? 0xFF101418 : 0xFFCFCFCF);
-            nm.setTextSize(20f);
+            nm.setTextSize(20f * scale);
             nm.setTextAlign(1);
             canvas.drawText(NAME_SEQ[i], x0 + cellW / 2f, cellY0 + cellH / 2f + 7, nm);
             // Tick mark.
@@ -234,7 +235,7 @@ public final class ScaleRunner implements VocalMonitorVisualPlugin {
                 PluginPaint tickP = canvas.newPaint();
                 tickP.setColor(0xFF101418);
                 tickP.setStyle(PluginStyle.STROKE);
-                tickP.setStrokeWidth(3f);
+                tickP.setStrokeWidth(3f * scale);
                 float tcx = x0 + cellW - 18f;
                 float tcy = cellY0 + 14f;
                 PluginPath tk = canvas.newPath();
@@ -249,7 +250,7 @@ public final class ScaleRunner implements VocalMonitorVisualPlugin {
         float tHz = targetHz();
         PluginPaint sub = canvas.newPaint();
         sub.setColor(0xFFFFD66B);
-        sub.setTextSize(28f);
+        sub.setTextSize(28f * scale);
         sub.setTextAlign(1);
         canvas.drawText("Now: " + NAME_SEQ[stepIdx < 8 ? stepIdx : (15 - stepIdx)] +
             "  (" + Math.round(tHz) + " Hz)", width / 2f, height * 0.72f, sub);
@@ -260,7 +261,7 @@ public final class ScaleRunner implements VocalMonitorVisualPlugin {
             boolean inTune = Math.abs(cents) <= 50f;
             PluginPaint you = canvas.newPaint();
             you.setColor(inTune ? 0xFF66DD66 : 0xFFE25656);
-            you.setTextSize(20f);
+            you.setTextSize(20f * scale);
             you.setTextAlign(1);
             canvas.drawText(
                 "You: " + Math.round(smoothedPitchHz) + " Hz  (" +
@@ -269,7 +270,7 @@ public final class ScaleRunner implements VocalMonitorVisualPlugin {
         } else {
             PluginPaint you = canvas.newPaint();
             you.setColor(0xFF888888);
-            you.setTextSize(18f);
+            you.setTextSize(18f * scale);
             you.setTextAlign(1);
             canvas.drawText("Sing the note…", width / 2f, height * 0.82f, you);
         }

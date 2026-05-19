@@ -110,7 +110,8 @@ public final class RocketPitch implements VocalMonitorVisualPlugin {
         feedLive(streams);
         float dt = (lastRenderMs < 0) ? 0.016f : Math.min(0.05f, (timeMs - lastRenderMs) / 1000f);
         lastRenderMs = timeMs;
-        scroll += dt * 60f;                  // pixels/sec
+        float scale = Math.min(width, height) / 360f;
+        scroll += dt * 60f * scale;                  // pixels/sec, adapted to canvas
         if (scroll > 4096f) scroll -= 4096f;
 
         // Sunset sky gradient.
@@ -211,13 +212,13 @@ public final class RocketPitch implements VocalMonitorVisualPlugin {
         PluginPaint winRim = canvas.newPaint();
         winRim.setColor(0xFF335577);
         winRim.setStyle(PluginStyle.STROKE);
-        winRim.setStrokeWidth(2f);
+        winRim.setStrokeWidth(2f * scale);
         canvas.drawCircle(rx + rocketLen * 0.15f, ry, rocketW * 0.18f, winRim);
 
         // HUD — pitch readout.
         PluginPaint hud = canvas.newPaint();
         hud.setColor(0xFFFFFFFF);
-        hud.setTextSize(22f);
+        hud.setTextSize(22f * scale);
         hud.setTextAlign(0);   // left
         canvas.drawText(
             "Pitch: " + Math.round(smoothedPitchHz) + " Hz",
@@ -230,7 +231,7 @@ public final class RocketPitch implements VocalMonitorVisualPlugin {
         canvas.drawLine(scaleX, height * 0.1f, scaleX, height * 0.85f, sc);
         PluginPaint tick = canvas.newPaint();
         tick.setColor(0xCCFFFFFF);
-        tick.setTextSize(11f);
+        tick.setTextSize(11f * scale);
         tick.setTextAlign(2);  // right
         int[] markers = { 100, 200, 300, 400, 500 };
         for (int hz : markers) {

@@ -1,0 +1,14 @@
+{
+  "id": "svg-demo",
+  "name": "SVG Demo",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Demonstrates loading an SVG vector asset via PluginHost.loadAssetText() and rendering it through gamekit.svg.PluginShape. The bird flaps with the mic level and tints to the user's vocal energy.",
+  "tags": ["visual", "demo", "svg", "asset", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.SvgDemo",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "1:1", "min_height_dp": 240 },
+  "streams": ["waveform"],
+  "assets": ["bird.svg"]
+}

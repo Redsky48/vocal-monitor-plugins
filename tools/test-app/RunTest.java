@@ -86,8 +86,9 @@ public class RunTest {
         }
 
         // ---- Compile plugin ----
-        Path stubSrc = repoRoot.resolve(
-                "scripts/native-stub/com/vocalmonitor/plugin/VocalMonitorNativePlugin.java");
+        // Walk the entire stub package tree so canvas-mode plugins and
+        // PluginGameKit-backed plugins resolve all their imports.
+        Path stubRoot = repoRoot.resolve("scripts/native-stub/com/vocalmonitor/plugin");
         Path buildDir = repoRoot.resolve("scripts/native-stub/build/runtest-" + pluginId);
         Files.createDirectories(buildDir);
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
@@ -97,8 +98,13 @@ public class RunTest {
         }
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
         try (StandardJavaFileManager fm = compiler.getStandardFileManager(diagnostics, null, null)) {
-            Iterable<? extends JavaFileObject> units = fm.getJavaFileObjects(
-                    stubSrc.toFile(), entry.javaSrc.toFile());
+            List<File> sourceFiles = new ArrayList<>();
+            try (var stream = Files.walk(stubRoot)) {
+                stream.filter(p -> p.toString().endsWith(".java"))
+                      .forEach(p -> sourceFiles.add(p.toFile()));
+            }
+            sourceFiles.add(entry.javaSrc.toFile());
+            Iterable<? extends JavaFileObject> units = fm.getJavaFileObjectsFromFiles(sourceFiles);
             List<String> options = Arrays.asList(
                     "-d", buildDir.toString(),
                     "--release", "8",

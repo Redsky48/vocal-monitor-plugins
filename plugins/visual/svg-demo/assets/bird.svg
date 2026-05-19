@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Body -->
+  <circle cx="50" cy="50" r="32" fill="#FFD34A" stroke="#2A2A2A" stroke-width="2"/>
+  <!-- Belly -->
+  <circle cx="50" cy="62" r="20" fill="#FFF1B0"/>
+  <!-- Wing -->
+  <path d="M 30 48 Q 20 42 24 60 Q 36 64 40 54 Z" fill="#E25656" stroke="#2A2A2A" stroke-width="1.5"/>
+  <!-- Eye white -->
+  <circle cx="62" cy="42" r="10" fill="#FFFFFF" stroke="#2A2A2A" stroke-width="1.5"/>
+  <!-- Pupil -->
+  <circle cx="65" cy="42" r="5" fill="#101018"/>
+  <!-- Beak -->
+  <polygon points="72,48 90,52 72,56" fill="#FF8833" stroke="#2A2A2A" stroke-width="1.5"/>
+  <!-- Feet -->
+  <line x1="42" y1="80" x2="40" y2="92" stroke="#FF8833" stroke-width="2.5"/>
+  <line x1="58" y1="80" x2="60" y2="92" stroke="#FF8833" stroke-width="2.5"/>
+</svg>

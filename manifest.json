@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-17T16:33:26.024Z",
+  "generatedAt": "2026-05-17T23:11:55.425Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -485,7 +485,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/angry-chirp/angry-chirp.dex",
-      "sizeBytes": 10920,
+      "sizeBytes": 10632,
       "className": "com.vocalmonitor.plugin.community.AngryChirp",
       "ui_kind": "canvas",
       "ui": {
@@ -515,7 +515,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/balloon-blow/balloon-blow.dex",
-      "sizeBytes": 6244,
+      "sizeBytes": 6340,
       "className": "com.vocalmonitor.plugin.community.BalloonBlow",
       "ui_kind": "canvas",
       "ui": {
@@ -545,7 +545,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/character-voice/character-voice.dex",
-      "sizeBytes": 11596,
+      "sizeBytes": 11788,
       "className": "com.vocalmonitor.plugin.community.CharacterVoice",
       "ui_kind": "canvas",
       "ui": {
@@ -654,7 +654,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/rocket-pitch/rocket-pitch.dex",
-      "sizeBytes": 6296,
+      "sizeBytes": 6332,
       "className": "com.vocalmonitor.plugin.community.RocketPitch",
       "ui_kind": "canvas",
       "ui": {
@@ -1716,7 +1716,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/breath-hold/breath-hold.dex",
-      "sizeBytes": 5136,
+      "sizeBytes": 5184,
       "className": "com.vocalmonitor.plugin.community.BreathHold",
       "ui_kind": "canvas",
       "ui": {
@@ -1746,7 +1746,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/pitch-arrow/pitch-arrow.dex",
-      "sizeBytes": 6504,
+      "sizeBytes": 5576,
       "className": "com.vocalmonitor.plugin.community.PitchArrow",
       "ui_kind": "canvas",
       "ui": {
@@ -1775,7 +1775,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/scale-runner/scale-runner.dex",
-      "sizeBytes": 7432,
+      "sizeBytes": 7452,
       "className": "com.vocalmonitor.plugin.community.ScaleRunner",
       "ui_kind": "canvas",
       "ui": {
@@ -1804,7 +1804,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/target-tone/target-tone.dex",
-      "sizeBytes": 6576,
+      "sizeBytes": 6624,
       "className": "com.vocalmonitor.plugin.community.TargetTone",
       "ui_kind": "canvas",
       "ui": {
@@ -1885,6 +1885,31 @@
         "aspect": "5:3",
         "min_height_dp": 240
       }
+    },
+    {
+      "id": "voice-knobs",
+      "name": "Voice Knobs",
+      "author": "Vocal Monitor",
+      "category": "Visual",
+      "description": "Voice Knobs — replace this description in plugin.json before publishing.",
+      "version": "1.0.0",
+      "tags": [
+        "visual",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/visual/voice-knobs/voice-knobs.dex",
+      "sizeBytes": 3596,
+      "className": "com.vocalmonitor.plugin.community.VoiceKnobs",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 320
+      },
+      "streams": [
+        "waveform"
+      ],
+      "fullscreen": true
     },
     {
       "id": "articulation",

@@ -29,4 +29,22 @@ public interface PluginHost {
      * process() invocation.
      */
     void setParameter(String name, float value);
+
+    /**
+     * Read a UTF-8 text asset shipped alongside the plugin.  Returns
+     * {@code null} when the host doesn't ship assets, the named file
+     * isn't present, or the plugin was authored against an older host
+     * that doesn't implement this method.
+     *
+     * Plugins declare assets in {@code plugin.json} via an
+     * {@code "assets": ["foo.svg", ...]} array.  Hosts fetch / cache
+     * those files alongside the plugin's compiled class; this method
+     * returns the on-disk text on demand.
+     *
+     * Use case: SVG vector art loaded via {@code Svg.parse} from the
+     * gamekit, replacing dozens of procedural {@code drawPath} calls.
+     * Plugins SHOULD null-check the return — older hosts won't
+     * implement this and procedural fallback is the graceful path.
+     */
+    default String loadAssetText(String name) { return null; }
 }

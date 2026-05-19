@@ -141,6 +141,7 @@ public final class TargetTone implements VocalMonitorVisualPlugin {
         Map<String, float[]> streams
     ) {
         feedLive(streams);
+        float scale = Math.min(width, height) / 360f;
         PluginPaint bg = canvas.newPaint();
         bg.setColor(0xFF101418);
         canvas.drawRect(0, 0, width, height, bg);
@@ -148,7 +149,7 @@ public final class TargetTone implements VocalMonitorVisualPlugin {
         // Heading.
         PluginPaint titleP = canvas.newPaint();
         titleP.setColor(0xFFFFFFFF);
-        titleP.setTextSize(28f);
+        titleP.setTextSize(28f * scale);
         titleP.setTextAlign(1);
         canvas.drawText("Target: " + noteName(targetHz) +
             "  (" + Math.round(targetHz) + " Hz)",
@@ -184,7 +185,7 @@ public final class TargetTone implements VocalMonitorVisualPlugin {
         // ±50 labels.
         PluginPaint lbl = canvas.newPaint();
         lbl.setColor(0xFF888888);
-        lbl.setTextSize(11f);
+        lbl.setTextSize(11f * scale);
         lbl.setTextAlign(1);
         canvas.drawText("-50¢", left,  gaugeY + thickness + 32, lbl);
         canvas.drawText("0",    cx,    gaugeY + thickness + 32, lbl);
@@ -209,14 +210,14 @@ public final class TargetTone implements VocalMonitorVisualPlugin {
             // Pitch readout.
             PluginPaint readout = canvas.newPaint();
             readout.setColor(needleColor);
-            readout.setTextSize(26f);
+            readout.setTextSize(26f * scale);
             readout.setTextAlign(1);
             String label = inTune ? "In tune!" :
                 ((smoothedCents > 0 ? "+" : "") + Math.round(smoothedCents) + " cents");
             canvas.drawText(label, cx, height * 0.84f, readout);
             PluginPaint sub = canvas.newPaint();
             sub.setColor(0xFFCFCFCF);
-            sub.setTextSize(16f);
+            sub.setTextSize(16f * scale);
             sub.setTextAlign(1);
             canvas.drawText(
                 "You: " + Math.round(smoothedPitchHz) + " Hz · " + noteName(smoothedPitchHz),
@@ -224,7 +225,7 @@ public final class TargetTone implements VocalMonitorVisualPlugin {
         } else {
             PluginPaint hint = canvas.newPaint();
             hint.setColor(0xFF888888);
-            hint.setTextSize(20f);
+            hint.setTextSize(20f * scale);
             hint.setTextAlign(1);
             canvas.drawText("Sing along with the tone…", cx, height * 0.85f, hint);
         }
