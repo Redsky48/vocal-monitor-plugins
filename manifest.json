@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-20T14:45:55.471Z",
+  "generatedAt": "2026-05-20T14:50:28.495Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -1982,7 +1982,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/visual/wave-runner/wave-runner.dex",
-      "sizeBytes": 4568,
+      "sizeBytes": 4720,
       "className": "com.vocalmonitor.plugin.community.WaveRunner",
       "ui_kind": "canvas",
       "ui": {
