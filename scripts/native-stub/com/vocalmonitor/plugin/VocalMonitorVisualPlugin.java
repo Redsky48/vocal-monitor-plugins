@@ -30,6 +30,22 @@ public interface VocalMonitorVisualPlugin extends VocalMonitorNativePlugin {
     default void setHost(PluginHost host) { /* opt-in */ }
 
     /**
+     * Host-pushed configuration as a JSON string.  Used by plugins
+     * that mirror state from elsewhere in the app — e.g. wave-runner
+     * watches the active "wb2.v1" wave the user selected in Settings
+     * so the plugin's bar rendering tracks whatever's authored over
+     * in the WebView builder.  Plugins that don't need this leave
+     * the default no-op in place.
+     *
+     * The host calls this whenever its state changes, NOT once per
+     * frame — plugins should cache the parsed result and only
+     * re-parse on a meaningful change.  Parse failures should keep
+     * the last-good config (so a malformed push doesn't blank the
+     * screen mid-stream).
+     */
+    default void setConfig(String json) { /* opt-in */ }
+
+    /**
      * Touch went down inside the panel. Coordinates are in the same
      * dp-equivalent units that {@link #render} draws in, with the
      * origin at the panel's top-left. Default impl ignores it. Pair

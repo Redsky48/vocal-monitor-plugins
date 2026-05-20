@@ -8,34 +8,41 @@ import com.vocalmonitor.plugin.BlendMode;
 import com.vocalmonitor.plugin.VocalMonitorNativePlugin;
 import com.vocalmonitor.plugin.VocalMonitorVisualPlugin;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
  * Wave Runner — faithful native port of wave-engine.js.
  *
- * Each layer is rendered with the same math as the JS engine
- * (bin sampling → asymmetric smoothing → shapeMagnitude(contrast,
- * tilt) → response curve → height clamp → paint), and the colour
- * modes / paint styles / path construction all mirror the JS
- * implementation 1:1. Multi-layer composites apply each layer's
- * blend mode + opacity via PluginPaint.setBlendMode.
+ * The plugin renders whatever Waveform Builder wave the host has
+ * active. The host pushes the JSON via {@link #setConfig(String)}
+ * (called from PluginPanel whenever WaveConfigStore.activeWaveJson
+ * changes), and feeds the same log-spaced FFT bins the WebView
+ * visualizer reads via {@code streams["topVisBins"]}. With matching
+ * input on both sides + identical render math, Skia output and JS
+ * output line up bar-for-bar.
+ *
+ * The wave schema is the `wb2.v1` shape from waveform-builder.html:
+ *   { schema, layers: [{ type: 'bars'|'line', visible, settings: {…} }] }
  *
  * Known limitations vs. the JS engine:
- *   • No `fxFade` trail — would require an offscreen bitmap, which
- *     the PluginCanvas API doesn't expose. Layers with fxFade > 0
- *     simply render as if fxFade == 0.
- *   • No `fxGlow` / `fxBlur` post-effects yet (PluginPaint has
- *     setGlow but the per-bar overhead would dominate the test).
+ *   • `fxFade` trail — needs an offscreen bitmap (PluginCanvas doesn't
+ *     expose one). Layers with fxFade > 0 render as if fxFade == 0.
+ *   • `fxGlow` / `fxBlur` post-effects — PluginPaint.setGlow exists
+ *     but per-bar overhead would dominate the test; left for a later
+ *     iteration once the rest of the engine is proven.
  *
- * The hardcoded test wave below mirrors a typical 2-layer build
- * (bars + line, frequency colours, center align, spline + mirror
- * on the line) so the user can A/B against the same config in
- * the JS Waveform Builder.
+ * JSON parsing is hand-rolled (see {@link JsonMini} below) because
+ * the cross-platform plugin sandbox doesn't let us depend on
+ * org.json or Gson.
  */
 public final class WaveRunner
         implements VocalMonitorNativePlugin, VocalMonitorVisualPlugin {
 
-    // ─── Audio analysis ──────────────────────────────────────────────
+    // ─── Audio analysis (fallback Goertzel — only used when the host
+    //     doesn't feed us streams["topVisBins"]) ─────────────────────
     private static final int BINS = 64;
     private static final int WINDOW = 2048;
     private static final float MIN_HZ = 40f;
@@ -52,24 +59,15 @@ public final class WaveRunner
     private final float[] scratch = new float[WINDOW];
     private final float[] hann    = new float[WINDOW];
 
-    // ─── Wave config ────────────────────────────────────────────────
-    private Wave activeWave;
-    // Per-layer per-bar smoothing state, paint scratch, etc. lives
-    // on the Layer itself so multiple layers of the same type don't
-    // share buffers.
+    // ─── Wave config ─────────────────────────────────────────────────
+    private volatile Wave activeWave;  // pushed by setConfig
 
-    // ─── Parameters ──────────────────────────────────────────────────
-    // `style` picks which hardcoded wave preset to render. Slider in
-    // the host's plugin panel; the host coerces float values, so we
-    // floor to an int and clamp to PRESET_COUNT - 1.
-    private static final String PARAM_STYLE = "style";
-    private static final int    PRESET_COUNT = 4;
-    private int styleIdx = 0;
-
-    // ─── Pluggable paint cache ───────────────────────────────────────
+    // ─── Paint cache ─────────────────────────────────────────────────
     private PluginPaint paintFill;
     private PluginPaint paintStroke;
     private PluginPaint paintArea;
+
+    // ─── Lifecycle ───────────────────────────────────────────────────
 
     @Override public void init(int sr) {
         this.sampleRate = sr;
@@ -88,36 +86,33 @@ public final class WaveRunner
             ring[i] = 0f;
         }
         ringW = 0;
-        activeWave = buildPreset(styleIdx);
+        // No initial wave — host pushes one once it boots. Until
+        // then render() no-ops.
+        activeWave = null;
     }
 
-    @Override public String[] parameterNames() {
-        return new String[]{ PARAM_STYLE };
-    }
-    @Override public float parameterMin(String n)     { return 0f; }
-    @Override public float parameterMax(String n) {
-        return PARAM_STYLE.equals(n) ? (float)(PRESET_COUNT - 1) : 1f;
-    }
-    @Override public float parameterDefault(String n) { return 0f; }
-    @Override public String parameterLabel(String n) {
-        // Pretty-print preset names on the slider so the user sees
-        // what they're picking. The host shows label next to the
-        // numeric value, so this maps "0..3 → name".
-        if (PARAM_STYLE.equals(n)) return "Style";
-        return n;
-    }
-    @Override public void setParameter(String n, float v) {
-        if (PARAM_STYLE.equals(n)) {
-            int idx = (int) Math.floor(v);
-            if (idx < 0) idx = 0;
-            if (idx > PRESET_COUNT - 1) idx = PRESET_COUNT - 1;
-            if (idx != styleIdx) {
-                styleIdx = idx;
-                // Build the new active wave + reset per-layer state so
-                // smoothing buffers from the previous preset don't
-                // leak. Layer count / type may differ.
-                activeWave = buildPreset(idx);
-            }
+    @Override public String[] parameterNames()           { return new String[0]; }
+    @Override public float    parameterMin(String n)     { return 0f; }
+    @Override public float    parameterMax(String n)     { return 1f; }
+    @Override public float    parameterDefault(String n) { return 0f; }
+    @Override public String   parameterLabel(String n)   { return n; }
+    @Override public void     setParameter(String n, float v) { }
+
+    /**
+     * Host calls this with the wb2.v1 wave JSON whenever the user
+     * switches active wave in Settings (or the live edit channel
+     * fires from the PC builder). Parse → swap; on any parse
+     * failure keep the previous wave so a malformed push doesn't
+     * blank the screen mid-stream.
+     */
+    @Override public void setConfig(String json) {
+        if (json == null || json.isEmpty()) return;
+        try {
+            Object root = JsonMini.parse(json);
+            Wave w = buildWave(root);
+            if (w != null) activeWave = w;
+        } catch (Throwable t) {
+            // Keep last good config.
         }
     }
 
@@ -132,54 +127,62 @@ public final class WaveRunner
         }
     }
 
-    // ─── Visual ──────────────────────────────────────────────────────
+    // ─── Render ──────────────────────────────────────────────────────
 
     @Override public void render(
             PluginCanvas canvas, int width, int height, long timeMs,
             Map<String, Float> params, Map<String, float[]> streams
     ) {
+        // Skip all work until the host has pushed a config.
+        Wave wv = activeWave;
+        if (wv == null || wv.layers == null || wv.layers.length == 0) return;
+
         if (paintFill == null) {
             paintFill   = canvas.newPaint().setStyle(PluginStyle.FILL).setAntialias(true);
             paintStroke = canvas.newPaint().setStyle(PluginStyle.STROKE).setAntialias(true);
             paintArea   = canvas.newPaint().setStyle(PluginStyle.FILL).setAntialias(true);
         }
-        // 1. Pull audio + compute spectrum.
-        float[] wave = streams != null ? streams.get("waveform") : null;
-        if (wave == null || wave.length < 64) {
-            int w = ringW;
-            for (int i = 0; i < WINDOW; i++) scratch[i] = ring[(w + i) % WINDOW];
-            wave = scratch;
-        }
-        float peak = 0f;
-        for (int i = 0; i < wave.length; i++) {
-            float a = wave[i] < 0 ? -wave[i] : wave[i];
-            if (a > peak) peak = a;
-        }
-        if (peak > 1e-5f) analyseBands(wave);
 
-        // 2. Energy used by 'energy' colour mode + pulse animation.
+        // Bins. Preferred path: the host hands us the same log-spaced
+        // FFT bins the WebView TopVis reads, so output matches the JS
+        // engine bit for bit. Fallback: when that stream isn't wired
+        // (older host) or is empty (engine idle), run our own Goertzel
+        // on the raw waveform so the visual still animates.
+        float[] bins = streams != null ? streams.get("topVisBins") : null;
+        if (bins == null || bins.length == 0) {
+            float[] wave = streams != null ? streams.get("waveform") : null;
+            if (wave == null || wave.length < 64) {
+                int w = ringW;
+                for (int i = 0; i < WINDOW; i++) scratch[i] = ring[(w + i) % WINDOW];
+                wave = scratch;
+            }
+            float peak = 0f;
+            for (int i = 0; i < wave.length; i++) {
+                float a = wave[i] < 0 ? -wave[i] : wave[i];
+                if (a > peak) peak = a;
+            }
+            if (peak > 1e-5f) analyseBands(wave);
+            bins = bandLevel;
+        }
+
+        // Energy for 'energy' colour mode + pulse detection.
         float energy = 0f;
-        for (int i = 0; i < BINS; i++) energy += bandLevel[i];
-        energy /= BINS;
+        for (int i = 0; i < bins.length; i++) energy += bins[i];
+        energy /= Math.max(1, bins.length);
 
-        // 3. Composite layers.
-        if (activeWave == null) return;
         final float W = width, H = height;
         final float tSec = timeMs / 1000f;
-        for (int li = 0; li < activeWave.layers.length; li++) {
-            Layer L = activeWave.layers[li];
-            if (!L.visible) continue;
-            // Compose paint with this layer's blend mode + opacity.
-            // PluginPaint.setBlendMode persists until cleared, so
-            // restore to SRC_OVER at the end of every layer pass.
+        for (int li = 0; li < wv.layers.length; li++) {
+            Layer L = wv.layers[li];
+            if (L == null || !L.visible) continue;
             BlendMode bm = mapBlend(L.fxBlend);
             paintFill.setBlendMode(bm);
             paintStroke.setBlendMode(bm);
             paintArea.setBlendMode(bm);
             if (L.type == LayerType.BARS) {
-                renderBars(canvas, W, H, L, energy, tSec);
+                renderBars(canvas, W, H, L, bins, energy, tSec);
             } else if (L.type == LayerType.LINE) {
-                renderLine(canvas, W, H, L, energy, tSec);
+                renderLine(canvas, W, H, L, bins, energy, tSec);
             }
         }
         paintFill.setBlendMode(BlendMode.SRC_OVER);
@@ -191,10 +194,9 @@ public final class WaveRunner
 
     private void renderBars(
             PluginCanvas canvas, float W, float H,
-            Layer L, float energy, float tSec
+            Layer L, float[] bins, float energy, float tSec
     ) {
         int n = Math.max(2, L.count);
-        // Per-layer smoothed buffer.
         if (L._smoothed == null || L._smoothed.length != n) L._smoothed = new float[n];
         float[] sm = L._smoothed;
 
@@ -206,17 +208,17 @@ public final class WaveRunner
         float minH  = Math.max(0, L.minHeight);
         float round = Math.max(0, L.round);
 
-        // Asym smoothing factors — see shapeMagnitude comment.
         float attack  = clamp(L.smoothAttack  >= 0 ? L.smoothAttack  : L.smooth, 0, 99) / 100f;
         float release = clamp(L.smoothRelease >= 0 ? L.smoothRelease : L.smooth, 0, 99) / 100f;
 
         int opacityPct = (L.fxOpacity < 0) ? 100 : L.fxOpacity;
         float alphaMul = opacityPct / 100f;
 
+        int bL = bins.length;
         for (int i = 0; i < n; i++) {
-            int idx = (int) Math.floor((i / (float) n) * BINS);
-            if (idx < 0) idx = 0; else if (idx >= BINS) idx = BINS - 1;
-            float raw = bandLevel[idx];
+            int idx = (int) Math.floor((i / (float) n) * bL);
+            if (idx < 0) idx = 0; else if (idx >= bL) idx = bL - 1;
+            float raw = bins[idx];
             float k = raw > sm[i] ? attack : release;
             sm[i] = sm[i] * k + raw * (1f - k);
             float fi = i / (float) Math.max(1, n - 1);
@@ -259,7 +261,7 @@ public final class WaveRunner
 
     private void renderLine(
             PluginCanvas canvas, float W, float H,
-            Layer L, float energy, float tSec
+            Layer L, float[] bins, float energy, float tSec
     ) {
         int n = Math.max(2, L.count);
         if (L._smoothed == null || L._smoothed.length != n) L._smoothed = new float[n];
@@ -289,10 +291,11 @@ public final class WaveRunner
         float[] ys   = scratchY(n);
         float[] mags = scratchM(n);
 
+        int bL = bins.length;
         for (int i = 0; i < n; i++) {
-            int idx = (int) Math.floor((i / (float) n) * BINS);
-            if (idx < 0) idx = 0; else if (idx >= BINS) idx = BINS - 1;
-            float raw = bandLevel[idx];
+            int idx = (int) Math.floor((i / (float) n) * bL);
+            if (idx < 0) idx = 0; else if (idx >= bL) idx = bL - 1;
+            float raw = bins[idx];
             float k = raw > sm[i] ? attack : release;
             sm[i] = sm[i] * k + raw * (1f - k);
             float fi = i / (float) Math.max(1, n - 1);
@@ -305,7 +308,6 @@ public final class WaveRunner
             ys[i] = baseline + dir * sign * amp;
         }
 
-        // Optional fill below the line.
         if (L.fillBelow && n > 1) {
             int fillOp = (L.fillOpacity < 0) ? 30 : L.fillOpacity;
             float fillAlpha = (fillOp / 100f) * alphaMul;
@@ -325,7 +327,6 @@ public final class WaveRunner
             canvas.drawPath(path, paintArea);
         }
 
-        // Stroke the line.
         if (L.colorMode.equals("solid")) {
             int c = applyAlpha(parseHex(L.color, 0xFFFFFFFF), alphaMul);
             paintStroke.setColor(c).clearShader().setStrokeWidth(strokeW);
@@ -341,11 +342,6 @@ public final class WaveRunner
             buildLinePath(path, xs, ys, n, L.spline);
             canvas.drawPath(path, paintStroke);
         } else {
-            // Per-segment colour. Straight segments only — matches the
-            // JS engine when spline + per-segment colour are combined
-            // (the bezier helper there still uses control points but
-            // strokes each segment individually, so visual is the
-            // same as joined straight strokes at thumb scale).
             for (int i = 0; i < n - 1; i++) {
                 float fi = i / (float) Math.max(1, n - 1);
                 float mAvg = (mags[i] + mags[i + 1]) * 0.5f;
@@ -355,7 +351,6 @@ public final class WaveRunner
             }
         }
 
-        // Mirror — re-stroke a vertically-flipped copy.
         if (L.mirror) {
             float[] mys = scratchY2(n);
             for (int i = 0; i < n; i++) mys[i] = 2f * baseline - ys[i];
@@ -390,7 +385,6 @@ public final class WaveRunner
             for (int i = 1; i < n; i++) path.lineTo(xs[i], ys[i]);
             return;
         }
-        // Catmull-Rom → cubic bezier. Same coefficients as the JS port.
         for (int i = 0; i < n - 1; i++) {
             int i0 = Math.max(0, i - 1);
             int i1 = i;
@@ -442,7 +436,6 @@ public final class WaveRunner
         return curve[i] + (curve[j] - curve[i]) * f;
     }
 
-    // Same colour modes as wave-engine.js barColor().
     private static int barColor(Layer L, float posFrac, float magnitude, float energy) {
         float hueShift = L.hueShift;
         float p = clamp(posFrac, 0f, 1f);
@@ -514,11 +507,6 @@ public final class WaveRunner
     }
 
     private static BlendMode mapBlend(String b) {
-        // PluginCanvas exposes the Porter-Duff core set + the common
-        // photographic modes; modes the host doesn't carry (difference,
-        // hard-light) fall back to the closest supported neighbour
-        // rather than dropping to SRC_OVER, so the visual stays close
-        // to what the JS engine produces.
         if (b == null) return BlendMode.SRC_OVER;
         switch (b) {
             case "screen":      return BlendMode.SCREEN;
@@ -526,16 +514,13 @@ public final class WaveRunner
             case "multiply":    return BlendMode.MULTIPLY;
             case "overlay":     return BlendMode.OVERLAY;
             case "color-dodge": return BlendMode.COLOR_DODGE;
-            // No DIFFERENCE / HARD_LIGHT in PluginCanvas — substitute
-            // OVERLAY which preserves the same "punch contrast"
-            // character without going negative-pixels-weird.
             case "difference":  return BlendMode.OVERLAY;
             case "hard-light":  return BlendMode.OVERLAY;
             default:            return BlendMode.SRC_OVER;
         }
     }
 
-    // ─── Spectrum analysis ───────────────────────────────────────────
+    // ─── Spectrum analysis (Goertzel fallback) ───────────────────────
 
     private void analyseBands(float[] wave) {
         int n = Math.min(wave.length, WINDOW);
@@ -555,9 +540,6 @@ public final class WaveRunner
             if (pinkBoost < 0.3f) pinkBoost = 0.3f;
             float lvl = mag * norm * pinkBoost;
             lvl = (float) Math.tanh(lvl * 2.0f);
-            // Raw bin values feed the renderer; smoothing happens
-            // per-layer inside renderBars / renderLine so each layer
-            // gets its own attack/release setting.
             bandLevel[b] = lvl;
         }
     }
@@ -569,11 +551,7 @@ public final class WaveRunner
     private float[] scratchY2(int n) { if (_sY2 == null || _sY2.length < n) _sY2 = new float[n]; return _sY2; }
     private float[] scratchM(int n)  { if (_sM  == null || _sM.length  < n) _sM  = new float[n]; return _sM; }
 
-    // ─── Wave config — hardcoded for now ────────────────────────────
-    // Mirrors a typical user wave: 1 bars layer (frequency colours,
-    // center align, asym smooth fast attack / slow release) and 1 line
-    // layer below with mirror + spline + gradient + fill-below. Edit
-    // [buildDefaultWave] to test different configs.
+    // ─── Wave model + builder from parsed JSON ──────────────────────
 
     private enum LayerType { BARS, LINE }
 
@@ -582,21 +560,19 @@ public final class WaveRunner
         boolean   visible = true;
         // shared
         int     count       = 48;
-        int     width       = 70;   // % of slot (bars)
-        int     gap         = 1;    // px between bars
+        int     width       = 70;
+        int     gap         = 1;
         float   scale       = 1.0f;
         int     minHeight   = 2;
         int     round       = 0;
         String  align       = "center";
         int     smooth      = 30;
-        int     smoothAttack  = 0;
-        int     smoothRelease = 80;
-        // colour
+        int     smoothAttack  = -1;
+        int     smoothRelease = -1;
         String  colorMode   = "frequency";
         String  color       = "#ffffff";
         String  color2      = "#5e7eff";
         float   hueShift    = 0f;
-        // animation shaping
         float   animContrast = 100f;
         float   animTilt     = 0f;
         float[] respCurve    = null;
@@ -607,12 +583,12 @@ public final class WaveRunner
         boolean elastic     = false;
         boolean fillBelow   = false;
         int     fillOpacity = 30;
-        // visual effects
+        // fx
         String  fxStyle     = "fill";
         float   fxStrokeW   = 2f;
         int     fxOpacity   = 100;
         String  fxBlend     = "source-over";
-        // per-layer scratch (allocated lazily in the renderer)
+        // scratch
         float[] _smoothed;
     }
 
@@ -620,123 +596,252 @@ public final class WaveRunner
         Layer[] layers;
     }
 
-    // Build a preset by index. Add new entries here + bump
-    // [PRESET_COUNT] above — the slider range auto-adapts.
-    //
-    //   0 — Bars only (frequency colours, classic spectrum look)
-    //   1 — Bars + mirrored gradient line on screen blend
-    //   2 — Bars + amber fill-below area, no mirror
-    //   3 — Pure mirrored gradient line (no bars)
-    private static Wave buildPreset(int idx) {
-        switch (idx) {
-            case 1:  return buildBarsPlusMirrorLine();
-            case 2:  return buildBarsPlusFillArea();
-            case 3:  return buildMirrorLineOnly();
-            case 0:
-            default: return buildBarsOnly();
+    @SuppressWarnings("unchecked")
+    private static Wave buildWave(Object root) {
+        if (!(root instanceof Map)) return null;
+        Map<String, Object> obj = (Map<String, Object>) root;
+        Object layersObj = obj.get("layers");
+        if (!(layersObj instanceof List)) return null;
+        List<Object> arr = (List<Object>) layersObj;
+        Layer[] out = new Layer[arr.size()];
+        int kept = 0;
+        for (Object o : arr) {
+            if (!(o instanceof Map)) continue;
+            Layer l = buildLayer((Map<String, Object>) o);
+            if (l == null) continue;
+            out[kept++] = l;
         }
-    }
-
-    private static Wave buildBarsOnly() {
-        Layer bars = new Layer();
-        bars.type = LayerType.BARS;
-        bars.count = 48;
-        bars.width = 70;
-        bars.gap = 1;
-        bars.scale = 1.0f;
-        bars.minHeight = 2;
-        bars.align = "center";
-        bars.colorMode = "frequency";
-        bars.smoothAttack = 0;
-        bars.smoothRelease = 80;
-        bars.round = 0;
+        Layer[] trimmed = new Layer[kept];
+        System.arraycopy(out, 0, trimmed, 0, kept);
         Wave w = new Wave();
-        w.layers = new Layer[]{ bars };
+        w.layers = trimmed;
         return w;
     }
 
-    private static Wave buildBarsPlusMirrorLine() {
-        Layer bars = new Layer();
-        bars.type = LayerType.BARS;
-        bars.count = 48;
-        bars.width = 70;
-        bars.gap = 1;
-        bars.scale = 0.9f;
-        bars.minHeight = 2;
-        bars.align = "center";
-        bars.colorMode = "frequency";
-        bars.smoothAttack = 0;
-        bars.smoothRelease = 80;
+    @SuppressWarnings("unchecked")
+    private static Layer buildLayer(Map<String, Object> lj) {
+        String type = asString(lj.get("type"), "");
+        LayerType lt;
+        if (type.equals("bars"))      lt = LayerType.BARS;
+        else if (type.equals("line")) lt = LayerType.LINE;
+        else return null;
+        Layer l = new Layer();
+        l.type = lt;
+        l.visible = asBool(lj.get("visible"), true);
+        Object sObj = lj.get("settings");
+        Map<String, Object> s = (sObj instanceof Map) ? (Map<String, Object>) sObj : new HashMap<>();
 
-        Layer line = new Layer();
-        line.type = LayerType.LINE;
-        line.count = 64;
-        line.scale = 1.0f;
-        line.align = "center";
-        line.strokeW = 2f;
-        line.spline = true;
-        line.mirror = true;
-        line.colorMode = "gradient";
-        line.color = "#ffffff";
-        line.color2 = "#fbbf24";
-        line.fxOpacity = 80;
-        line.fxBlend = "screen";
-
-        Wave w = new Wave();
-        w.layers = new Layer[]{ bars, line };
-        return w;
+        l.count        = asInt(s.get("count"),        lt == LayerType.LINE ? 64 : 48);
+        l.width        = asInt(s.get("width"),        70);
+        l.gap          = asInt(s.get("gap"),          1);
+        l.scale        = asFloat(s.get("scale"),      1.0f);
+        l.minHeight    = asInt(s.get("minHeight"),    lt == LayerType.LINE ? 0 : 2);
+        l.round        = asInt(s.get("round"),        0);
+        l.align        = asString(s.get("align"),     "center");
+        l.smooth       = asInt(s.get("smooth"),       30);
+        l.smoothAttack  = asInt(s.get("smoothAttack"),  -1);
+        l.smoothRelease = asInt(s.get("smoothRelease"), -1);
+        l.colorMode    = asString(s.get("colorMode"),  "solid");
+        l.color        = asString(s.get("color"),      "#ffffff");
+        l.color2       = asString(s.get("color2"),     "#5e7eff");
+        l.hueShift     = asFloat(s.get("hueShift"),    0f);
+        l.animContrast = asFloat(s.get("animContrast"), 100f);
+        l.animTilt     = asFloat(s.get("animTilt"),     0f);
+        Object ca = s.get("respCurve");
+        if (ca instanceof List) {
+            List<Object> arr = (List<Object>) ca;
+            if (!arr.isEmpty()) {
+                float[] curve = new float[arr.size()];
+                for (int i = 0; i < curve.length; i++) curve[i] = asFloat(arr.get(i), 1f);
+                l.respCurve = curve;
+            }
+        }
+        l.strokeW     = asFloat(s.get("strokeW"),  2f);
+        l.spline      = asBool(s.get("spline"),    true);
+        l.mirror      = asBool(s.get("mirror"),    false);
+        l.elastic     = asBool(s.get("elastic"),   false);
+        l.fillBelow   = asBool(s.get("fillBelow"), false);
+        l.fillOpacity = asInt(s.get("fillOpacity"), 30);
+        l.fxStyle     = asString(s.get("fxStyle"),  "fill");
+        l.fxStrokeW   = asFloat(s.get("fxStrokeW"), 2f);
+        l.fxOpacity   = asInt(s.get("fxOpacity"),   100);
+        l.fxBlend     = asString(s.get("fxBlend"),  "source-over");
+        return l;
     }
 
-    private static Wave buildBarsPlusFillArea() {
-        Layer bars = new Layer();
-        bars.type = LayerType.BARS;
-        bars.count = 48;
-        bars.width = 70;
-        bars.gap = 1;
-        bars.scale = 0.9f;
-        bars.minHeight = 2;
-        bars.align = "bottom";
-        bars.colorMode = "frequency";
-        bars.smoothAttack = 0;
-        bars.smoothRelease = 75;
-
-        Layer line = new Layer();
-        line.type = LayerType.LINE;
-        line.count = 64;
-        line.scale = 1.0f;
-        line.align = "bottom";
-        line.strokeW = 1.5f;
-        line.spline = true;
-        line.mirror = false;
-        line.colorMode = "gradient";
-        line.color = "#fbbf24";
-        line.color2 = "#f97316";
-        line.fillBelow = true;
-        line.fillOpacity = 35;
-        line.fxOpacity = 100;
-        line.fxBlend = "source-over";
-
-        Wave w = new Wave();
-        w.layers = new Layer[]{ bars, line };
-        return w;
+    private static String asString(Object v, String def) {
+        return v == null ? def : v.toString();
+    }
+    private static int asInt(Object v, int def) {
+        if (v == null) return def;
+        if (v instanceof Number) return ((Number) v).intValue();
+        try { return Integer.parseInt(v.toString()); }
+        catch (NumberFormatException e) { return def; }
+    }
+    private static float asFloat(Object v, float def) {
+        if (v == null) return def;
+        if (v instanceof Number) return ((Number) v).floatValue();
+        try { return Float.parseFloat(v.toString()); }
+        catch (NumberFormatException e) { return def; }
+    }
+    private static boolean asBool(Object v, boolean def) {
+        if (v == null) return def;
+        if (v instanceof Boolean) return (Boolean) v;
+        if (v instanceof Number) return ((Number) v).intValue() != 0;
+        String s = v.toString();
+        return s.equals("true") || s.equals("1");
     }
 
-    private static Wave buildMirrorLineOnly() {
-        Layer line = new Layer();
-        line.type = LayerType.LINE;
-        line.count = 64;
-        line.scale = 1.0f;
-        line.align = "center";
-        line.strokeW = 2.5f;
-        line.spline = true;
-        line.mirror = true;
-        line.elastic = false;
-        line.colorMode = "frequency";
-        line.smoothAttack = 0;
-        line.smoothRelease = 75;
+    // ─── Minimal JSON parser ─────────────────────────────────────────
+    // Recursive-descent over a char array. Returns nested Map / List /
+    // String / Double / Boolean / null — exactly what {@link buildWave}
+    // expects. No external deps; small enough that the whole parser
+    // adds ~3 KB to the dex. Handles the wb2.v1 wave schema; common
+    // escapes (backslash-quote, backslash-backslash, backslash-n,
+    // backslash-t, backslash-u-XXXX) are supported, exotic ones
+    // are best-effort.
 
-        Wave w = new Wave();
-        w.layers = new Layer[]{ line };
-        return w;
+    private static final class JsonMini {
+        private final char[] src;
+        private int pos;
+
+        private JsonMini(String s) { this.src = s.toCharArray(); this.pos = 0; }
+
+        static Object parse(String s) {
+            JsonMini p = new JsonMini(s);
+            p.skipWs();
+            Object v = p.readValue();
+            p.skipWs();
+            return v;
+        }
+
+        private void skipWs() {
+            while (pos < src.length) {
+                char c = src[pos];
+                if (c == ' ' || c == '\t' || c == '\r' || c == '\n') pos++;
+                else break;
+            }
+        }
+
+        private Object readValue() {
+            skipWs();
+            if (pos >= src.length) throw new RuntimeException("unexpected eof");
+            char c = src[pos];
+            if (c == '{') return readObject();
+            if (c == '[') return readArray();
+            if (c == '"') return readString();
+            if (c == 't' || c == 'f') return readBool();
+            if (c == 'n') return readNull();
+            return readNumber();
+        }
+
+        private Map<String, Object> readObject() {
+            Map<String, Object> m = new HashMap<>();
+            pos++; // {
+            skipWs();
+            if (pos < src.length && src[pos] == '}') { pos++; return m; }
+            while (true) {
+                skipWs();
+                if (pos >= src.length || src[pos] != '"') throw new RuntimeException("expected key string");
+                String key = readString();
+                skipWs();
+                if (pos >= src.length || src[pos] != ':') throw new RuntimeException("expected ':'");
+                pos++;
+                Object v = readValue();
+                m.put(key, v);
+                skipWs();
+                if (pos >= src.length) throw new RuntimeException("unexpected eof in object");
+                char c = src[pos];
+                if (c == ',') { pos++; continue; }
+                if (c == '}') { pos++; return m; }
+                throw new RuntimeException("expected , or } in object");
+            }
+        }
+
+        private List<Object> readArray() {
+            List<Object> list = new ArrayList<>();
+            pos++; // [
+            skipWs();
+            if (pos < src.length && src[pos] == ']') { pos++; return list; }
+            while (true) {
+                Object v = readValue();
+                list.add(v);
+                skipWs();
+                if (pos >= src.length) throw new RuntimeException("unexpected eof in array");
+                char c = src[pos];
+                if (c == ',') { pos++; continue; }
+                if (c == ']') { pos++; return list; }
+                throw new RuntimeException("expected , or ] in array");
+            }
+        }
+
+        private String readString() {
+            pos++; // opening "
+            StringBuilder sb = new StringBuilder();
+            while (pos < src.length) {
+                char c = src[pos++];
+                if (c == '"') return sb.toString();
+                if (c == '\\') {
+                    if (pos >= src.length) break;
+                    char e = src[pos++];
+                    switch (e) {
+                        case '"':  sb.append('"');  break;
+                        case '\\': sb.append('\\'); break;
+                        case '/':  sb.append('/');  break;
+                        case 'b':  sb.append('\b'); break;
+                        case 'f':  sb.append('\f'); break;
+                        case 'n':  sb.append('\n'); break;
+                        case 'r':  sb.append('\r'); break;
+                        case 't':  sb.append('\t'); break;
+                        case 'u':
+                            if (pos + 4 > src.length) throw new RuntimeException("bad \\u escape");
+                            int cp = Integer.parseInt(new String(src, pos, 4), 16);
+                            sb.append((char) cp);
+                            pos += 4;
+                            break;
+                        default: sb.append(e);
+                    }
+                } else {
+                    sb.append(c);
+                }
+            }
+            throw new RuntimeException("unterminated string");
+        }
+
+        private Boolean readBool() {
+            if (src[pos] == 't') {
+                if (pos + 4 <= src.length && src[pos + 1] == 'r' && src[pos + 2] == 'u' && src[pos + 3] == 'e') {
+                    pos += 4;
+                    return Boolean.TRUE;
+                }
+            } else if (src[pos] == 'f') {
+                if (pos + 5 <= src.length && src[pos + 1] == 'a' && src[pos + 2] == 'l' && src[pos + 3] == 's' && src[pos + 4] == 'e') {
+                    pos += 5;
+                    return Boolean.FALSE;
+                }
+            }
+            throw new RuntimeException("expected true/false");
+        }
+
+        private Object readNull() {
+            if (pos + 4 <= src.length && src[pos + 1] == 'u' && src[pos + 2] == 'l' && src[pos + 3] == 'l') {
+                pos += 4;
+                return null;
+            }
+            throw new RuntimeException("expected null");
+        }
+
+        private Double readNumber() {
+            int start = pos;
+            if (pos < src.length && src[pos] == '-') pos++;
+            while (pos < src.length) {
+                char c = src[pos];
+                if ((c >= '0' && c <= '9') || c == '.' || c == 'e' || c == 'E' || c == '+' || c == '-') {
+                    pos++;
+                } else break;
+            }
+            String s = new String(src, start, pos - start);
+            return Double.parseDouble(s);
+        }
     }
 }

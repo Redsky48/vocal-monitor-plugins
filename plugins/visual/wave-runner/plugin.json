@@ -2,13 +2,13 @@
   "id": "wave-runner",
   "name": "Wave Runner",
   "author": "Vocal Monitor",
-  "version": "0.2.0",
-  "description": "Native (Skia) port of the Waveform Builder rendering engine. Pixel-equivalent output to the WebView TopVis with full feature parity: bars + line layers, every colour mode, asymmetric attack/release smoothing, contrast/tilt, response curves, mirror/elastic/spline/fill — only fxFade and post-blur are deferred. A `style` parameter switches between hardcoded preset waves (bars / bars+mirror line / bars+fill / line only) so the user can A/B against the JS engine without recompiling.",
+  "version": "0.3.0",
+  "description": "Native (Skia) port of the Waveform Builder rendering engine. Consumes the same log-spaced FFT bins as the WebView TopVis (via streams[\"topVisBins\"]) and parses the active wave config the host pushes through setConfig(json) — so output matches the JS engine bar-for-bar, just rendered through Skia. Bars + line layers, every colour mode, asymmetric attack/release smoothing, contrast/tilt, response curves, mirror/elastic/spline/fill — fxFade trail + post-blur deferred (PluginCanvas has no offscreen primitive yet). JSON parser is inline (no org.json dep), keeps the plugin portable to the PC DAW host.",
   "tags": ["visual", "spectrum", "native", "test"],
   "engine": "native",
   "className": "com.vocalmonitor.plugin.community.WaveRunner",
   "ui_kind": "canvas",
-  "streams": ["waveform"],
+  "streams": ["topVisBins", "waveform"],
   "ui": {
     "aspect": "8:3",
     "min_height_dp": 96
