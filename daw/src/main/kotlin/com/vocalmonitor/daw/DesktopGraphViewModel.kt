@@ -281,6 +281,13 @@ class DesktopGraphViewModel(
     private var micMonitor: MicLevelMonitor? = null
     private var micMonitoringDevice: String? = null
 
+    // Latest mic chunk for stream-based plugins.  Volatile so the UI
+    // thread sees a consistent reference; the audio thread always
+    // assigns a fresh array, never mutates the existing one — so the
+    // UI can hand it to plugin.render() without copying.
+    @Volatile private var latestWaveBuffer: FloatArray? = null
+    override fun latestWaveform(): FloatArray? = latestWaveBuffer
+
     @Synchronized
     override fun startMicMonitoring(deviceName: String?) {
         val normalised = deviceName?.takeIf { it.isNotBlank() && it != "Default" }
@@ -292,12 +299,15 @@ class DesktopGraphViewModel(
             deviceName = normalised,
             onLevel = { lvl -> _micLevel.value = lvl },
             onSamples = { samples ->
+                // Publish a snapshot for stream-based plugins (the UI
+                // hands this to plugin.render() under "waveform").
+                // copyOf() so the audio thread can keep reusing its
+                // internal scratch buffer without the UI thread seeing
+                // mid-write contents.
+                latestWaveBuffer = samples.copyOf()
                 // Fan-out to every cached native-plugin instance — both
                 // audio-only effects (robot-voice, echo-cave, …) and
-                // visual plugins (glow-meter, balloon-blow, …).  The
-                // visual ones happen to also paint, but they all read
-                // their state out of process() input.  Output buffer is
-                // discarded for now (no audio playback yet).
+                // visual plugins (glow-meter, balloon-blow, …).
                 val snapshot = pluginCache.values
                 if (snapshot.isEmpty()) return@MicLevelMonitor
                 for (p in snapshot) {

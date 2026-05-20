@@ -94,6 +94,15 @@ interface AudioGraphViewModel {
      *  platforms that don't have a meter implementation. */
     val micLevel: StateFlow<Float>
 
+    /** Latest mic chunk delivered to the audio loop.  Hosts that pass
+     *  this into the plugin's `render(... streams)` map under the key
+     *  `"waveform"` give stream-based plugins (pitch-arrow,
+     *  target-tone, scale-runner, …) live data on the DAW the same
+     *  way Android slim's `PluginPanel.kt` does.  Returns `null` on
+     *  hosts that don't capture mic.  Treat as read-only — the array
+     *  may be reassigned at any time on the audio thread. */
+    fun latestWaveform(): FloatArray? = null
+
     /** Open the input device (or the OS default if [deviceName] is
      *  null / "Default") and start streaming level data into
      *  [micLevel].  Idempotent — calling twice with the same device

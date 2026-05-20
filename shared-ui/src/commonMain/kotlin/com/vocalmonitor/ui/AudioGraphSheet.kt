@@ -343,8 +343,12 @@ private fun FullScreenPluginDialog(
     ) {
         Box(Modifier.fillMaxSize()) {
             if (plugin != null) {
+                val wave = viewModel.latestWaveform()
+                val streams = if (wave != null) mapOf("waveform" to wave)
+                              else emptyMap()
                 PluginVisualSurface(
                     plugin = plugin,
+                    streams = streams,
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
@@ -1628,8 +1632,17 @@ private fun NodeBody(
                         .background(Color(0xFF0A0B0E)),
                 ) {
                     if (visualPlugin != null) {
+                        // Stream-based plugins (PitchTracker / RmsFollower
+                        // / OnsetDetector / svg-demo) read mic via
+                        // streams["waveform"].  Slim already does this in
+                        // PluginPanel.kt — wire the same on DAW so they
+                        // react identically to the live mic.
+                        val wave = viewModel.latestWaveform()
+                        val streams = if (wave != null) mapOf("waveform" to wave)
+                                      else emptyMap()
                         PluginVisualSurface(
                             plugin = visualPlugin,
+                            streams = streams,
                             modifier = Modifier.fillMaxSize(),
                         )
                     } else {
