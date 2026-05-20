@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-20T14:50:28.495Z",
+  "generatedAt": "2026-05-20T15:15:00.793Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -1972,8 +1972,8 @@
       "name": "Wave Runner",
       "author": "Vocal Monitor",
       "category": "Visual",
-      "description": "Native port of the Waveform Builder rendering engine. Same visual concept as the WebView TopVis visualiser, but rendered through Skia via the PluginCanvas API — used to A/B-test whether bypassing the WebView gives meaningful headroom on mobile. Currently hard-codes a single bars layer with frequency-mapped colours; the goal is render-loop speed, not config flexibility.",
-      "version": "0.1.0",
+      "description": "Native (Skia) port of the Waveform Builder rendering engine. Pixel-equivalent output to the WebView TopVis with full feature parity: bars + line layers, every colour mode, asymmetric attack/release smoothing, contrast/tilt, response curves, mirror/elastic/spline/fill — only fxFade and post-blur are deferred. A `style` parameter switches between hardcoded preset waves (bars / bars+mirror line / bars+fill / line only) so the user can A/B against the JS engine without recompiling.",
+      "version": "0.2.0",
       "tags": [
         "visual",
         "spectrum",
@@ -1982,7 +1982,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/visual/wave-runner/wave-runner.dex",
-      "sizeBytes": 4720,
+      "sizeBytes": 16456,
       "className": "com.vocalmonitor.plugin.community.WaveRunner",
       "ui_kind": "canvas",
       "ui": {
