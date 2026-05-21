@@ -91,12 +91,26 @@ public final class WaveRunner
         activeWave = null;
     }
 
-    @Override public String[] parameterNames()           { return new String[0]; }
-    @Override public float    parameterMin(String n)     { return 0f; }
-    @Override public float    parameterMax(String n)     { return 1f; }
-    @Override public float    parameterDefault(String n) { return 0f; }
-    @Override public String   parameterLabel(String n)   { return n; }
-    @Override public void     setParameter(String n, float v) { }
+    // ─── Parameters ──────────────────────────────────────────────────
+    // freeResize  — 0/1 toggle the host reads to switch the floating
+    //               panel's resize handle from aspect-locked uniform
+    //               scale to independent width/height. Stored as a
+    //               plain plugin param so the same persistence path
+    //               that handles every other knob writes / restores
+    //               it without special-casing.
+    private static final String PARAM_FREE_RESIZE = "freeResize";
+
+    @Override public String[] parameterNames() {
+        return new String[]{ PARAM_FREE_RESIZE };
+    }
+    @Override public float parameterMin(String n)     { return 0f; }
+    @Override public float parameterMax(String n)     { return 1f; }
+    @Override public float parameterDefault(String n) { return 0f; }
+    @Override public String parameterLabel(String n) {
+        if (PARAM_FREE_RESIZE.equals(n)) return "Free Resize";
+        return n;
+    }
+    @Override public void setParameter(String n, float v) { }
 
     /**
      * Host calls this with the wb2.v1 wave JSON whenever the user
@@ -507,17 +521,16 @@ public final class WaveRunner
     }
 
     private static BlendMode mapBlend(String b) {
-        if (b == null) return BlendMode.SRC_OVER;
-        switch (b) {
-            case "screen":      return BlendMode.SCREEN;
-            case "lighten":     return BlendMode.LIGHTEN;
-            case "multiply":    return BlendMode.MULTIPLY;
-            case "overlay":     return BlendMode.OVERLAY;
-            case "color-dodge": return BlendMode.COLOR_DODGE;
-            case "difference":  return BlendMode.OVERLAY;
-            case "hard-light":  return BlendMode.OVERLAY;
-            default:            return BlendMode.SRC_OVER;
-        }
+        // Blend modes are temporarily forced to SRC_OVER. The JS engine
+        // implements them via a per-layer OFFSCREEN canvas + composite,
+        // so SCREEN(white_pixel, anything) stays bounded by the line's
+        // alpha — only the line's actual pixels brighten. The plugin
+        // draws strokes directly, so Skia's SCREEN paint applies to
+        // every anti-aliased stroke pixel and washes adjacent bars to
+        // white. Until PluginCanvas gains a saveLayer primitive
+        // (planned), forcing SRC_OVER produces correct-coloured output
+        // even though it loses the "screen brightens" effect.
+        return BlendMode.SRC_OVER;
     }
 
     // ─── Spectrum analysis (Goertzel fallback) ───────────────────────
