@@ -1,0 +1,20 @@
+                    GNU GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
+
+This plugin ("youtube-source") bundles NewPipeExtractor, which is
+licensed under the GNU General Public License v3.0 or later. The
+plugin is therefore distributed under the same terms.
+
+The host application that loads this plugin at runtime (vocal-monitor-
+slim) treats every .dex as a separate work loaded dynamically through
+its own classloader; the GPL terms apply to this plugin's source and
+the bundled `.dex` artifact, not to the host application itself.
+
+The complete corresponding source for this plugin is published at:
+  https://github.com/Redsky48/vocal-monitor-plugins/tree/main/plugins/source/youtube-source
+
+The complete corresponding source for NewPipeExtractor is at:
+  https://github.com/TeamNewPipe/NewPipeExtractor
+
+For the full text of the GNU General Public License v3.0, see:
+  https://www.gnu.org/licenses/gpl-3.0.en.html

@@ -1,0 +1,181 @@
+name: youtube-source — daily rebuild + sign
+
+# What this workflow does:
+#   1. Every night (07:00 UTC) — and on demand via workflow_dispatch
+#      — check whether NewPipeExtractor has a newer release than the
+#      version currently pinned in plugins/source/youtube-source/plugin.json.
+#   2. If newer, bump plugin.json's upstream.version + plugin version,
+#      run scripts/build-source.mjs to produce a fresh .dex, sign it
+#      with the ed25519 private key held in PLUGIN_SIGNING_KEY secret,
+#      commit the new .dex + .json + .sig, and push.
+#   3. The manifest-rebuild workflow then picks up the change and
+#      regenerates manifest.json + manifest.json.sig automatically.
+#
+# Phones running vocal-monitor-slim poll the registry once a day; they
+# verify the new manifest.json.sig against the bundled plugin-trust.pub
+# (matching public key), then verify the new .dex against its own .sig,
+# then atomic-swap into filesDir/source-plugins/. Failed signature
+# = no swap, current code keeps running.
+#
+# Bootstrap requirements (one-time, owner's setup):
+#   - run tools/plugin-signer/keygen.sh locally
+#   - copy plugin-trust.pub into app/src/main/assets/ in the slim repo
+#   - paste the 32-byte private.key (base64-encoded) into the GitHub
+#     repository secret PLUGIN_SIGNING_KEY
+#
+# If the secret is unset, the workflow still produces an unsigned .dex
+# (the build step succeeds) and a no-op signing step — useful for PR
+# previews, but the resulting .dex will not be loadable by released
+# phones until a signed rebuild runs.
+
+on:
+  schedule:
+    - cron: '0 7 * * *'  # 07:00 UTC daily — well off-peak everywhere
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: 'Rebuild even if upstream is unchanged'
+        required: false
+        default: 'false'
+  push:
+    branches: [main]
+    paths:
+      - 'plugins/source/youtube-source/**'
+      - 'scripts/build-source.mjs'
+      - 'scripts/source-stub/**'
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android SDK (for d8)
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Resolve latest NewPipeExtractor release
+        id: npe
+        run: |
+          # GitHub API → latest release tag for TeamNewPipe/NewPipeExtractor.
+          # The tag is the version string JitPack accepts as-is.
+          LATEST=$(curl -s -f \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/TeamNewPipe/NewPipeExtractor/releases/latest \
+            | jq -r .tag_name)
+          if [[ -z "$LATEST" || "$LATEST" == "null" ]]; then
+            echo "Could not resolve latest NPE version" >&2
+            exit 1
+          fi
+          CURRENT=$(jq -r '.upstream.version // ""' plugins/source/youtube-source/plugin.json)
+          echo "latest=$LATEST"   >> "$GITHUB_OUTPUT"
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          if [[ "$LATEST" != "$CURRENT" || "${{ github.event.inputs.force_rebuild }}" == "true" ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip (upstream unchanged)
+        if: steps.npe.outputs.changed != 'true'
+        run: echo "NewPipeExtractor ${{ steps.npe.outputs.current }} is already current."
+
+      - name: Bump plugin.json
+        if: steps.npe.outputs.changed == 'true'
+        run: |
+          # Bump upstream.version AND the plugin's own version (patch
+          # bump). The plugin version is what the app compares against
+          # when deciding whether to auto-update; bumping it on every
+          # NPE refresh means a fresh NPE always reaches users.
+          jq --arg new "${{ steps.npe.outputs.latest }}" '
+            .upstream.version = $new
+            | .version = (.version | split(".") | (.[2] = ((.[2] | tonumber + 1) | tostring)) | join("."))
+          ' plugins/source/youtube-source/plugin.json > _tmp.json
+          mv _tmp.json plugins/source/youtube-source/plugin.json
+          jq '.' plugins/source/youtube-source/plugin.json
+
+      - name: Patch upstream coordinate
+        if: steps.npe.outputs.changed == 'true'
+        run: |
+          # plugin.json's "upstream.library" is the bare coordinate; the
+          # build script appends ":<version>" from upstream.version when
+          # resolving via Gradle.
+          jq --arg ver "${{ steps.npe.outputs.latest }}" '
+            .upstream.libraryWithVersion = (.upstream.library + ":" + $ver)
+          ' plugins/source/youtube-source/plugin.json > _tmp.json
+          mv _tmp.json plugins/source/youtube-source/plugin.json
+
+      - name: Build fat-dex
+        if: steps.npe.outputs.changed == 'true'
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+        run: node scripts/build-source.mjs youtube-source
+
+      - name: Sign .dex + plugin.json with ed25519
+        if: steps.npe.outputs.changed == 'true' && env.PLUGIN_SIGNING_KEY != ''
+        env:
+          PLUGIN_SIGNING_KEY: ${{ secrets.PLUGIN_SIGNING_KEY }}
+        run: |
+          python -m pip install --quiet pynacl
+          python - <<'PY'
+          import base64, os, nacl.signing, pathlib
+          key = nacl.signing.SigningKey(base64.b64decode(os.environ['PLUGIN_SIGNING_KEY']))
+          for p in [
+              "plugins/source/youtube-source/youtube-source.dex",
+              "plugins/source/youtube-source/plugin.json",
+          ]:
+              data = pathlib.Path(p).read_bytes()
+              sig = key.sign(data).signature  # raw 64-byte signature
+              pathlib.Path(p + ".sig").write_bytes(sig)
+              print(f"signed {p}")
+          PY
+
+      - name: Sanity-check signatures
+        if: steps.npe.outputs.changed == 'true' && env.PLUGIN_SIGNING_KEY != ''
+        env:
+          PLUGIN_SIGNING_KEY: ${{ secrets.PLUGIN_SIGNING_KEY }}
+        run: |
+          python - <<'PY'
+          import base64, os, nacl.signing, pathlib
+          sk = nacl.signing.SigningKey(base64.b64decode(os.environ['PLUGIN_SIGNING_KEY']))
+          vk = sk.verify_key
+          for p in [
+              "plugins/source/youtube-source/youtube-source.dex",
+              "plugins/source/youtube-source/plugin.json",
+          ]:
+              data = pathlib.Path(p).read_bytes()
+              sig = pathlib.Path(p + ".sig").read_bytes()
+              vk.verify(data, sig)
+              print(f"verify ok: {p}")
+          PY
+
+      - name: Commit + push
+        if: steps.npe.outputs.changed == 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add plugins/source/youtube-source/
+          if ! git diff --cached --quiet; then
+            git commit -m "youtube-source: bump NPE to ${{ steps.npe.outputs.latest }} [auto]"
+            git push
+          else
+            echo "No changes to commit."
+          fi
