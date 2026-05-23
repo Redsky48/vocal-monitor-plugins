@@ -52,8 +52,31 @@ public interface PluginCanvas {
 
     /** Push the current transform + clip onto the stack. */
     void save();
-    /** Pop the most recent {@link #save}. */
+    /** Pop the most recent {@link #save} or {@link #saveLayer}. */
     void restore();
+
+    /**
+     * Push an offscreen drawing layer onto the stack. Subsequent draw
+     * calls land on a fresh transparent surface bounded by the rect
+     * (left, top, right, bottom). When the matching {@link #restore}
+     * fires, the layer is composited back onto the parent canvas
+     * using {@code paint}'s blend mode + alpha — so blend modes that
+     * need an isolated source (SCREEN, MULTIPLY, OVERLAY…) and per-
+     * layer opacity work the same way Canvas2D's offscreen-canvas-
+     * then-globalCompositeOperation pattern does in the JS engine.
+     *
+     * {@code paint} MAY be null — equivalent to a paint with default
+     * SRC_OVER blend and full alpha. Backwards-compatible default:
+     * older hosts that haven't implemented this method degrade to a
+     * plain {@link #save}, which still gets transforms / clips right
+     * even if blend / opacity composition is lost.
+     */
+    default void saveLayer(
+        float left, float top, float right, float bottom,
+        PluginPaint paint
+    ) {
+        save();
+    }
 
     void translate(float dx, float dy);
     void scale(float sx, float sy);
@@ -72,4 +95,35 @@ public interface PluginCanvas {
 
     /** A fresh paint with defaults (color black, FILL, antialias on). */
     PluginPaint newPaint();
+
+    // ─── Persistent offscreen bitmaps ─────────────────────────────────
+
+    /**
+     * Get or create a persistent offscreen bitmap keyed by {@code key}.
+     * The host caches the backing surface across frames; same key +
+     * matching size returns the same buffer, so the plugin can read
+     * the previous frame's pixels (e.g. for the JS engine's Fade
+     * Trail effect — paint a partial-alpha rect over the bitmap,
+     * then draw the new frame on top, then composite back).
+     *
+     * Default impl returns {@code null} — older hosts don't support
+     * persistent bitmaps. Plugins MUST null-check and fall back to
+     * direct rendering so they stay forward-compatible.
+     */
+    default PluginBitmap acquireBitmap(String key, float width, float height) {
+        return null;
+    }
+
+    /**
+     * Composite a previously-acquired {@link PluginBitmap} onto the
+     * current canvas at (0, 0). The {@code paint}'s blend mode +
+     * color alpha control the composition — pass a paint with the
+     * layer's fxBlend + fxOpacity to mirror the JS engine's
+     * {@code globalCompositeOperation} + {@code globalAlpha} on
+     * the offscreen-canvas drawImage call. Default impl is a no-op
+     * on older hosts.
+     */
+    default void drawBitmap(PluginBitmap bitmap, PluginPaint paint) {
+        // older hosts don't support this — silently ignore.
+    }
 }

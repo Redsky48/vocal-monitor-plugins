@@ -75,6 +75,16 @@ public interface PluginPaint {
     /** Override the compositing mode. Default is {@link BlendMode#SRC_OVER}. */
     PluginPaint setBlendMode(BlendMode mode);
 
+    /**
+     * Gaussian blur applied to every pixel the paint draws — mirror of
+     * CSS {@code filter: blur(Xpx)}. Set to 0 to clear a previous blur.
+     * Default impl on older hosts that haven't wired this is a no-op
+     * so plugins compiled against the newer interface still link.
+     */
+    default PluginPaint setBlur(float radiusDp) {
+        return this;
+    }
+
     // ─── Text ─────────────────────────────────────────────────────────
 
     /** Text size in logical pixels for {@link PluginCanvas#drawText}. */
