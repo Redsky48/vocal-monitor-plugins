@@ -172,7 +172,7 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
         // But ensure the URL is on the allowlist by routing it through
         // a one-byte probe first — if the host rejects this, the real
         // stream open will too.
-        final byte[] probe = host.fetch(streamUrl, headersForByteRange(0, 0), 5000);
+        final byte[] probe = host.fetch("GET", streamUrl, headersForByteRange(0, 0), null, 5000);
         if (probe == null) throw new IOException("stream probe rejected");
 
         // Actual streaming. Allowlist is enforced by the URL prefix
@@ -305,7 +305,14 @@ class HostDownloader extends Downloader {
                     }
                 }
             }
-            final byte[] body = host.fetch(request.url(), flatHeaders, 15_000);
+            // NPE's modern YT extractor uses POST against Innertube
+            // endpoints with JSON body; older code paths use GET. Pass
+            // through whatever NPE wanted.
+            final String method = request.httpMethod() != null
+                ? request.httpMethod().toUpperCase() : "GET";
+            final byte[] reqBody = request.dataToSend();
+            final byte[] body = host.fetch(method, request.url(), flatHeaders,
+                reqBody, 15_000);
             return new Response(
                 200,
                 "OK",
