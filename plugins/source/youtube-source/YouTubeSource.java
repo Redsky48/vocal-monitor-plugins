@@ -203,7 +203,8 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
         conn.setRequestMethod("GET");
         conn.setConnectTimeout(15_000);
         conn.setReadTimeout(30_000);
-        conn.setRequestProperty("User-Agent", DEFAULT_UA);
+        conn.setRequestProperty("User-Agent",
+            "Mozilla/5.0 (X11; Linux x86_64; rv:91.0) Gecko/20100101 Firefox/91.0");
 
         final int statusCode;
         try {
