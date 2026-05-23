@@ -163,12 +163,25 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
                 + ": " + t.getMessage());
             throw t instanceof Exception ? (Exception) t : new IOException(t);
         }
-        host.log("event", "yt streams_count=" + (info.getAudioStreams() == null
-            ? 0 : info.getAudioStreams().size()));
+        final int audioCount = info.getAudioStreams() == null
+            ? 0 : info.getAudioStreams().size();
+        final int videoCount = info.getVideoStreams() == null
+            ? 0 : info.getVideoStreams().size();
+        final int comboCount = info.getVideoOnlyStreams() == null
+            ? 0 : info.getVideoOnlyStreams().size();
+        host.log("event", "yt streams audio=" + audioCount
+            + " video=" + videoCount + " video_only=" + comboCount
+            + " title=\"" + (info.getName() != null
+                ? info.getName().substring(0, Math.min(40, info.getName().length()))
+                : "?") + "\"");
+        if (info.getErrorMessage() != null) {
+            host.log("error", "yt info.errorMessage: " + info.getErrorMessage());
+        }
 
         final AudioStream chosen = pickAudioStream(info, request.getPreferredFormats());
         if (chosen == null) {
-            host.log("error", "no compatible audio stream for " + request.getResultId());
+            host.log("error", "no compatible audio stream for " + request.getResultId()
+                + " (audio=" + audioCount + " video=" + videoCount + " combo=" + comboCount + ")");
             throw new IOException("no compatible audio stream for " + request.getResultId());
         }
         final String streamUrl;
