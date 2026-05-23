@@ -255,8 +255,8 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
             // Hint at age-restriction if there are video streams but no
             // audio streams — that's the typical signature.
             final String detail = (videoCount > 0 && audioCount == 0)
-                ? "iespējams age-restricted vai premium-only"
-                : "video bez audio plūsmas";
+                ? "likely age-restricted or premium-only"
+                : "video has no audio stream";
             throw new IOException("NO_STREAMS: " + detail);
         }
         final String streamUrl;
