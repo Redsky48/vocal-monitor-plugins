@@ -2,7 +2,7 @@
   "id": "youtube-source",
   "name": "YouTube",
   "author": "Vocal Monitor",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "YouTube as a music source — search the catalog and download audio (opus / m4a) into your local library. Runs inside the app's isolated-process sandbox; all network calls go through a per-plugin domain allowlist enforced by the host. Wraps NewPipeExtractor (GPLv3) so YouTube-protocol churn is upstream maintained.",
   "tags": [
     "source",
