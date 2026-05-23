@@ -155,52 +155,86 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
         throttle(lastDownloadAtMs, MIN_DOWNLOAD_INTERVAL_MS);
         host.progress(0.0f);
 
-        final StreamInfo info = StreamInfo.getInfo(ServiceList.YouTube, request.getResultId());
+        final StreamInfo info;
+        try {
+            info = StreamInfo.getInfo(ServiceList.YouTube, request.getResultId());
+        } catch (Throwable t) {
+            host.log("error", "StreamInfo.getInfo threw " + t.getClass().getSimpleName()
+                + ": " + t.getMessage());
+            throw t instanceof Exception ? (Exception) t : new IOException(t);
+        }
+        host.log("event", "yt streams_count=" + (info.getAudioStreams() == null
+            ? 0 : info.getAudioStreams().size()));
+
         final AudioStream chosen = pickAudioStream(info, request.getPreferredFormats());
         if (chosen == null) {
+            host.log("error", "no compatible audio stream for " + request.getResultId());
             throw new IOException("no compatible audio stream for " + request.getResultId());
         }
-        final String streamUrl = chosen.getContent();
+        final String streamUrl;
+        try {
+            streamUrl = chosen.getContent();
+        } catch (Throwable t) {
+            host.log("error", "chosen.getContent threw " + t.getClass().getSimpleName()
+                + ": " + t.getMessage());
+            throw t instanceof Exception ? (Exception) t : new IOException(t);
+        }
+        if (streamUrl == null || streamUrl.isEmpty()) {
+            host.log("error", "stream URL is null/empty");
+            throw new IOException("stream URL is null/empty");
+        }
         host.log("event", "yt download bitrate=" + chosen.getAverageBitrate()
             + " fmt=" + (chosen.getFormat() != null ? chosen.getFormat().getName() : "?")
             + " url_prefix=" + streamUrl.substring(0, Math.min(40, streamUrl.length())));
 
-        // Direct GET (not through SourceHost.fetch — those are for
-        // small JSON / HTML probes; multi-MB audio belongs in a
-        // streaming connection that handles backpressure via the
-        // OutputStream the host writes into).
-        // But ensure the URL is on the allowlist by routing it through
-        // a one-byte probe first — if the host rejects this, the real
-        // stream open will too.
-        final byte[] probe = host.fetch("GET", streamUrl, headersForByteRange(0, 0), null, 5000);
-        if (probe == null) throw new IOException("stream probe rejected");
-
-        // Actual streaming. Allowlist is enforced by the URL prefix
-        // — host.fetch above proves the URL passes; the host's per-plugin
-        // policy treats any URL in the allowlist as fetchable by the
-        // plugin (this URL is *.googlevideo.com which is on the YT
-        // allowlist).
+        // Direct streaming connection (not through SourceHost.fetch —
+        // that's for small JSON / HTML payloads, capped at a few MB on
+        // the host side; multi-MB audio belongs in a streaming
+        // connection that hands chunks straight to host.writeChunk).
+        // The URL is *.googlevideo.com which is already on the
+        // url_allowlist; the host's allowlist check applies to
+        // host.fetch calls, but the plugin runs in-process today (sandbox
+        // disabled while we debug isolated-process spawn) so the direct
+        // connection is allowed by app permission. Earlier code did a
+        // host.fetch GET as a probe — removed because YT does not honour
+        // Range: bytes=0-0 reliably, so the probe could pull the full
+        // audio body through the host buffer and OOM the process.
         final HttpURLConnection conn = (HttpURLConnection) new URL(streamUrl).openConnection();
         conn.setRequestMethod("GET");
         conn.setConnectTimeout(15_000);
         conn.setReadTimeout(30_000);
+        conn.setRequestProperty("User-Agent", DEFAULT_UA);
+
+        final int statusCode;
+        try {
+            statusCode = conn.getResponseCode();
+        } catch (Throwable t) {
+            host.log("error", "streaming responseCode threw " + t.getClass().getSimpleName()
+                + ": " + t.getMessage());
+            conn.disconnect();
+            throw t instanceof Exception ? (Exception) t : new IOException(t);
+        }
+        if (statusCode < 200 || statusCode >= 300) {
+            host.log("error", "streaming status=" + statusCode);
+            conn.disconnect();
+            throw new IOException("stream HTTP " + statusCode);
+        }
 
         final long totalBytes = conn.getContentLengthLong();
+        host.log("event", "yt streaming_start total=" + totalBytes + "B status=" + statusCode);
         long sent = 0L;
         try (InputStream in = conn.getInputStream()) {
             final byte[] buf = new byte[DOWNLOAD_CHUNK_BYTES];
             int n;
             while ((n = in.read(buf)) > 0) {
                 final byte[] chunk = (n == buf.length) ? buf : copyOfRange(buf, 0, n);
-                final boolean last = false;       // finalize is sent below
-                host.writeChunk(chunk, last);
+                host.writeChunk(chunk, false);
                 sent += n;
                 if (totalBytes > 0) {
                     host.progress(Math.min(0.99f, (float) sent / (float) totalBytes));
                 }
             }
-            // One last empty chunk with last=true so the host closes the
-            // file + scans MediaStore.
+            // Final empty chunk → host closes the file + scans MediaStore.
             host.writeChunk(new byte[0], true);
         } finally {
             conn.disconnect();
