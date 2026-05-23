@@ -162,8 +162,16 @@ async function compileOne(name, meta, stubOut) {
   const javaSrc = join(folder, `${simpleName}.java`);
   if (!await exists(javaSrc)) throw new Error(`no source at ${javaSrc}`);
 
-  console.log(`  resolving ${meta.upstream.library} …`);
-  const upstreamJars = await resolveUpstream(folder, meta.upstream.library);
+  // `library` is the bare Maven coordinate (group:artifact); `version`
+  // is bumped by the auto-update workflow. The actual Gradle resolution
+  // coord is the two joined with a colon. We require version to be set
+  // — the workflow always populates it before invoking this script.
+  if (!meta.upstream.version) {
+    throw new Error('plugin.json missing upstream.version (workflow bump step should set this)');
+  }
+  const coord = `${meta.upstream.library}:${meta.upstream.version}`;
+  console.log(`  resolving ${coord} …`);
+  const upstreamJars = await resolveUpstream(folder, coord);
   console.log(`    → ${upstreamJars.length} jars on classpath`);
 
   const classOut = join(BUILD_DIR, name);

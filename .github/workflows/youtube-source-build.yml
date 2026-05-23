@@ -112,16 +112,9 @@ jobs:
           mv _tmp.json plugins/source/youtube-source/plugin.json
           jq '.' plugins/source/youtube-source/plugin.json
 
-      - name: Patch upstream coordinate
-        if: steps.npe.outputs.changed == 'true'
-        run: |
-          # plugin.json's "upstream.library" is the bare coordinate; the
-          # build script appends ":<version>" from upstream.version when
-          # resolving via Gradle.
-          jq --arg ver "${{ steps.npe.outputs.latest }}" '
-            .upstream.libraryWithVersion = (.upstream.library + ":" + $ver)
-          ' plugins/source/youtube-source/plugin.json > _tmp.json
-          mv _tmp.json plugins/source/youtube-source/plugin.json
+      # build-source.mjs reads `upstream.version` and joins it with
+      # `upstream.library` to form the Gradle resolution coordinate. The
+      # bump step above already set this — nothing extra needed.
 
       - name: Build fat-dex
         if: steps.npe.outputs.changed == 'true'
