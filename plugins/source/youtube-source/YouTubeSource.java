@@ -62,19 +62,23 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
     private static final long MIN_SEARCH_INTERVAL_MS = 1_000L;
 
     /** Floor between consecutive downloads. YT's audio CDN absorbs more
-     *  than the search endpoint, but each download is megabytes of
-     *  bandwidth — too-rapid sequencing draws abuse detection. */
-    private static final long MIN_DOWNLOAD_INTERVAL_MS = 10_000L;
+     *  than the search endpoint, but back-to-back rapid-fire downloads
+     *  draw abuse detection. 1 sec is enough courtesy for personal use
+     *  without making single-download UX feel jammed (was 10 sec, which
+     *  made every second download feel broken). */
+    private static final long MIN_DOWNLOAD_INTERVAL_MS = 1_000L;
 
     /** Initial 429 backoff. Doubles up to MAX_BACKOFF on repeated 429s
      *  within one operation. */
     private static final long INITIAL_BACKOFF_MS = 5_000L;
     private static final long MAX_BACKOFF_MS = 60_000L;
 
-    /** Chunk size for the download path — small enough that the
-     *  CircularProgressIndicator on the UI feels live, big enough that
-     *  Binder transactions aren't pure overhead. */
-    private static final int DOWNLOAD_CHUNK_BYTES = 64 * 1024;
+    /** Chunk size for the download path. 256 KB strikes the balance:
+     *  for a typical 4-min opus (~5 MB) that's ~20 chunks, so the
+     *  LinearProgressIndicator advances visibly without paying Binder
+     *  marshalling + ContentResolver write overhead per 64 KB the old
+     *  default required. */
+    private static final int DOWNLOAD_CHUNK_BYTES = 256 * 1024;
 
     @Override
     public String id() { return "youtube-source"; }
@@ -237,6 +241,13 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
         final long totalBytes = conn.getContentLengthLong();
         host.log("event", "yt streaming_start total=" + totalBytes + "B status=" + statusCode);
         long sent = 0L;
+        // Only fire host.progress on whole-percent boundaries — the
+        // UI is a LinearProgressIndicator, not a tachometer, and each
+        // progress() call hops through Binder + DebugFile HTTP POST. At
+        // 256 KB chunks on a 5 MB file that's ~20 chunks total; without
+        // this gate every chunk would still ping the bar 100 times for
+        // a fraction it can't render any smoother.
+        int lastPct = -1;
         try (InputStream in = conn.getInputStream()) {
             final byte[] buf = new byte[DOWNLOAD_CHUNK_BYTES];
             int n;
@@ -245,7 +256,11 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
                 host.writeChunk(chunk, false);
                 sent += n;
                 if (totalBytes > 0) {
-                    host.progress(Math.min(0.99f, (float) sent / (float) totalBytes));
+                    final int pct = (int) Math.min(99L, (sent * 100L) / totalBytes);
+                    if (pct != lastPct) {
+                        host.progress(pct / 100f);
+                        lastPct = pct;
+                    }
                 }
             }
             // Final empty chunk → host closes the file + scans MediaStore.
