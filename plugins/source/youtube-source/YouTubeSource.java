@@ -178,8 +178,13 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
             + " title=\"" + (info.getName() != null
                 ? info.getName().substring(0, Math.min(40, info.getName().length()))
                 : "?") + "\"");
-        if (info.getErrorMessage() != null) {
-            host.log("error", "yt info.errorMessage: " + info.getErrorMessage());
+        if (info.getErrors() != null && !info.getErrors().isEmpty()) {
+            final StringBuilder errs = new StringBuilder();
+            for (Throwable t : info.getErrors()) {
+                if (errs.length() > 0) errs.append(" | ");
+                errs.append(t.getClass().getSimpleName()).append(": ").append(t.getMessage());
+            }
+            host.log("error", "yt info.errors: " + errs);
         }
 
         final AudioStream chosen = pickAudioStream(info, request.getPreferredFormats());
