@@ -2,13 +2,21 @@
   "id": "youtube-source",
   "name": "YouTube",
   "author": "Vocal Monitor",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "YouTube as a music source — search the catalog and download audio (opus / m4a) into your local library. Runs inside the app's isolated-process sandbox; all network calls go through a per-plugin domain allowlist enforced by the host. Wraps NewPipeExtractor (GPLv3) so YouTube-protocol churn is upstream maintained.",
-  "tags": ["source", "youtube", "audio", "download"],
+  "tags": [
+    "source",
+    "youtube",
+    "audio",
+    "download"
+  ],
   "engine": "source",
   "className": "com.vocalmonitor.plugin.source.youtube.YouTubeSource",
   "system": true,
-  "permissions": ["network", "media-store-write"],
+  "permissions": [
+    "network",
+    "media-store-write"
+  ],
   "url_allowlist": [
     "*.youtube.com",
     "*.googlevideo.com",
@@ -19,7 +27,10 @@
   "config_schema": {
     "format": {
       "type": "enum",
-      "values": ["opus", "m4a"],
+      "values": [
+        "opus",
+        "m4a"
+      ],
       "default": "opus"
     },
     "search_limit": {
@@ -32,6 +43,7 @@
   "upstream": {
     "library": "com.github.TeamNewPipe:NewPipeExtractor",
     "tracker": "https://github.com/TeamNewPipe/NewPipeExtractor/releases",
-    "license": "GPL-3.0"
+    "license": "GPL-3.0",
+    "version": "v0.26.1"
   }
 }
