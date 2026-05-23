@@ -294,6 +294,15 @@ class HostDownloader extends Downloader {
 
     HostDownloader(SourceHost host) { this.host = host; }
 
+    /** Default UA + Accept-Language injected when NPE doesn't specify
+     *  them. Without these, www.youtube.com returns a stripped page
+     *  (no `var ytInitialData = …` block) and NPE throws
+     *  ParsingException: Could not get ytInitialData. The UA mirrors
+     *  what NPE's reference downloader uses upstream. */
+    private static final String DEFAULT_UA =
+        "Mozilla/5.0 (X11; Linux x86_64; rv:91.0) Gecko/20100101 Firefox/91.0";
+    private static final String DEFAULT_ACCEPT_LANG = "en-US,en;q=0.9";
+
     @Override
     public Response execute(Request request) throws IOException, ReCaptchaException {
         try {
@@ -305,14 +314,21 @@ class HostDownloader extends Downloader {
                     }
                 }
             }
-            // NPE's modern YT extractor uses POST against Innertube
-            // endpoints with JSON body; older code paths use GET. Pass
-            // through whatever NPE wanted.
+            if (!flatHeaders.containsKey("User-Agent")) {
+                flatHeaders.put("User-Agent", DEFAULT_UA);
+            }
+            if (!flatHeaders.containsKey("Accept-Language")) {
+                flatHeaders.put("Accept-Language", DEFAULT_ACCEPT_LANG);
+            }
             final String method = request.httpMethod() != null
                 ? request.httpMethod().toUpperCase() : "GET";
             final byte[] reqBody = request.dataToSend();
             final byte[] body = host.fetch(method, request.url(), flatHeaders,
                 reqBody, 15_000);
+            final int bodyLen = body == null ? 0 : body.length;
+            host.log("event", "yt.http " + method + " "
+                + request.url().substring(0, Math.min(60, request.url().length()))
+                + " → " + bodyLen + "B");
             return new Response(
                 200,
                 "OK",
