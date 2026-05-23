@@ -22,7 +22,8 @@
     "*.googlevideo.com",
     "*.ytimg.com",
     "*.youtube-nocookie.com",
-    "*.ggpht.com"
+    "*.ggpht.com",
+    "youtubei.googleapis.com"
   ],
   "config_schema": {
     "format": {
