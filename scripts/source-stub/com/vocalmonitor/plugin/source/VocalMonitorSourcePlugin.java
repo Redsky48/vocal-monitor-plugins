@@ -18,5 +18,6 @@ public interface VocalMonitorSourcePlugin {
     List<SourceResult> search(String query, int limit, String token) throws Exception;
     void download(DownloadRequest request, String token) throws Exception;
     void cancel(String token);
+    String resolveStreamUrl(String resultId) throws Exception;
     void shutdown();
 }

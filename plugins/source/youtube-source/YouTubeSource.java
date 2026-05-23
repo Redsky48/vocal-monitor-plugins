@@ -30,6 +30,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * YouTube source plugin. Runs inside the app's isolated-process
@@ -55,6 +56,20 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
     private SourceHost host;
     private final AtomicLong lastSearchAtMs = new AtomicLong(0L);
     private final AtomicLong lastDownloadAtMs = new AtomicLong(0L);
+
+    /** Currently-streaming HttpURLConnection. Held so {@link #cancel}
+     *  can disconnect it from the binder thread; the worker thread
+     *  blocked on {@code in.read()} then throws IOException promptly
+     *  and the download() catch path runs. Null when no streaming is
+     *  in flight (we're still in the NPE handshake or fully done). */
+    private final AtomicReference<HttpURLConnection> activeConn =
+        new AtomicReference<>(null);
+
+    /** Token-keyed cancel flag so worker code can poll between blocking
+     *  calls. AtomicReference (not Map) because we only ever have one
+     *  download in flight per plugin instance. */
+    private final AtomicReference<String> cancelledToken =
+        new AtomicReference<>(null);
 
     /** Floor between consecutive searches — anti-ban. NPE / YT's threshold
      *  is opaque; 1 / sec is a polite default that hasn't tripped 429 in
@@ -156,7 +171,9 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
 
     @Override
     public void download(DownloadRequest request, String token) throws Exception {
+        cancelledToken.set(null);  // fresh start
         throttle(lastDownloadAtMs, MIN_DOWNLOAD_INTERVAL_MS);
+        throwIfCancelled(token);
         host.progress(0.0f);
 
         final StreamInfo info;
@@ -165,8 +182,9 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
         } catch (Throwable t) {
             host.log("error", "StreamInfo.getInfo threw " + t.getClass().getSimpleName()
                 + ": " + t.getMessage());
-            throw t instanceof Exception ? (Exception) t : new IOException(t);
+            throw mapNpeException(t);
         }
+        throwIfCancelled(token);
         final int audioCount = info.getAudioStreams() == null
             ? 0 : info.getAudioStreams().size();
         final int videoCount = info.getVideoStreams() == null
@@ -191,7 +209,12 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
         if (chosen == null) {
             host.log("error", "no compatible audio stream for " + request.getResultId()
                 + " (audio=" + audioCount + " video=" + videoCount + " combo=" + comboCount + ")");
-            throw new IOException("no compatible audio stream for " + request.getResultId());
+            // Hint at age-restriction if there are video streams but no
+            // audio streams — that's the typical signature.
+            final String detail = (videoCount > 0 && audioCount == 0)
+                ? "iespējams age-restricted vai premium-only"
+                : "video bez audio plūsmas";
+            throw new IOException("NO_STREAMS: " + detail);
         }
         final String streamUrl;
         try {
@@ -199,12 +222,13 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
         } catch (Throwable t) {
             host.log("error", "chosen.getContent threw " + t.getClass().getSimpleName()
                 + ": " + t.getMessage());
-            throw t instanceof Exception ? (Exception) t : new IOException(t);
+            throw mapNpeException(t);
         }
         if (streamUrl == null || streamUrl.isEmpty()) {
             host.log("error", "stream URL is null/empty");
-            throw new IOException("stream URL is null/empty");
+            throw new IOException("NO_STREAMS: stream URL was empty");
         }
+        throwIfCancelled(token);
         host.log("event", "yt download bitrate=" + chosen.getAverageBitrate()
             + " fmt=" + (chosen.getFormat() != null ? chosen.getFormat().getName() : "?")
             + " url_prefix=" + streamUrl.substring(0, Math.min(40, streamUrl.length())));
@@ -227,20 +251,31 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
         conn.setReadTimeout(30_000);
         conn.setRequestProperty("User-Agent",
             "Mozilla/5.0 (X11; Linux x86_64; rv:91.0) Gecko/20100101 Firefox/91.0");
+        activeConn.set(conn);
 
         final int statusCode;
         try {
             statusCode = conn.getResponseCode();
         } catch (Throwable t) {
+            activeConn.compareAndSet(conn, null);
+            // If the binder thread disconnect()-ed us mid-handshake,
+            // cancelledToken is set — translate to a cleaner cancel
+            // throw so the host UI shows "Atcelts" rather than a generic
+            // network error.
+            if (token.equals(cancelledToken.get())) {
+                throw new IOException("CANCELLED: download stopped by user");
+            }
             host.log("error", "streaming responseCode threw " + t.getClass().getSimpleName()
                 + ": " + t.getMessage());
             conn.disconnect();
-            throw t instanceof Exception ? (Exception) t : new IOException(t);
+            throw new IOException("NETWORK: " + t.getClass().getSimpleName()
+                + (t.getMessage() != null ? " — " + t.getMessage() : ""));
         }
         if (statusCode < 200 || statusCode >= 300) {
             host.log("error", "streaming status=" + statusCode);
+            activeConn.compareAndSet(conn, null);
             conn.disconnect();
-            throw new IOException("stream HTTP " + statusCode);
+            throw new IOException("NETWORK: stream HTTP " + statusCode);
         }
 
         final long totalBytes = conn.getContentLengthLong();
@@ -257,6 +292,9 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
             final byte[] buf = new byte[DOWNLOAD_CHUNK_BYTES];
             int n;
             while ((n = in.read(buf)) > 0) {
+                if (token.equals(cancelledToken.get())) {
+                    throw new IOException("CANCELLED: download stopped by user");
+                }
                 final byte[] chunk = (n == buf.length) ? buf : copyOfRange(buf, 0, n);
                 host.writeChunk(chunk, false);
                 sent += n;
@@ -270,7 +308,16 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
             }
             // Final empty chunk → host closes the file + scans MediaStore.
             host.writeChunk(new byte[0], true);
+        } catch (IOException ioe) {
+            // If cancel() disconnect()-ed the socket mid-read this is the
+            // path the worker thread arrives on — translate to clean
+            // CANCELLED so the UI doesn't render "Connection reset by peer".
+            if (token.equals(cancelledToken.get())) {
+                throw new IOException("CANCELLED: download stopped by user");
+            }
+            throw ioe;
         } finally {
+            activeConn.compareAndSet(conn, null);
             conn.disconnect();
         }
         host.progress(1.0f);
@@ -278,12 +325,97 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
     }
 
     @Override
+    public String resolveStreamUrl(String resultId) throws Exception {
+        // Skip the download throttle — streaming is a smaller commitment
+        // than a multi-MB download. Still throttle the search-side rate
+        // because resolveStreamUrl drives the same /player + /next
+        // Innertube hits.
+        throttle(lastSearchAtMs, MIN_SEARCH_INTERVAL_MS);
+        final StreamInfo info;
+        try {
+            info = StreamInfo.getInfo(ServiceList.YouTube, resultId);
+        } catch (Throwable t) {
+            host.log("error", "resolveStreamUrl getInfo threw "
+                + t.getClass().getSimpleName() + ": " + t.getMessage());
+            throw mapNpeException(t);
+        }
+        final AudioStream chosen = pickAudioStream(info,
+            java.util.Arrays.asList("opus", "m4a"));
+        if (chosen == null) {
+            throw new IOException("NO_STREAMS: no audio stream for streaming");
+        }
+        final String url = chosen.getContent();
+        if (url == null || url.isEmpty()) {
+            throw new IOException("NO_STREAMS: stream URL was empty");
+        }
+        host.log("event", "yt stream_url resolved bitrate=" + chosen.getAverageBitrate()
+            + " fmt=" + (chosen.getFormat() != null ? chosen.getFormat().getName() : "?"));
+        return url;
+    }
+
+    /** Maps an NPE exception class to one of the stable error-code
+     *  prefixes the host UI translates to Latvian. Falls through to
+     *  PLUGIN_ERROR for anything we haven't categorised yet. */
+    private IOException mapNpeException(Throwable t) {
+        // Walk the cause chain — NPE often wraps the real exception.
+        for (Throwable cur = t; cur != null; cur = cur.getCause()) {
+            final String name = cur.getClass().getSimpleName();
+            if (name.contains("AgeRestricted")) {
+                return new IOException("AGE_RESTRICTED: " + safeMsg(cur));
+            }
+            if (name.contains("GeographicRestriction") || name.contains("Geo")) {
+                return new IOException("REGION_BLOCKED: " + safeMsg(cur));
+            }
+            if (name.contains("Private")) {
+                return new IOException("UNAVAILABLE: " + safeMsg(cur));
+            }
+            if (name.contains("Paid")) {
+                return new IOException("PAID: " + safeMsg(cur));
+            }
+            if (name.contains("ReCaptcha")) {
+                return new IOException("RATE_LIMITED: " + safeMsg(cur));
+            }
+            if (name.contains("ContentNotAvailable")
+                || name.contains("ContentNotSupported")) {
+                return new IOException("UNAVAILABLE: " + safeMsg(cur));
+            }
+            if (name.contains("AccountTerminated")) {
+                return new IOException("UNAVAILABLE: account terminated — "
+                    + safeMsg(cur));
+            }
+        }
+        // Network / parse / generic
+        if (t instanceof IOException) {
+            return new IOException("NETWORK: " + safeMsg(t));
+        }
+        return new IOException("PLUGIN_ERROR: "
+            + t.getClass().getSimpleName() + " — " + safeMsg(t));
+    }
+
+    private static String safeMsg(Throwable t) {
+        final String m = t.getMessage();
+        return m == null ? "(no message)" : m;
+    }
+
+    private void throwIfCancelled(String token) throws IOException {
+        if (token.equals(cancelledToken.get())) {
+            throw new IOException("CANCELLED: download stopped by user");
+        }
+    }
+
+    @Override
     public void cancel(String token) {
-        // The blocking InputStream read is per-thread; tolerable to no-op
-        // for the MVP — the AIDL caller times out on its end. Wire
-        // proper Thread.interrupt() in the next iteration if cancel UX
-        // gets visible.
-        host.log("event", "yt cancel " + token);
+        cancelledToken.set(token);
+        // Closing the active socket from any thread makes the worker's
+        // in.read(buf) throw IOException promptly — that's the only way
+        // to interrupt a blocked native read on Android without doing
+        // full thread.interrupt() ceremonies that don't always work for
+        // HttpURLConnection internals.
+        final HttpURLConnection c = activeConn.getAndSet(null);
+        if (c != null) {
+            try { c.disconnect(); } catch (Throwable ignore) {}
+        }
+        host.log("event", "yt cancel " + token + " (active_conn=" + (c != null) + ")");
     }
 
     @Override
