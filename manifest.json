@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-21T00:25:12.147Z",
+  "generatedAt": "2026-05-26T15:34:39.664Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -323,6 +323,24 @@
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/distortion/saturator/saturator.dex",
       "sizeBytes": 1844,
       "className": "com.vocalmonitor.plugin.community.Saturator"
+    },
+    {
+      "id": "app-compressor",
+      "name": "App Compressor",
+      "author": "Vocal Monitor",
+      "category": "Dynamics",
+      "description": "Bit-exact port of the app's built-in feed-forward compressor. Same threshold / ratio / attack / release / soft-knee / makeup-gain model the host runs on save — drops the static-curve + envelope follower into a node-chain context so a chain version produces identical output to the built-in.",
+      "version": "1.0.0",
+      "tags": [
+        "dynamics",
+        "compressor",
+        "app-mirror",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/dynamics/app-compressor/app-compressor.dex",
+      "sizeBytes": 4580,
+      "className": "com.vocalmonitor.plugin.community.AppCompressor"
     },
     {
       "id": "compressor",
@@ -705,6 +723,25 @@
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/telephone/telephone.dex",
       "sizeBytes": 3152,
       "className": "com.vocalmonitor.plugin.community.Telephone"
+    },
+    {
+      "id": "app-eq",
+      "name": "App EQ",
+      "author": "Vocal Monitor",
+      "category": "EQ",
+      "description": "Bit-exact port of the app's built-in 10-band graphic EQ. Constant-Q biquad peaking filters at ISO octave centres (31 / 62 / 125 / 250 / 500 / 1k / 2k / 4k / 8k / 16k Hz), Q = 1.4. Same RBJ cookbook coefficients the host runs on save, so the plugin chain version produces identical output to the built-in.",
+      "version": "1.0.0",
+      "tags": [
+        "eq",
+        "biquad",
+        "graphic",
+        "app-mirror",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/eq/app-eq/app-eq.dex",
+      "sizeBytes": 3828,
+      "className": "com.vocalmonitor.plugin.community.AppEq"
     },
     {
       "id": "exciter",
@@ -1722,6 +1759,24 @@
       "className": "com.vocalmonitor.plugin.community.SpringReverb"
     },
     {
+      "id": "youtube-source",
+      "name": "YouTube",
+      "author": "Vocal Monitor",
+      "category": "Source",
+      "description": "YouTube as a music source — search the catalog and download audio (opus / m4a) into your local library. Runs inside the app's isolated-process sandbox; all network calls go through a per-plugin domain allowlist enforced by the host. Wraps NewPipeExtractor (GPLv3) so YouTube-protocol churn is upstream maintained.",
+      "version": "0.1.9",
+      "tags": [
+        "source",
+        "youtube",
+        "audio",
+        "download"
+      ],
+      "engine": "source",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/source/youtube-source/youtube-source.dex",
+      "sizeBytes": 3529004,
+      "className": "com.vocalmonitor.plugin.source.youtube.YouTubeSource"
+    },
+    {
       "id": "breath-hold",
       "name": "Breath Hold",
       "author": "Vocal Monitor",
@@ -1972,8 +2027,8 @@
       "name": "Wave Runner",
       "author": "Vocal Monitor",
       "category": "Visual",
-      "description": "Native (Skia) port of the Waveform Builder rendering engine. Consumes the same log-spaced FFT bins as the WebView TopVis (via streams[\"topVisBins\"]) and parses the active wave config the host pushes through setConfig(json) — so output matches the JS engine bar-for-bar, just rendered through Skia. Bars + line layers, every colour mode, asymmetric attack/release smoothing, contrast/tilt, response curves, mirror/elastic/spline/fill — fxFade trail + post-blur deferred (PluginCanvas has no offscreen primitive yet). JSON parser is inline (no org.json dep), keeps the plugin portable to the PC DAW host.",
-      "version": "0.4.0",
+      "description": "Native (Skia) port of the Waveform Builder rendering engine. Consumes the same log-spaced FFT bins as the WebView TopVis (via streams[\"topVisBins\"]) and parses the active wave config the host pushes through setConfig(json) — so output matches the JS engine bar-for-bar, just rendered through Skia. Bars + line + particles layers, every colour mode, asymmetric attack/release smoothing, contrast/tilt, response curves, mirror/elastic/spline/fill, particle physics (gravity/wind/drag/turbulence/burst). JSON parser is inline (no org.json dep), keeps the plugin portable to the PC DAW host.",
+      "version": "0.8.1",
       "tags": [
         "visual",
         "spectrum",
@@ -1982,7 +2037,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/visual/wave-runner/wave-runner.dex",
-      "sizeBytes": 20612,
+      "sizeBytes": 32732,
       "className": "com.vocalmonitor.plugin.community.WaveRunner",
       "ui_kind": "canvas",
       "ui": {

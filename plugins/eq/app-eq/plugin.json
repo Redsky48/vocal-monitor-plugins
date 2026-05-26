@@ -1,0 +1,10 @@
+{
+  "id": "app-eq",
+  "name": "App EQ",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Bit-exact port of the app's built-in 10-band graphic EQ. Constant-Q biquad peaking filters at ISO octave centres (31 / 62 / 125 / 250 / 500 / 1k / 2k / 4k / 8k / 16k Hz), Q = 1.4. Same RBJ cookbook coefficients the host runs on save, so the plugin chain version produces identical output to the built-in.",
+  "tags": ["eq", "biquad", "graphic", "app-mirror", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.AppEq"
+}

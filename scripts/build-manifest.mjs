@@ -68,17 +68,25 @@ async function readPlugin(categoryDir, pluginDir, cfg) {
   if (meta.draft === true) return null;
   const engine = meta.engine ?? 'js';
   // File extension follows the engine: JS plugins ship a `.js` source,
-  // native plugins ship a pre-compiled `.dex`. The app's installer
-  // routes to the matching engine based on this same field.
-  const filename = engine === 'native' ? `${meta.id}.dex` : `${meta.id}.js`;
+  // native plugins ship a pre-compiled `.dex`, `source` plugins ship
+  // their backend as `<id>.dex` (same packaging as native).  Other
+  // engines may add their own conventions later — fall back to
+  // <id>.<engine> for forward-compat.
+  let filename;
+  switch (engine) {
+    case 'native': filename = `${meta.id}.dex`; break;
+    case 'js':     filename = `${meta.id}.js`;  break;
+    case 'source': filename = `${meta.id}.dex`; break;
+    default:       filename = `${meta.id}.${engine}`; break;
+  }
   await readFile(join(folder, filename));  // must exist
   // Stat the payload so the app can show "Size X MB" in the Library
   // listing without first downloading the plugin. Cached in the
   // manifest because manifest builds are stable & published with the
   // source — re-stat at runtime would mean an extra round-trip per row.
   const sizeBytes = (await stat(join(folder, filename))).size;
-  if (engine === 'native' && !meta.className) {
-    throw new Error(`${categoryDir}/${pluginDir}/plugin.json: native plugins must declare \`className\``);
+  if ((engine === 'native' || engine === 'source') && !meta.className) {
+    throw new Error(`${categoryDir}/${pluginDir}/plugin.json: ${engine} plugins must declare \`className\``);
   }
   const category = CATEGORY_LABELS[categoryDir]
     ?? (categoryDir[0].toUpperCase() + categoryDir.slice(1));
@@ -94,7 +102,7 @@ async function readPlugin(categoryDir, pluginDir, cfg) {
     source: `https://raw.githubusercontent.com/${cfg.repository}/${cfg.branch}/plugins/${categoryDir}/${pluginDir}/${filename}`,
     sizeBytes,
   };
-  if (engine === 'native') entry.className = meta.className;
+  if (engine === 'native' || engine === 'source') entry.className = meta.className;
   // Forward custom-UI fields verbatim. ui_kind tells the host whether
   // to host the plugin's canvas-mode render() (VocalMonitorVisualPlugin)
   // or render its declarative spec block. The ui object is the spec

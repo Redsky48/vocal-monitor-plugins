@@ -1,0 +1,10 @@
+{
+  "id": "app-compressor",
+  "name": "App Compressor",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Bit-exact port of the app's built-in feed-forward compressor. Same threshold / ratio / attack / release / soft-knee / makeup-gain model the host runs on save — drops the static-curve + envelope follower into a node-chain context so a chain version produces identical output to the built-in.",
+  "tags": ["dynamics", "compressor", "app-mirror", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.AppCompressor"
+}

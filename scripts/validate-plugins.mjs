@@ -78,8 +78,11 @@ async function validatePlugin(category, name) {
   }
   const engine = meta.engine ?? 'js';
   if (engine === 'native') return validateNativePlugin(folder, category, name, meta);
+  // `source` plugins ship the same way as native (.dex + className) —
+  // reuse the native validator with a different filename hint.
+  if (engine === 'source') return validateNativePlugin(folder, category, name, meta);
   if (engine !== 'js') {
-    return fail(metaPath, `unknown engine "${engine}" (expected "js" or "native")`);
+    return fail(metaPath, `unknown engine "${engine}" (expected "js", "native", or "source")`);
   }
   const jsPath = join(folder, `${meta.id}.js`);
   let src;
