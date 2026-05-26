@@ -2,9 +2,11 @@
   "id": "app-compressor",
   "name": "App Compressor",
   "author": "Vocal Monitor",
-  "version": "1.0.0",
-  "description": "Bit-exact port of the app's built-in feed-forward compressor. Same threshold / ratio / attack / release / soft-knee / makeup-gain model the host runs on save — drops the static-curve + envelope follower into a node-chain context so a chain version produces identical output to the built-in.",
-  "tags": ["dynamics", "compressor", "app-mirror", "native"],
+  "version": "1.1.0",
+  "description": "Bit-exact port of the app's built-in feed-forward compressor. Same threshold / ratio / attack / release / soft-knee / makeup-gain model the host runs on save. The canvas mirrors the in-app CompressorCard transfer-curve display: dB-in vs dB-out grid, dotted 1:1 reference, yellow curve traced through the static-gain function, vertical threshold marker.",
+  "tags": ["dynamics", "compressor", "app-mirror", "transfer-curve", "native"],
   "engine": "native",
-  "className": "com.vocalmonitor.plugin.community.AppCompressor"
+  "className": "com.vocalmonitor.plugin.community.AppCompressor",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "16:9", "min_height_dp": 200 }
 }

@@ -2,9 +2,11 @@
   "id": "app-eq",
   "name": "App EQ",
   "author": "Vocal Monitor",
-  "version": "1.0.0",
-  "description": "Bit-exact port of the app's built-in 10-band graphic EQ. Constant-Q biquad peaking filters at ISO octave centres (31 / 62 / 125 / 250 / 500 / 1k / 2k / 4k / 8k / 16k Hz), Q = 1.4. Same RBJ cookbook coefficients the host runs on save, so the plugin chain version produces identical output to the built-in.",
-  "tags": ["eq", "biquad", "graphic", "app-mirror", "native"],
+  "version": "1.1.0",
+  "description": "Bit-exact port of the app's built-in 10-band graphic EQ. Constant-Q biquad peaking filters at ISO octave centres (31 / 62 / 125 / 250 / 500 / 1k / 2k / 4k / 8k / 16k Hz), Q = 1.4. RBJ cookbook coefficients — identical output to the host's save-time EQ. The canvas mirrors the in-app EqualizerWidget: vertical bars per band, yellow curve through the thumbs, drag horizontally to paint a curve across bands, tap centre to snap that band to 0 dB.",
+  "tags": ["eq", "biquad", "graphic", "app-mirror", "interactive", "native"],
   "engine": "native",
-  "className": "com.vocalmonitor.plugin.community.AppEq"
+  "className": "com.vocalmonitor.plugin.community.AppEq",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "16:9", "min_height_dp": 200 }
 }
