@@ -14,9 +14,12 @@ import org.schabi.newpipe.extractor.exceptions.ReCaptchaException;
 import org.schabi.newpipe.extractor.localization.ContentCountry;
 import org.schabi.newpipe.extractor.localization.Localization;
 import org.schabi.newpipe.extractor.search.SearchExtractor;
+import org.schabi.newpipe.extractor.MediaFormat;
 import org.schabi.newpipe.extractor.stream.AudioStream;
+import org.schabi.newpipe.extractor.stream.Stream;
 import org.schabi.newpipe.extractor.stream.StreamInfo;
 import org.schabi.newpipe.extractor.stream.StreamInfoItem;
+import org.schabi.newpipe.extractor.stream.VideoStream;
 import org.schabi.newpipe.extractor.InfoItem;
 
 import java.io.ByteArrayOutputStream;
@@ -248,15 +251,15 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
             host.log("error", "yt info.errors: " + errs);
         }
 
-        final AudioStream chosen = pickAudioStream(info, request.getPreferredFormats());
+        final PickedStream chosen = pickStream(info, request.getPreferredFormats());
         if (chosen == null) {
             host.log("error", "no compatible audio stream for " + request.getResultId()
                 + " (audio=" + audioCount + " video=" + videoCount + " combo=" + comboCount + ")");
-            // Hint at age-restriction if there are video streams but no
-            // audio streams — that's the typical signature.
-            final String detail = (videoCount > 0 && audioCount == 0)
-                ? "likely age-restricted or premium-only"
-                : "video has no audio stream";
+            // No pure audio AND no progressive video → the video is
+            // genuinely audio-less or only published as DASH video-only.
+            final String detail = (comboCount > 0 && audioCount == 0)
+                ? "DASH video-only (no audio track published)"
+                : "video has no streamable audio";
             throw new IOException("NO_STREAMS: " + detail);
         }
         final String streamUrl;
@@ -272,8 +275,9 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
             throw new IOException("NO_STREAMS: stream URL was empty");
         }
         throwIfCancelled(token);
-        host.log("event", "yt download bitrate=" + chosen.getAverageBitrate()
+        host.log("event", "yt download bitrate=" + chosen.bitrate
             + " fmt=" + (chosen.getFormat() != null ? chosen.getFormat().getName() : "?")
+            + (chosen.isVideoContainer ? " [progressive video container]" : "")
             + " url_prefix=" + streamUrl.substring(0, Math.min(40, streamUrl.length())));
 
         // Direct streaming connection (not through SourceHost.fetch —
@@ -537,7 +541,7 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
                 + t.getClass().getSimpleName() + ": " + t.getMessage());
             throw mapNpeException(t);
         }
-        final AudioStream chosen = pickAudioStream(info,
+        final PickedStream chosen = pickStream(info,
             java.util.Arrays.asList("opus", "m4a"));
         if (chosen == null) {
             throw new IOException("NO_STREAMS: no audio stream for streaming");
@@ -546,7 +550,7 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
         if (url == null || url.isEmpty()) {
             throw new IOException("NO_STREAMS: stream URL was empty");
         }
-        host.log("event", "yt stream_url resolved bitrate=" + chosen.getAverageBitrate()
+        host.log("event", "yt stream_url resolved bitrate=" + chosen.bitrate
             + " fmt=" + (chosen.getFormat() != null ? chosen.getFormat().getName() : "?"));
         return url;
     }
@@ -645,24 +649,75 @@ public class YouTubeSource implements VocalMonitorSourcePlugin {
      * order. Within a format, prefer higher bitrate. Returns null when
      * the video has no compatible streams (rare; live + region-locked).
      */
-    private AudioStream pickAudioStream(StreamInfo info, List<String> preferredFormats) {
-        if (info.getAudioStreams() == null || info.getAudioStreams().isEmpty()) return null;
-        for (String wanted : preferredFormats) {
-            AudioStream best = null;
-            for (AudioStream s : info.getAudioStreams()) {
-                if (s.getFormat() == null) continue;
-                final String fmt = s.getFormat().getName().toLowerCase();
-                if (!fmt.contains(wanted.toLowerCase())) continue;
-                if (best == null || s.getAverageBitrate() > best.getAverageBitrate()) best = s;
+    private PickedStream pickStream(StreamInfo info, List<String> preferredFormats) {
+        // Pass 1: preferred audio formats (opus / m4a), highest bitrate.
+        if (info.getAudioStreams() != null && !info.getAudioStreams().isEmpty()) {
+            for (String wanted : preferredFormats) {
+                AudioStream best = null;
+                for (AudioStream s : info.getAudioStreams()) {
+                    if (s.getFormat() == null) continue;
+                    final String fmt = s.getFormat().getName().toLowerCase();
+                    if (!fmt.contains(wanted.toLowerCase())) continue;
+                    if (best == null || s.getAverageBitrate() > best.getAverageBitrate()) best = s;
+                }
+                if (best != null) return PickedStream.audio(best);
             }
-            if (best != null) return best;
+            // Pass 2: any audio stream, highest bitrate.
+            AudioStream fallback = null;
+            for (AudioStream s : info.getAudioStreams()) {
+                if (fallback == null || s.getAverageBitrate() > fallback.getAverageBitrate()) fallback = s;
+            }
+            if (fallback != null) return PickedStream.audio(fallback);
         }
-        // Fallback: any audio stream, highest bitrate.
-        AudioStream fallback = null;
-        for (AudioStream s : info.getAudioStreams()) {
-            if (fallback == null || s.getAverageBitrate() > fallback.getAverageBitrate()) fallback = s;
+        // Pass 3: progressive (combined audio+video) streams. YouTube has
+        // started returning videos where the pure-audio track list is
+        // empty but a progressive stream is available — typical for
+        // older uploads, some music labels, and a NewPipe parser fallback
+        // path. Downloading a progressive container still gets the user
+        // the audio they're after; the file lands as .webm or .mp4 with
+        // both tracks in it. NOT good for storage but recovers the
+        // download from a hard NO_STREAMS failure. video_only streams
+        // (DASH video without audio) are intentionally skipped — saving
+        // a silent .webm doesn't help anyone.
+        if (info.getVideoStreams() != null && !info.getVideoStreams().isEmpty()) {
+            VideoStream lowest = null;
+            for (VideoStream v : info.getVideoStreams()) {
+                if (v.isVideoOnly()) continue;
+                if (lowest == null || v.getBitrate() < lowest.getBitrate()) lowest = v;
+            }
+            if (lowest != null) {
+                host.log("warn", "yt fallback to progressive video stream "
+                    + (lowest.getFormat() != null ? lowest.getFormat().getName() : "?")
+                    + "@" + lowest.getBitrate() + " (no pure audio streams)");
+                return PickedStream.video(lowest);
+            }
         }
-        return fallback;
+        return null;
+    }
+
+    /** Thin wrapper around an audio OR video stream so the rest of the
+     *  plugin doesn't need to branch on type. {@link AudioStream} and
+     *  {@link VideoStream} both extend {@link Stream} so .getContent()
+     *  and .getFormat() are shared; only the bitrate accessor differs
+     *  in name. */
+    private static final class PickedStream {
+        final Stream stream;
+        final int bitrate;
+        final boolean isVideoContainer;
+
+        private PickedStream(Stream s, int bitrate, boolean video) {
+            this.stream = s;
+            this.bitrate = bitrate;
+            this.isVideoContainer = video;
+        }
+        static PickedStream audio(AudioStream s) {
+            return new PickedStream(s, s.getAverageBitrate(), false);
+        }
+        static PickedStream video(VideoStream s) {
+            return new PickedStream(s, s.getBitrate(), true);
+        }
+        String getContent() { return stream.getContent(); }
+        MediaFormat getFormat() { return stream.getFormat(); }
     }
 
     private String firstThumbnailOrNull(List<?> thumbs) {
