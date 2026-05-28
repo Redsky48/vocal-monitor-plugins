@@ -2,13 +2,13 @@
   "id": "rocket-pitch",
   "name": "Rocket Pitch",
   "author": "Vocal Monitor",
-  "version": "1.0.0",
-  "description": "Pitch-controlled rocket game. Sing higher and your rocket flies up; lower and it descends. Volume controls flame size. Use it to explore vocal range — kids love seeing the rocket follow their voice through scales and slides.",
-  "tags": ["creative", "kids", "game", "pitch", "rocket", "fullscreen", "native"],
+  "version": "2.0.0",
+  "description": "Voice-controlled rocket game. Sing higher and the rocket climbs, lower and it dives; your volume feeds the engine flame. Fly through the ring gates (each one shows the note to sing) to score, and dodge the tumbling asteroids. Difficulty creeps up the longer you survive. A proper ready / play / game-over loop with score, best-score and full game juice - and still the best way for kids to explore their vocal range.",
+  "tags": ["entertainment", "creative", "kids", "game", "pitch", "rocket", "fullscreen", "native"],
   "engine": "native",
   "className": "com.vocalmonitor.plugin.community.RocketPitch",
   "ui_kind": "canvas",
-  "ui": { "aspect": "16:9", "min_height_dp": 320 },
+  "ui": { "aspect": "9:16", "min_height_dp": 480 },
   "fullscreen": true,
   "streams": ["waveform"]
 }
