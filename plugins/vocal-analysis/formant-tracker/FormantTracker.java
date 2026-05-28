@@ -10,21 +10,28 @@ import com.vocalmonitor.plugin.VocalMonitorVisualPlugin;
 import java.util.Map;
 
 /**
- * Formant Tracker — pro-grade F1/F2/F3 + bandwidths via **LPC root
- * finding** (Durand-Kerner) and **greedy continuity tracking**.
+ * Formant Tracker — pro-grade F1/F2/F3 + bandwidths via **weighted
+ * linear prediction** (WLP) and **LPC root finding** (Durand-Kerner).
  *
- *   - 12th-order LPC by autocorrelation + Levinson-Durbin (existing).
- *   - **Durand-Kerner** finds the 12 complex roots in 25 iterations.
- *     For each root z = r·e^(jω):
+ *   - 12th-order **WLP** by the covariance normal equations, weighted
+ *     by short-time energy W[n] = Σ_{k=1..M} x[n-k]².  The STE weight
+ *     concentrates the LP fit on the high-energy glottal closed phase,
+ *     which sharpens formants on sparse-harmonic high-f0 voices
+ *     (female / child) where plain autocorrelation LPC mis-locates F2/
+ *     F3.  Falls back to autocorrelation + Levinson-Durbin if the
+ *     covariance system is singular.
+ *   - **Durand-Kerner** finds the 12 complex roots.  For each root
+ *     z = r·e^(jω):
  *       f = ω · sr / (2π)
  *       bw = −ln(r) · sr / π
- *   - Roots are kept when 90 ≤ f ≤ 5500 Hz, bw ≤ 600 Hz, |z| < 1.
+ *     Roots outside the unit circle are reflected inside to keep the
+ *     all-pole model stable.  Kept when 90 ≤ f ≤ 5500 Hz, bw ≤ 700 Hz.
  *   - **Continuity tracker**: each frame's previous F1/F2/F3 are
  *     greedily reassigned to the new root nearest in Hz (within 350
  *     Hz) — prevents F1↔F2 label swapping during glides.
  *
  * Displays F1/F2/F3 with their bandwidths on the classic F1-F2
- * vowel map.
+ * vowel map (axes span female / child range: F1 200–1100, F2 700–3000).
  */
 public final class FormantTracker
         implements VocalMonitorNativePlugin, VocalMonitorVisualPlugin {
@@ -73,10 +80,9 @@ public final class FormantTracker
     // Anti-aliasing biquad — designed lazily once we know sampleRate.
     private float[] aaCoefs;
 
-    // LPC magnitude spectrum, sampled on SPEC_BINS points across the
-    // formant band (0..5.5 kHz), for peak-picking.
-    private static final int SPEC_BINS = 256;
-    private final float[] lpcSpec = new float[SPEC_BINS];
+    // Durand-Kerner working roots (reused per frame).
+    private final double[] rootRe = new double[LPC_ORDER];
+    private final double[] rootIm = new double[LPC_ORDER];
 
     // ── Result + trail ──
     private float f1 = 0f, f2 = 0f, f3 = 0f;
@@ -149,72 +155,39 @@ public final class FormantTracker
             float w = (float)(0.5 - 0.5 * Math.cos(2 * Math.PI * i / (DEC_SIZE - 1)));
             frameDec[i] = frame[i * DEC_FACTOR] * w;
         }
-        // 4. Autocorrelation on the decimated frame.
-        for (int k = 0; k <= LPC_ORDER; k++) {
-            float sum = 0f;
-            for (int i = k; i < DEC_SIZE; i++) sum += frameDec[i] * frameDec[i - k];
-            R[k] = sum;
-        }
-        if (R[0] < 1e-9f) return;
-        // Levinson-Durbin → lpcA.
-        float[] a = new float[LPC_ORDER + 1];
-        float[] aPrev = new float[LPC_ORDER + 1];
-        float Eerr = R[0];
-        a[0] = 1f;
-        for (int p = 1; p <= LPC_ORDER; p++) {
-            float k = -R[p];
-            for (int j = 1; j < p; j++) k -= a[j] * R[p - j];
-            k /= Eerr;
-            if (k > 0.99f) k = 0.99f; if (k < -0.99f) k = -0.99f;
-            System.arraycopy(a, 0, aPrev, 0, p);
-            a[p] = k;
-            for (int j = 1; j < p; j++) a[j] = aPrev[j] + k * aPrev[p - j];
-            Eerr *= 1f - k * k;
-            if (Eerr < 1e-9f) Eerr = 1e-9f;
-        }
-        System.arraycopy(a, 0, lpcA, 0, LPC_ORDER + 1);
-
-        // LPC magnitude spectrum |1 / A(e^jω)| sampled on SPEC_BINS
-        // points across 0..5.5 kHz at the *decimated* sample rate
-        // (sampleRate / DEC_FACTOR).  Pick 2-bin local maxima, then
-        // estimate bandwidth from the −3 dB width.  Real formants come
-        // out narrow (50–200 Hz); we reject anything wider than 500 Hz
-        // as a non-formant spectral lump.
-        float maxHz = 5500f;
-        float decSr = sampleRate / (float) DEC_FACTOR;
-        for (int b = 0; b < SPEC_BINS; b++) {
-            float freq = (b + 1) * maxHz / SPEC_BINS;
-            double w = 2.0 * Math.PI * freq / decSr;
-            double re = 0, im = 0;
+        // 4. Weighted Linear Prediction (covariance method, STE weight).
+        //    Falls back to autocorrelation + Levinson-Durbin if the
+        //    covariance system is singular.
+        if (!wlp(frameDec, DEC_SIZE, LPC_ORDER, LPC_ORDER, lpcA)) {
             for (int k = 0; k <= LPC_ORDER; k++) {
-                re += lpcA[k] * Math.cos(-w * k);
-                im += lpcA[k] * Math.sin(-w * k);
+                float sum = 0f;
+                for (int i = k; i < DEC_SIZE; i++) sum += frameDec[i] * frameDec[i - k];
+                R[k] = sum;
             }
-            double mag2 = re * re + im * im;
-            lpcSpec[b] = mag2 > 1e-12f ? (float)(1.0 / Math.sqrt(mag2)) : 0f;
-        }
-        float[] candF  = new float[8];
-        float[] candBw = new float[8];
-        int nCand = 0;
-        for (int b = 2; b < SPEC_BINS - 2 && nCand < candF.length; b++) {
-            float v = lpcSpec[b];
-            if (v > lpcSpec[b - 1] && v > lpcSpec[b + 1]
-                    && v > lpcSpec[b - 2] && v > lpcSpec[b + 2]) {
-                float peakHz = (b + 1) * maxHz / SPEC_BINS;
-                if (peakHz < 150f || peakHz > 5300f) continue;
-                // −3 dB bandwidth: walk left + right until magnitude
-                // drops 1/sqrt(2) below the peak.
-                float thresh = v * 0.7071f;
-                int bLo = b, bHi = b;
-                while (bLo > 0 && lpcSpec[bLo] > thresh) bLo--;
-                while (bHi < SPEC_BINS - 1 && lpcSpec[bHi] > thresh) bHi++;
-                float bwHz = (bHi - bLo) * maxHz / SPEC_BINS;
-                if (bwHz > 500f) continue;     // not a real formant
-                candF[nCand]  = peakHz;
-                candBw[nCand] = bwHz;
-                nCand++;
+            if (R[0] < 1e-9f) return;
+            float[] a = new float[LPC_ORDER + 1];
+            float[] aPrev = new float[LPC_ORDER + 1];
+            float Eerr = R[0];
+            a[0] = 1f;
+            for (int p = 1; p <= LPC_ORDER; p++) {
+                float k = -R[p];
+                for (int j = 1; j < p; j++) k -= a[j] * R[p - j];
+                k /= Eerr;
+                if (k > 0.99f) k = 0.99f; if (k < -0.99f) k = -0.99f;
+                System.arraycopy(a, 0, aPrev, 0, p);
+                a[p] = k;
+                for (int j = 1; j < p; j++) a[j] = aPrev[j] + k * aPrev[p - j];
+                Eerr *= 1f - k * k;
+                if (Eerr < 1e-9f) Eerr = 1e-9f;
             }
+            System.arraycopy(a, 0, lpcA, 0, LPC_ORDER + 1);
         }
+
+        // 5. Durand-Kerner root finding on A(z) → formant candidates.
+        float decSr = sampleRate / (float) DEC_FACTOR;
+        float[] candF  = new float[LPC_ORDER];
+        float[] candBw = new float[LPC_ORDER];
+        int nCand = formantRoots(lpcA, LPC_ORDER, decSr, candF, candBw);
         if (nCand == 0) return;
         // Sort candidates ascending by frequency.
         for (int i = 1; i < nCand; i++) {
@@ -294,6 +267,122 @@ public final class FormantTracker
         }
     }
 
+    // Weighted Linear Prediction via the covariance normal equations.
+    // W[n] is the short-time energy of the previous M samples, so the
+    // fit weights the glottal closed phase — this is what sharpens
+    // formants on high-pitched voices.  Returns false (caller falls
+    // back to autocorrelation) when the p×p system is singular.
+    private boolean wlp(float[] x, int N, int p, int M, float[] aOut) {
+        int n0 = Math.max(p, M);
+        if (N <= n0 + 2) return false;
+        double[][] C = new double[p][p];
+        double[] b = new double[p];
+        for (int n = n0; n < N; n++) {
+            double w = 0;
+            for (int k = 1; k <= M; k++) { double v = x[n - k]; w += v * v; }
+            if (w <= 0) continue;
+            double xn = x[n];
+            for (int i = 1; i <= p; i++) {
+                double xi = w * x[n - i];
+                b[i - 1] -= xi * xn;
+                for (int j = i; j <= p; j++) C[i - 1][j - 1] += xi * x[n - j];
+            }
+        }
+        for (int i = 0; i < p; i++)
+            for (int j = 0; j < i; j++) C[i][j] = C[j][i];
+        double[] sol = new double[p];
+        if (!solveLinear(C, b, p, sol)) return false;
+        aOut[0] = 1f;
+        for (int i = 0; i < p; i++) aOut[i + 1] = (float) sol[i];
+        return true;
+    }
+
+    // Gaussian elimination with partial pivoting, solves A·out = b.
+    private boolean solveLinear(double[][] A, double[] b, int n, double[] out) {
+        double[][] M = new double[n][n + 1];
+        for (int i = 0; i < n; i++) {
+            System.arraycopy(A[i], 0, M[i], 0, n);
+            M[i][n] = b[i];
+        }
+        for (int col = 0; col < n; col++) {
+            int piv = col;
+            for (int r = col + 1; r < n; r++)
+                if (Math.abs(M[r][col]) > Math.abs(M[piv][col])) piv = r;
+            if (Math.abs(M[piv][col]) < 1e-12) return false;
+            double[] tmp = M[col]; M[col] = M[piv]; M[piv] = tmp;
+            for (int r = 0; r < n; r++) {
+                if (r == col) continue;
+                double f = M[r][col] / M[col][col];
+                for (int c = col; c <= n; c++) M[r][c] -= f * M[col][c];
+            }
+        }
+        for (int i = 0; i < n; i++) out[i] = M[i][n] / M[i][i];
+        return true;
+    }
+
+    // Durand-Kerner (Weierstrass) — all p complex roots of the monic
+    // polynomial z^p + a1 z^{p-1} + … + ap (a[0]=1).  Each root with
+    // positive imaginary part, inside the unit circle (outside roots
+    // are reflected in to stay stable), becomes a formant.  Fills
+    // outF/outBw sorted ascending by frequency; returns the count.
+    private int formantRoots(float[] a, int p, float decSr,
+                             float[] outF, float[] outBw) {
+        double zr = 1, zi = 0;                 // seed (0.4+0.9i)^i
+        for (int i = 0; i < p; i++) {
+            rootRe[i] = zr; rootIm[i] = zi;
+            double nr = zr * 0.4 - zi * 0.9, ni = zr * 0.9 + zi * 0.4;
+            zr = nr; zi = ni;
+        }
+        for (int it = 0; it < 80; it++) {
+            double maxd = 0;
+            for (int i = 0; i < p; i++) {
+                double pr = 1, pi = 0;         // P(z) via Horner
+                for (int k = 1; k <= p; k++) {
+                    double nr = pr * rootRe[i] - pi * rootIm[i] + a[k];
+                    double ni = pr * rootIm[i] + pi * rootRe[i];
+                    pr = nr; pi = ni;
+                }
+                double dr = 1, di = 0;         // Π_{j≠i}(z_i − z_j)
+                for (int j = 0; j < p; j++) {
+                    if (j == i) continue;
+                    double ar = rootRe[i] - rootRe[j], ai = rootIm[i] - rootIm[j];
+                    double nr = dr * ar - di * ai, ni = dr * ai + di * ar;
+                    dr = nr; di = ni;
+                }
+                double den = dr * dr + di * di;
+                if (den < 1e-30) continue;
+                double qr = (pr * dr + pi * di) / den;
+                double qi = (pi * dr - pr * di) / den;
+                rootRe[i] -= qr; rootIm[i] -= qi;
+                maxd = Math.max(maxd, Math.abs(qr) + Math.abs(qi));
+            }
+            if (maxd < 1e-10) break;
+        }
+        int n = 0;
+        for (int i = 0; i < p && n < outF.length; i++) {
+            if (rootIm[i] < 0) continue;       // one of each conjugate pair
+            double rr = rootRe[i], ii = rootIm[i];
+            double r = Math.hypot(rr, ii);
+            if (r >= 1) { rr /= r * r; ii /= r * r; r = 1 / r; }   // reflect inside
+            if (r <= 0 || r >= 1) continue;
+            double th = Math.atan2(ii, rr);
+            if (th < 0) th += 2 * Math.PI;
+            float f  = (float) (th * decSr / (2 * Math.PI));
+            float bw = (float) (-Math.log(r) * decSr / Math.PI);
+            if (f < 90f || f > 5500f || bw > 700f) continue;
+            outF[n] = f; outBw[n] = bw; n++;
+        }
+        for (int i = 1; i < n; i++) {          // insertion sort ascending
+            float kf = outF[i], kbw = outBw[i];
+            int j = i - 1;
+            while (j >= 0 && outF[j] > kf) {
+                outF[j + 1] = outF[j]; outBw[j + 1] = outBw[j]; j--;
+            }
+            outF[j + 1] = kf; outBw[j + 1] = kbw;
+        }
+        return n;
+    }
+
     // RBJ-cookbook low-pass biquad, normalised to a0=1 form for the
     // direct-form-1 difference equation used inline above.
     private static float[] lowPassBiquad(float fc, float q, int sr) {
@@ -341,7 +430,7 @@ public final class FormantTracker
         textBright.setColor(COLOR_TEXT_BRIGHT).setTextSize(12f).setTextAlign(0);
         canvas.drawText("FORMANT TRACKER", 12f, 16f, textBright);
         textDim.setColor(COLOR_TEXT_DIM).setTextSize(9f).setTextAlign(2);
-        canvas.drawText("LPC 12 @ 11 kHz + peak-pick", W - 12f, 16f, textDim);
+        canvas.drawText("WLP 12 @ 11 kHz + DK roots", W - 12f, 16f, textDim);
 
         float pad = 12f, headerH = 24f, footerH = 26f;
         float plotX0 = pad + 40f;
@@ -361,7 +450,7 @@ public final class FormantTracker
             textDim.setColor(COLOR_TEXT_DIM).setTextSize(8f).setTextAlign(2);
             canvas.drawText(hz + "", plotX0 - 3f, y + 3f, textDim);
         }
-        for (int hz = 800; hz <= 2400; hz += 400) {
+        for (int hz = 1000; hz <= 3000; hz += 500) {
             float x = mapF2(hz, plotX0, plotX1);
             gridPaint.setColor(COLOR_GRID).setStyle(PluginStyle.STROKE).setStrokeWidth(0.6f);
             canvas.drawLine(x, plotY0, x, plotY1, gridPaint);
@@ -421,12 +510,12 @@ public final class FormantTracker
     }
 
     private float mapF1(float hz, float y0, float y1) {
-        float t = (hz - 200f) / 800f;
+        float t = (hz - 200f) / 900f;          // 200..1100 Hz (covers child /a/)
         if (t < 0f) t = 0f; else if (t > 1f) t = 1f;
         return y0 + t * (y1 - y0);
     }
     private float mapF2(float hz, float x0, float x1) {
-        float t = (hz - 800f) / 1600f;
+        float t = (hz - 700f) / 2300f;         // 700..3000 Hz (covers child /i/)
         if (t < 0f) t = 0f; else if (t > 1f) t = 1f;
         return x1 - t * (x1 - x0);
     }
