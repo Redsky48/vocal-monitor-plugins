@@ -13,14 +13,14 @@ import java.util.Map;
  * Formant Tracker — pro-grade F1/F2/F3 + bandwidths via **weighted
  * linear prediction** (WLP) and **LPC root finding** (Durand-Kerner).
  *
- *   - 12th-order **WLP** by the covariance normal equations, weighted
+ *   - 14th-order **WLP** by the covariance normal equations, weighted
  *     by short-time energy W[n] = Σ_{k=1..M} x[n-k]².  The STE weight
  *     concentrates the LP fit on the high-energy glottal closed phase,
  *     which sharpens formants on sparse-harmonic high-f0 voices
  *     (female / child) where plain autocorrelation LPC mis-locates F2/
  *     F3.  Falls back to autocorrelation + Levinson-Durbin if the
  *     covariance system is singular.
- *   - **Durand-Kerner** finds the 12 complex roots.  For each root
+ *   - **Durand-Kerner** finds the 14 complex roots.  For each root
  *     z = r·e^(jω):
  *       f = ω · sr / (2π)
  *       bw = −ln(r) · sr / π
@@ -65,7 +65,7 @@ public final class FormantTracker
     // peaks (BW > 1 kHz) instead of real formants.  We anti-alias at
     // 5 kHz with a 4-pole Butterworth then decimate by 4 → 11.025 kHz,
     // and run order-12 LPC there.
-    private static final int LPC_ORDER  = 12;
+    private static final int LPC_ORDER  = 14;
     private static final int FRAME_SIZE = 1024;
     private static final int HOP        = 512;
     private static final int DEC_FACTOR = 4;
@@ -430,9 +430,9 @@ public final class FormantTracker
         textBright.setColor(COLOR_TEXT_BRIGHT).setTextSize(12f).setTextAlign(0);
         canvas.drawText("FORMANT TRACKER", 12f, 16f, textBright);
         textDim.setColor(COLOR_TEXT_DIM).setTextSize(9f).setTextAlign(2);
-        canvas.drawText("WLP 12 @ 11 kHz + DK roots", W - 12f, 16f, textDim);
+        canvas.drawText("WLP 14 @ 11 kHz + DK roots", W - 12f, 16f, textDim);
 
-        float pad = 12f, headerH = 24f, footerH = 26f;
+        float pad = 12f, headerH = 24f, footerH = 40f;
         float plotX0 = pad + 40f;
         float plotY0 = pad + headerH;
         float plotX1 = W - pad;
@@ -459,8 +459,8 @@ public final class FormantTracker
         }
         textDim.setColor(COLOR_TEXT_DIM).setTextSize(9f).setTextAlign(0);
         canvas.drawText("F1 (Hz)", pad, plotY0 - 4f, textDim);
-        textDim.setTextAlign(2);
-        canvas.drawText("F2 (Hz)", plotX1, plotY1 + 22f, textDim);
+        textDim.setTextAlign(1);
+        canvas.drawText("F2 (Hz)", (plotX0 + plotX1) * 0.5f, plotY1 + 22f, textDim);
 
         for (int i = 0; i < VOWELS.length; i++) {
             float vx = mapF2(VOWEL_F2[i], plotX0, plotX1);
@@ -497,16 +497,18 @@ public final class FormantTracker
             canvas.drawCircle(tx, ty, 4f, dotPaint);
         }
 
+        // Live F1/F2/F3 readouts spread edge-to-edge so they don't
+        // collide on narrow (portrait) windows.  BW in parentheses.
         float ny = H - pad - 4f;
         textDim.setColor(COLOR_TEXT_DIM).setTextSize(9f).setTextAlign(0);
-        canvas.drawText(f1 > 0f ? String.format("F1 %.0f Hz (BW %.0f)", f1, bw1) : "F1 --",
+        canvas.drawText(f1 > 0f ? String.format("F1 %.0f (BW%.0f)", f1, bw1) : "F1 --",
                 pad, ny, textDim);
-        canvas.drawText(f2 > 0f ? String.format("F2 %.0f Hz (BW %.0f)", f2, bw2) : "F2 --",
-                pad + 140f, ny, textDim);
-        canvas.drawText(f3 > 0f ? String.format("F3 %.0f Hz (BW %.0f)", f3, bw3) : "F3 --",
-                pad + 280f, ny, textDim);
-        textDim.setColor(COLOR_SIGNATURE).setTextAlign(2);
-        canvas.drawText("vowel map", plotX1, ny, textDim);
+        textDim.setTextAlign(1);
+        canvas.drawText(f2 > 0f ? String.format("F2 %.0f (BW%.0f)", f2, bw2) : "F2 --",
+                (pad + plotX1) * 0.5f, ny, textDim);
+        textDim.setTextAlign(2);
+        canvas.drawText(f3 > 0f ? String.format("F3 %.0f (BW%.0f)", f3, bw3) : "F3 --",
+                plotX1, ny, textDim);
     }
 
     private float mapF1(float hz, float y0, float y1) {
