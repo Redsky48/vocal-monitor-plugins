@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-28T22:04:27.605Z",
+  "generatedAt": "2026-05-28T22:22:19.130Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -1933,7 +1933,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/lip-trill/lip-trill.dex",
-      "sizeBytes": 52792,
+      "sizeBytes": 53520,
       "className": "com.vocalmonitor.plugin.community.LipTrill",
       "ui_kind": "canvas",
       "ui": {

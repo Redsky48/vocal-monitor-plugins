@@ -51,22 +51,31 @@ public final class LipTrill extends GamePluginBase {
     private final PitchTracker pitch = new PitchTracker();
 
     // ── Envelope-modulation (flutter) analysis ──────────────
-    // We keep a short ring of recent block-RMS samples and detect how
-    // the envelope itself oscillates.  Block rate is ~render rate
-    // (~60 Hz) — too coarse to see a 30 Hz flutter directly, so we
-    // instead compute a per-block "sub-envelope" by walking the raw
-    // waveform with a fast one-pole follower and counting envelope
-    // peaks inside the block.  That gives a flutter-rate estimate
-    // every frame without needing a big FFT.
-    private float envFast = 0f;          // fast amplitude follower
-    private float envSlow = 0f;          // slow baseline of the follower
+    // The host hands us short PCM blocks (~1024 samples ≈ 23 ms) — that's
+    // SHORTER than one period of a 20-35 Hz trill, so we cannot measure
+    // the flutter inside a single block. Instead we keep all envelope state
+    // PERSISTENT across blocks and time the interval between successive
+    // up-crossings of the envelope's own slow baseline. Two stages of
+    // de-carrier-ing are needed: (1) decimate |x| with a boxcar hop down to
+    // ~440 Hz, then (2) a 2-stage one-pole low-pass at ~45 Hz. A single
+    // one-pole was too gentle — it leaked the rectified carrier ripple
+    // (2·f0 ≥ ~200 Hz) and the crossing timer locked onto THAT instead of
+    // the 12-45 Hz flutter (steady tones read as ~58 Hz "flutter"). The
+    // boxcar + cascade kills the ripple so only the real flutter survives.
+    private float accHop = 0f;           // boxcar decimation accumulator
+    private int   hopCount = 0;
+    private float env1 = 0f, env2 = 0f;  // 2-stage LP of decimated |x|
+    private float envBase = 0f;          // slow baseline (mean of env2)
+    private float envMax = 0f, envMin = 0f; // decaying extremes for depth
+    private boolean flutAbove = false;   // crossing-detector hysteresis state
+    private int decSinceCross = 0;       // decimated samples since up-cross
+    private float[] lastWave = null;     // dedupe re-rendered snapshots
     private float flutterRateHz = 0f;    // smoothed estimate
     private float flutterDepth = 0f;     // 0..1 modulation depth
     private float regularity = 0f;       // 0..1, 1 = perfectly even
 
     // period bookkeeping for regularity
-    private float lastPeriodS = 0f;
-    private float periodMean = 0.04f;
+    private float periodMean = 0.035f;
     private float periodVar = 0f;
 
     // ── Quality + session state ─────────────────────────────
@@ -94,9 +103,11 @@ public final class LipTrill extends GamePluginBase {
     @Override
     protected void onInit(int sr) {
         pitch.setSampleRate(sr).lpCutoff(700f).floor(0.006f).reset();
-        envFast = envSlow = 0f;
+        accHop = 0f; hopCount = 0;
+        env1 = env2 = envBase = envMax = envMin = 0f;
+        flutAbove = false; decSinceCross = 0; lastWave = null;
         flutterRateHz = flutterDepth = regularity = 0f;
-        lastPeriodS = 0f; periodMean = 0.04f; periodVar = 0f;
+        periodMean = 0.035f; periodVar = 0f;
         quality = 0f; active = false; holdS = 0f; bestHoldS = 0f;
         spawnAccum = 0f;
         for (int i = 0; i < MAX_BUBBLES; i++) bubAlive[i] = false;
@@ -107,67 +118,88 @@ public final class LipTrill extends GamePluginBase {
         pitch.feed(streams, dt);
         float[] wave = streams != null ? streams.get("waveform") : null;
         if (wave == null || wave.length < 32) {
-            // decay everything toward calm
-            flutterDepth *= 0.85f;
-            quality += 0.1f * (0f - quality);
-            active = false;
+            decayIdle();
             return;
         }
+        // Render can fire faster than the mic delivers new PCM; walking
+        // the same snapshot twice would double-count crossings and inflate
+        // the rate. Only run the envelope walk on a fresh array.
+        if (wave != lastWave) {
+            lastWave = wave;
+            walkEnvelope(wave);
+        }
+        updateScores();
+    }
 
-        // Fast amplitude follower over the raw block; count peaks of the
-        // follower's deviation from its slow baseline → flutter rate.
-        final float aFast = 0.35f;   // attack/decay of fast follower
-        final float aSlow = 0.02f;   // slow baseline tracking
-        int peaks = 0;
-        boolean above = false;
-        float blockSampleHz = sampleRate;
-        float minPeak = 0f, maxPeak = 0f;
-        boolean first = true;
+    /** Decimate |x| (boxcar) → 2-stage LP → up-crossing timer.  All state
+     *  persists across blocks so the 12-45 Hz flutter is reconstructed even
+     *  though one block is shorter than a flutter period. */
+    private void walkEnvelope(float[] wave) {
+        final int fs = sampleRate;
+        final int HOP = Math.max(16, fs / 441);   // ~441 Hz decimated rate
+        final float fsd = (float) fs / HOP;
+        // 2-stage one-pole LP at ~45 Hz on the decimated stream: passes the
+        // 12-45 Hz flutter, rejects the rectified-carrier ripple (≥2·f0).
+        final float aLp   = 1f - (float) Math.exp(-2 * Math.PI * 45f / fsd);
+        final float aBase = 1f - (float) Math.exp(-2 * Math.PI * 3f  / fsd);
+        final float aExt  = 1f - (float) Math.exp(-2 * Math.PI * 10f / fsd);
+        final float minR = 8f, maxR = 55f;
+        final int refractory = (int) (fsd / maxR);
+
         for (int i = 0; i < wave.length; i++) {
-            float a = Math.abs(wave[i]);
-            envFast += aFast * (a - envFast);
-            envSlow += aSlow * (envFast - envSlow);
-            float dev = envFast - envSlow;
-            // hysteresis comparator about zero deviation
-            if (!above && dev > envSlow * 0.06f + 1e-4f) { above = true; peaks++; }
-            else if (above && dev < -envSlow * 0.04f) { above = false; }
-            if (first) { minPeak = maxPeak = envFast; first = false; }
-            else { if (envFast < minPeak) minPeak = envFast; if (envFast > maxPeak) maxPeak = envFast; }
+            accHop += Math.abs(wave[i]);
+            if (++hopCount < HOP) continue;
+            float e = accHop / HOP;                // boxcar-decimated mean-abs
+            accHop = 0f; hopCount = 0;
+
+            env1 += aLp * (e - env1);
+            env2 += aLp * (env1 - env2);
+            envBase += aBase * (env2 - envBase);
+            if (env2 > envMax) envMax = env2; else envMax += aExt * (env2 - envMax);
+            if (env2 < envMin) envMin = env2; else envMin += aExt * (env2 - envMin);
+
+            float dev = env2 - envBase;
+            float thr = Math.max(envBase * 0.06f, 8e-5f);
+            if (!flutAbove && dev > thr && decSinceCross >= refractory) {
+                flutAbove = true;
+                float periodS = decSinceCross / fsd;
+                decSinceCross = 0;
+                float r = periodS > 1e-4f ? 1f / periodS : 0f;
+                if (r >= minR && r <= maxR) {
+                    flutterRateHz += 0.25f * (r - flutterRateHz);
+                    float d = periodS - periodMean;
+                    periodMean += 0.15f * d;
+                    periodVar  += 0.15f * (d * d - periodVar);
+                    float cov = periodMean > 1e-4f
+                        ? (float) Math.sqrt(periodVar) / periodMean : 1f;
+                    regularity += 0.25f * (Ease.clamp(1f - cov * 2.2f, 0f, 1f) - regularity);
+                }
+            } else if (flutAbove && dev < -thr * 0.5f) {
+                flutAbove = false;
+            }
+            if (decSinceCross < (int) fsd) decSinceCross++;
+
+            // No pulse for >~1/6 s → the buzz has stopped; let it fall.
+            if (decSinceCross > fsd / 6f) {
+                flutterRateHz += 0.05f * (0f - flutterRateHz);
+                regularity    += 0.03f * (0f - regularity);
+            }
         }
-        float blockDurS = wave.length / blockSampleHz;
-        float instRate = blockDurS > 0f ? peaks / blockDurS : 0f;
-        // clamp to a plausible trill band, smooth
-        if (instRate < 5f)  instRate = 0f;
-        if (instRate > 60f) instRate = 60f;
-        flutterRateHz += 0.25f * (instRate - flutterRateHz);
 
-        // Modulation depth: peak-to-mean ratio of the fast envelope.
-        float mean = (minPeak + maxPeak) * 0.5f;
-        float depth = mean > 1e-4f ? (maxPeak - minPeak) / (maxPeak + minPeak + 1e-4f) : 0f;
-        flutterDepth += 0.25f * (Ease.clamp(depth, 0f, 1f) - flutterDepth);
+        float denom = envMax + envMin + 1e-5f;
+        float depth = denom > 1e-5f ? (envMax - envMin) / denom : 0f;
+        flutterDepth += 0.2f * (Ease.clamp(depth, 0f, 1f) - flutterDepth);
+    }
 
-        // Regularity: running variance of the flutter period.
-        if (instRate > 5f) {
-            float periodS = 1f / instRate;
-            float d = periodS - periodMean;
-            periodMean += 0.12f * d;
-            periodVar  += 0.12f * (d * d - periodVar);
-            float cov = periodMean > 1e-4f ? (float) Math.sqrt(periodVar) / periodMean : 1f;
-            regularity += 0.2f * (Ease.clamp(1f - cov * 2.2f, 0f, 1f) - regularity);
-            lastPeriodS = periodS;
-        }
-
-        // Is this actually a trill?  Need: voiced-ish energy, flutter
-        // in band (12–45 Hz), meaningful depth.
+    /** Derive the trill state + quality score; runs every frame. */
+    private void updateScores() {
         boolean inBand = flutterRateHz >= 12f && flutterRateHz <= 45f;
-        boolean hasDepth = flutterDepth > 0.12f;
-        boolean loud = pitch.rms() > 0.006f || maxPeak > 0.01f;
+        boolean hasDepth = flutterDepth > 0.08f;
+        boolean loud = pitch.rms() > 0.006f;
         active = inBand && hasDepth && loud;
 
-        // Pitch-steadiness sub-score (carrier shouldn't wander).
         float drift = Math.abs(pitch.centsFrom(NoteName.snapToSemitone(pitch.hz())));
         float pitchScore = Ease.clamp(1f - drift / 60f, 0f, 1f);
-        // Rate sub-score: ideal centred at ~27 Hz, gentle falloff.
         float rateScore = inBand
             ? Ease.clamp(1f - Math.abs(flutterRateHz - 27f) / 22f, 0f, 1f)
             : 0f;
@@ -176,13 +208,21 @@ public final class LipTrill extends GamePluginBase {
             : 0f;
         quality += 0.15f * (target - quality);
 
-        // Hold timer: accumulate while quality stays "clean".
         if (active && quality > 0.55f) {
             holdS += dt;
             if (holdS > bestHoldS) bestHoldS = holdS;
         } else if (!active) {
             holdS = 0f;
         }
+    }
+
+    private void decayIdle() {
+        flutterDepth  *= 0.85f;
+        flutterRateHz *= 0.85f;
+        regularity    *= 0.9f;
+        quality += 0.1f * (0f - quality);
+        active = false;
+        lastWave = null;
     }
 
     // ── Bubble simulation ───────────────────────────────────
@@ -244,16 +284,14 @@ public final class LipTrill extends GamePluginBase {
         c.save();
         juice.applyShake(c);
 
-        // ── Title ──
-        Gfx.textCenter(c, "Lip Trill Coach", cx, 38f * scale, 24f * scale, Palette.UI_TEXT);
-        Gfx.textCenter(c, "keep the bubbles flowing", cx, 60f * scale,
-            13f * scale, Palette.UI_TEXT_DIM);
+        // ── Title ── (dynamic coaching cue sits just below, drawn later)
+        Gfx.textCenter(c, "Lip Trill Coach", cx, 34f * scale, 22f * scale, Palette.UI_TEXT);
 
         // ── SOVT bubble tube (centre) ──
         float tubeW = Math.min(w * 0.26f, 150f * scale);
         float tubeHalfW = tubeW * 0.5f;
-        float tubeTop = h * 0.20f;
-        float tubeBot = h * 0.82f;
+        float tubeTop = h * 0.24f;
+        float tubeBot = h * 0.72f;
         float tubeH = tubeBot - tubeTop;
         float rad = tubeHalfW;
 
@@ -289,12 +327,12 @@ public final class LipTrill extends GamePluginBase {
         c.drawRoundRect(cx - tubeHalfW, tubeTop, cx + tubeHalfW, tubeBot, rad, rim);
 
         // ── Steadiness ring (left) ──
-        float ringCx = w * 0.20f, ringCy = h * 0.50f, ringR = Math.min(w, h) * 0.10f;
+        float ringCx = w * 0.20f, ringCy = h * 0.46f, ringR = Math.min(w, h) * 0.10f;
         drawArcMeter(c, ringCx, ringCy, ringR, regularity, "STEADY",
             Math.round(regularity * 100f) + "%");
 
         // ── Flutter-rate dial (right) ──
-        float rrCx = w * 0.80f, rrCy = h * 0.50f, rrR = Math.min(w, h) * 0.10f;
+        float rrCx = w * 0.80f, rrCy = h * 0.46f, rrR = Math.min(w, h) * 0.10f;
         // map 12..45 Hz onto 0..1 for the arc; ideal band 20..35 shaded
         float rateNorm = Ease.clamp((flutterRateHz - 12f) / (45f - 12f), 0f, 1f);
         drawArcMeter(c, rrCx, rrCy, rrR, rateNorm, "FLUTTER",
@@ -338,7 +376,7 @@ public final class LipTrill extends GamePluginBase {
             cue = "Good — even it out  " + holdTxt;
             cueCol = Palette.ACCENT_BLUE;
         }
-        Gfx.textCenter(c, cue, cx, h * 0.155f, 16f * scale, cueCol);
+        Gfx.textCenter(c, cue, cx, 60f * scale, 15f * scale, cueCol);
 
         // carrier note readout under tube
         if (pitch.voiced()) {
