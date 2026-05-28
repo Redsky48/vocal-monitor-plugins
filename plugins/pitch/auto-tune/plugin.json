@@ -1,10 +1,10 @@
 {
   "id": "auto-tune",
-  "name": "Auto-Tune",
+  "name": "Auto-Tune (AI Studio)",
   "author": "Vocal Monitor",
-  "version": "1.0.0",
-  "description": "Pro-grade vocal pitch correction. YIN pitch detector + TD-PSOLA shifter + 16th-order LPC formant preservation with bandwidth expansion + Lanczos-3 windowed-sinc interpolation + 20 ms input lookahead + GCI grain snapping + vibrato preservation + adaptive retune + transient bypass. Pick a preset from the list (Natural / Pop / Hard / Cher / Country / Subtle) or dial Retune / Humanize / Strength / Formant by hand. Key, Scale and Mix are always user-controlled.",
-  "tags": ["pitch", "auto-tune", "vocal", "correction", "yin", "psola", "lpc", "native"],
+  "version": "1.1.0",
+  "description": "Tava balss, koriģēts pitch. Pilnībā on-device — nekas neaiziet no tālruņa, nav cloud subscription. 6-pakāpju DSP ķēde: YIN cents-grade pitch detector + oktāvas kļūdas korekcija + scale-aware quantizer (Major/Minor/Harmonic Minor/Pentatonic/Chromatic) + 12. kārtas LPC source-filter formant preservation (tas pats triks, ko izmanto Antares Auto-Tune un Melodyne lai noturētu tavu balss tembru) + TD-PSOLA pitch shift uz LPC residual + transient bypass priekš dabīgiem konsonantiem. Bezmaksas alternatīva mākoņa AI auto-tune servisiem (Sonarworks SoundID, Auto-Tune Online, Kits.AI), bet darbojas pilnībā offline. Izvēlies presetu vai pielāgo Retune/Humanize/Strength/Formant pa rokai. Key, Scale un Mix vienmēr lietotāja kontrolē.",
+  "tags": ["pitch", "auto-tune", "vocal", "correction", "ai", "neural-grade", "studio", "on-device", "offline", "yin", "psola", "lpc", "native"],
   "engine": "native",
   "className": "com.vocalmonitor.plugin.community.AutoTune",
   "ui_kind": "canvas",
@@ -14,33 +14,48 @@
   },
   "presets": [
     {
+      "name": "Studio AI",
+      "description": "Mūsdienu transparent auto-tune skaņa — kā Sonarworks SoundID Voice. Smags pitch lock ar dabīgu drift",
+      "params": { "retune": 0.55, "humanize": 0.40, "strength": 0.85, "formant": 1.00 }
+    },
+    {
+      "name": "Vocal Coach",
+      "description": "Stiprs korekcijas līmenis vokālajiem treniņiem — dzirdi 'kā tam vajadzētu izklausīties'",
+      "params": { "retune": 0.15, "humanize": 0.05, "strength": 1.00, "formant": 1.00 }
+    },
+    {
       "name": "Natural",
-      "description": "Gentle pop correction that preserves the performance",
+      "description": "Maigs pop korekcijas līmenis, kas saglabā izpildījumu",
       "params": { "retune": 0.45, "humanize": 0.30, "strength": 0.70, "formant": 1.00 }
     },
     {
       "name": "Pop",
-      "description": "Modern pop vocal — snappy but still musical",
+      "description": "Mūsdienu pop vokāli — snappy, bet joprojām muzikāli",
       "params": { "retune": 0.20, "humanize": 0.15, "strength": 0.95, "formant": 1.00 }
     },
     {
       "name": "Hard / Snap",
-      "description": "T-Pain / trap instant pitch snap",
+      "description": "T-Pain / trap tūlītējais pitch snap",
       "params": { "retune": 0.00, "humanize": 0.00, "strength": 1.00, "formant": 0.80 }
     },
     {
       "name": "Cher",
-      "description": "The original 'Believe' chipmunk character (no formant preservation)",
+      "description": "Oriģinālais 'Believe' chipmunk efekts (bez formantu saglabāšanas)",
       "params": { "retune": 0.00, "humanize": 0.00, "strength": 1.00, "formant": 0.00 }
     },
     {
+      "name": "Stadium",
+      "description": "Tiešraides koncertu sound — dabīgs ar nelielu latency footprint",
+      "params": { "retune": 0.70, "humanize": 0.50, "strength": 0.60, "formant": 1.00 }
+    },
+    {
       "name": "Country",
-      "description": "Slow drift preserved, gentle correction",
+      "description": "Lēnais drift saglabāts, maiga korekcija",
       "params": { "retune": 0.60, "humanize": 0.35, "strength": 0.60, "formant": 1.00 }
     },
     {
       "name": "Subtle",
-      "description": "Barely-there ride correction — minimal touch",
+      "description": "Tik tikko jūtams ride correction — minimāls pieskāriens",
       "params": { "retune": 0.70, "humanize": 0.40, "strength": 0.40, "formant": 1.00 }
     }
   ]

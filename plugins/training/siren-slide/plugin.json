@@ -1,0 +1,14 @@
+{
+  "id": "siren-slide",
+  "name": "Siren Slide",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "The pedagogue's favourite warm-up: a smooth 'siren' glissando line sweeps up and down your range and you slide your voice to ride it. Trains blending chest, mix and head registers without a break. Your live pitch is a glowing puck with a comet trail - green where you hug the line, red where you slip off. Set your own low/high notes and slide speed; the on-target percentage and streak timer track how cleanly you ride the swoops.",
+  "tags": ["training", "glissando", "siren", "pitch", "register", "warmup", "fullscreen", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.SirenSlide",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "9:16", "min_height_dp": 480 },
+  "fullscreen": true,
+  "streams": ["waveform"]
+}

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-26T15:43:39.799Z",
+  "generatedAt": "2026-05-28T21:48:38.313Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -731,6 +731,38 @@
       "className": "com.vocalmonitor.plugin.community.Telephone"
     },
     {
+      "id": "voice-rocket",
+      "name": "Voice Rocket",
+      "author": "Vocal Monitor",
+      "category": "Entertainment",
+      "description": "Balss vadīts sānskata raķetes bezgalīgs lidotājs. Klusi murmini — raķete kustās uz priekšu ar bāzes ātrumu. Skaļāk runā vai dziedi — raķete paātrina. Pacel toni augstāk — raķete kāpj augšup; pazemini — krīt lejup. Izvairies no statiskiem asteroīdiem un lidojošiem objektiem, kas nāk no labās malas. Labi trenē kontrolētu balss skaļumu un toņa virzību.",
+      "version": "0.1.0",
+      "tags": [
+        "entertainment",
+        "kids",
+        "game",
+        "rocket",
+        "pitch",
+        "volume",
+        "voice-control",
+        "fullscreen",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/voice-rocket/voice-rocket.dex",
+      "sizeBytes": 11212,
+      "className": "com.vocalmonitor.plugin.community.VoiceRocket",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 320
+      },
+      "streams": [
+        "waveform"
+      ],
+      "fullscreen": true
+    },
+    {
       "id": "app-eq",
       "name": "App EQ",
       "author": "Vocal Monitor",
@@ -1205,16 +1237,21 @@
     },
     {
       "id": "auto-tune",
-      "name": "Auto-Tune",
+      "name": "Auto-Tune (AI Studio)",
       "author": "Vocal Monitor",
       "category": "Pitch",
-      "description": "Pro-grade vocal pitch correction. YIN pitch detector + TD-PSOLA shifter + 16th-order LPC formant preservation with bandwidth expansion + Lanczos-3 windowed-sinc interpolation + 20 ms input lookahead + GCI grain snapping + vibrato preservation + adaptive retune + transient bypass. Pick a preset from the list (Natural / Pop / Hard / Cher / Country / Subtle) or dial Retune / Humanize / Strength / Formant by hand. Key, Scale and Mix are always user-controlled.",
-      "version": "1.0.0",
+      "description": "Tava balss, koriģēts pitch. Pilnībā on-device — nekas neaiziet no tālruņa, nav cloud subscription. 6-pakāpju DSP ķēde: YIN cents-grade pitch detector + oktāvas kļūdas korekcija + scale-aware quantizer (Major/Minor/Harmonic Minor/Pentatonic/Chromatic) + 12. kārtas LPC source-filter formant preservation (tas pats triks, ko izmanto Antares Auto-Tune un Melodyne lai noturētu tavu balss tembru) + TD-PSOLA pitch shift uz LPC residual + transient bypass priekš dabīgiem konsonantiem. Bezmaksas alternatīva mākoņa AI auto-tune servisiem (Sonarworks SoundID, Auto-Tune Online, Kits.AI), bet darbojas pilnībā offline. Izvēlies presetu vai pielāgo Retune/Humanize/Strength/Formant pa rokai. Key, Scale un Mix vienmēr lietotāja kontrolē.",
+      "version": "1.1.0",
       "tags": [
         "pitch",
         "auto-tune",
         "vocal",
         "correction",
+        "ai",
+        "neural-grade",
+        "studio",
+        "on-device",
+        "offline",
         "yin",
         "psola",
         "lpc",
@@ -1231,8 +1268,28 @@
       },
       "presets": [
         {
+          "name": "Studio AI",
+          "description": "Mūsdienu transparent auto-tune skaņa — kā Sonarworks SoundID Voice. Smags pitch lock ar dabīgu drift",
+          "params": {
+            "retune": 0.55,
+            "humanize": 0.4,
+            "strength": 0.85,
+            "formant": 1
+          }
+        },
+        {
+          "name": "Vocal Coach",
+          "description": "Stiprs korekcijas līmenis vokālajiem treniņiem — dzirdi 'kā tam vajadzētu izklausīties'",
+          "params": {
+            "retune": 0.15,
+            "humanize": 0.05,
+            "strength": 1,
+            "formant": 1
+          }
+        },
+        {
           "name": "Natural",
-          "description": "Gentle pop correction that preserves the performance",
+          "description": "Maigs pop korekcijas līmenis, kas saglabā izpildījumu",
           "params": {
             "retune": 0.45,
             "humanize": 0.3,
@@ -1242,7 +1299,7 @@
         },
         {
           "name": "Pop",
-          "description": "Modern pop vocal — snappy but still musical",
+          "description": "Mūsdienu pop vokāli — snappy, bet joprojām muzikāli",
           "params": {
             "retune": 0.2,
             "humanize": 0.15,
@@ -1252,7 +1309,7 @@
         },
         {
           "name": "Hard / Snap",
-          "description": "T-Pain / trap instant pitch snap",
+          "description": "T-Pain / trap tūlītējais pitch snap",
           "params": {
             "retune": 0,
             "humanize": 0,
@@ -1262,7 +1319,7 @@
         },
         {
           "name": "Cher",
-          "description": "The original 'Believe' chipmunk character (no formant preservation)",
+          "description": "Oriģinālais 'Believe' chipmunk efekts (bez formantu saglabāšanas)",
           "params": {
             "retune": 0,
             "humanize": 0,
@@ -1271,8 +1328,18 @@
           }
         },
         {
+          "name": "Stadium",
+          "description": "Tiešraides koncertu sound — dabīgs ar nelielu latency footprint",
+          "params": {
+            "retune": 0.7,
+            "humanize": 0.5,
+            "strength": 0.6,
+            "formant": 1
+          }
+        },
+        {
           "name": "Country",
-          "description": "Slow drift preserved, gentle correction",
+          "description": "Lēnais drift saglabāts, maiga korekcija",
           "params": {
             "retune": 0.6,
             "humanize": 0.35,
@@ -1282,7 +1349,7 @@
         },
         {
           "name": "Subtle",
-          "description": "Barely-there ride correction — minimal touch",
+          "description": "Tik tikko jūtams ride correction — minimāls pieskāriens",
           "params": {
             "retune": 0.7,
             "humanize": 0.4,
@@ -1776,7 +1843,7 @@
       "author": "Vocal Monitor",
       "category": "Source",
       "description": "YouTube as a music source — search the catalog and download audio (opus / m4a) into your local library. Runs inside the app's isolated-process sandbox; all network calls go through a per-plugin domain allowlist enforced by the host. Wraps NewPipeExtractor (GPLv3) so YouTube-protocol churn is upstream maintained.",
-      "version": "0.1.9",
+      "version": "0.2.1",
       "tags": [
         "source",
         "youtube",
@@ -1785,7 +1852,7 @@
       ],
       "engine": "source",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/source/youtube-source/youtube-source.dex",
-      "sizeBytes": 3529004,
+      "sizeBytes": 3530036,
       "className": "com.vocalmonitor.plugin.source.youtube.YouTubeSource"
     },
     {
@@ -1811,6 +1878,67 @@
       "ui": {
         "aspect": "16:9",
         "min_height_dp": 280
+      },
+      "streams": [
+        "waveform"
+      ],
+      "fullscreen": true
+    },
+    {
+      "id": "interval-trainer",
+      "name": "Interval Trainer",
+      "author": "Vocal Monitor",
+      "category": "Training",
+      "description": "Ear-training and pitch-jump drill. The app plays a root note, then a target note an interval above it (m3, P5, octave...), then you sing the target back. A live tuner needle shows how close you are; hold it in tune to score. Where Scale Runner drills single notes, this drills the relationship between two - the foundation of singing in tune against accompaniment. Pick the interval pool (perfect intervals, thirds & fifths, or mixed) and the root note so it sits in your range.",
+      "version": "1.0.0",
+      "tags": [
+        "training",
+        "ear-training",
+        "interval",
+        "pitch",
+        "kids",
+        "fullscreen",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/interval-trainer/interval-trainer.dex",
+      "sizeBytes": 11912,
+      "className": "com.vocalmonitor.plugin.community.IntervalTrainer",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "9:16",
+        "min_height_dp": 480
+      },
+      "streams": [
+        "waveform"
+      ],
+      "fullscreen": true
+    },
+    {
+      "id": "lip-trill",
+      "name": "Lip Trill Coach",
+      "author": "Vocal Monitor",
+      "category": "Training",
+      "description": "Trains lip trills, tongue trills and straw phonation (SOVT) - the cornerstone of modern vocal warm-up and therapy. Detects the buzzy amplitude flutter of a trill (~20-35 Hz), scores its rate, regularity and carrier-pitch steadiness, and turns it into a bubble tube: smooth dense bubbles when the trill is even, stuttering bubbles when it sputters. A hold timer rewards sustaining a clean trill.",
+      "version": "1.0.0",
+      "tags": [
+        "training",
+        "sovt",
+        "lip-trill",
+        "straw",
+        "warmup",
+        "breath",
+        "fullscreen",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/lip-trill/lip-trill.dex",
+      "sizeBytes": 9948,
+      "className": "com.vocalmonitor.plugin.community.LipTrill",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "9:16",
+        "min_height_dp": 480
       },
       "streams": [
         "waveform"
@@ -1870,6 +1998,37 @@
       "ui": {
         "aspect": "16:9",
         "min_height_dp": 320
+      },
+      "streams": [
+        "waveform"
+      ],
+      "fullscreen": true
+    },
+    {
+      "id": "siren-slide",
+      "name": "Siren Slide",
+      "author": "Vocal Monitor",
+      "category": "Training",
+      "description": "The pedagogue's favourite warm-up: a smooth 'siren' glissando line sweeps up and down your range and you slide your voice to ride it. Trains blending chest, mix and head registers without a break. Your live pitch is a glowing puck with a comet trail - green where you hug the line, red where you slip off. Set your own low/high notes and slide speed; the on-target percentage and streak timer track how cleanly you ride the swoops.",
+      "version": "1.0.0",
+      "tags": [
+        "training",
+        "glissando",
+        "siren",
+        "pitch",
+        "register",
+        "warmup",
+        "fullscreen",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/siren-slide/siren-slide.dex",
+      "sizeBytes": 9296,
+      "className": "com.vocalmonitor.plugin.community.SirenSlide",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "9:16",
+        "min_height_dp": 480
       },
       "streams": [
         "waveform"

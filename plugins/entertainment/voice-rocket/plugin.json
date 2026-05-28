@@ -1,0 +1,29 @@
+{
+  "id": "voice-rocket",
+  "name": "Voice Rocket",
+  "author": "Vocal Monitor",
+  "version": "0.1.0",
+  "description": "Balss vadīts sānskata raķetes bezgalīgs lidotājs. Klusi murmini — raķete kustās uz priekšu ar bāzes ātrumu. Skaļāk runā vai dziedi — raķete paātrina. Pacel toni augstāk — raķete kāpj augšup; pazemini — krīt lejup. Izvairies no statiskiem asteroīdiem un lidojošiem objektiem, kas nāk no labās malas. Labi trenē kontrolētu balss skaļumu un toņa virzību.",
+  "tags": [
+    "entertainment",
+    "kids",
+    "game",
+    "rocket",
+    "pitch",
+    "volume",
+    "voice-control",
+    "fullscreen",
+    "native"
+  ],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.VoiceRocket",
+  "ui_kind": "canvas",
+  "ui": {
+    "aspect": "16:9",
+    "min_height_dp": 320
+  },
+  "fullscreen": true,
+  "streams": [
+    "waveform"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "interval-trainer",
+  "name": "Interval Trainer",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Ear-training and pitch-jump drill. The app plays a root note, then a target note an interval above it (m3, P5, octave...), then you sing the target back. A live tuner needle shows how close you are; hold it in tune to score. Where Scale Runner drills single notes, this drills the relationship between two - the foundation of singing in tune against accompaniment. Pick the interval pool (perfect intervals, thirds & fifths, or mixed) and the root note so it sits in your range.",
+  "tags": ["training", "ear-training", "interval", "pitch", "kids", "fullscreen", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.IntervalTrainer",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "9:16", "min_height_dp": 480 },
+  "fullscreen": true,
+  "streams": ["waveform"]
+}

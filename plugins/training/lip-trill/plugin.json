@@ -1,0 +1,14 @@
+{
+  "id": "lip-trill",
+  "name": "Lip Trill Coach",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Trains lip trills, tongue trills and straw phonation (SOVT) - the cornerstone of modern vocal warm-up and therapy. Detects the buzzy amplitude flutter of a trill (~20-35 Hz), scores its rate, regularity and carrier-pitch steadiness, and turns it into a bubble tube: smooth dense bubbles when the trill is even, stuttering bubbles when it sputters. A hold timer rewards sustaining a clean trill.",
+  "tags": ["training", "sovt", "lip-trill", "straw", "warmup", "breath", "fullscreen", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.LipTrill",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "9:16", "min_height_dp": 480 },
+  "fullscreen": true,
+  "streams": ["waveform"]
+}
