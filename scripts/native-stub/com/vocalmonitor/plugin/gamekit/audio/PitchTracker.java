@@ -116,6 +116,10 @@ public final class PitchTracker {
     /** Smoothed RMS — useful for "is the user singing right now". */
     public float rms() { return smoothedRms; }
 
+    /** Detection clarity 0..1 of the most recent voiced frame
+     *  (1 = perfectly periodic). */
+    public float clarity() { return 0f; }
+
     /** True when the user is actually voicing (RMS > floor + pitch
      *  in vocal range). */
     public boolean voiced() { return smoothedHz > 50f && smoothedRms > floor * 0.6f; }

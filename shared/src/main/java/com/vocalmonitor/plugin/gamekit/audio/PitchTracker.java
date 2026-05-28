@@ -3,19 +3,25 @@ package com.vocalmonitor.plugin.gamekit.audio;
 import java.util.Map;
 
 /**
- * Fundamental-frequency tracker for vocal range (~60–800 Hz).
+ * Fundamental-frequency tracker for vocal range (~55–1000 Hz).
  *
- * Algorithm: one-pole low-pass at 800 Hz to suppress upper harmonics,
- * count upward zero-crossings of the filtered signal, divide by
- * window duration.  Output is smoothed across frames with a
- * configurable follow-rate so the readout glides instead of
- * jittering.  Cents-accurate it is NOT — for tuner-grade pitch
- * (sub-1¢) you'd want autocorrelation or YIN.  For "is the voice
- * going up or down" and ±50¢ training games, this is plenty.
+ * Algorithm: YIN-style cumulative-mean-normalized difference function
+ * (de Cheveigné & Kawahara) over a rolling ~54 ms window, with
+ * parabolic interpolation for sub-sample period accuracy.  Output is
+ * smoothed across frames with a configurable follow-rate so the
+ * readout glides instead of jittering.
  *
- * Backed by the same code AngryChirp / rocket-pitch / pitch-arrow /
- * target-tone / scale-runner all duplicate today — extracted here
- * so they can stop.
+ * <p>This replaced an upward-zero-crossing counter that locked onto
+ * harmonics on low / rich notes — it would read an octave high and
+ * "stick", refusing to track a glissando downward.  YIN's threshold
+ * search picks the shortest plausible period first, which avoids both
+ * the octave-up errors of zero-crossing and the octave-down errors of
+ * plain autocorrelation.
+ *
+ * <p>To stay cheap on the audio/render thread the signal is
+ * boxcar-decimated (which doubles as an anti-alias filter) before the
+ * difference function runs, so the inner loop is a few tens of
+ * thousands of multiplies per frame regardless of sample rate.
  *
  * Usage:
  *   tracker.feed(streams, dt);
@@ -27,7 +33,7 @@ import java.util.Map;
 public final class PitchTracker {
 
     private int sampleRate = 44_100;
-    private float lpCutoff = 800f;
+    private float lpCutoff = 800f;   // retained for API compat (anti-alias is the decimator now)
     private float lpAlpha = 0f;
     private float lpPrev = 0f;
 
@@ -35,8 +41,24 @@ public final class PitchTracker {
     private float smoothedHz = 0f;
     private float smoothedRms = 0f;
     private float followRate = 0.30f;
+    private float clarity = 0f;      // last detection clarity 0..1 (1 = perfectly periodic)
 
     private float idleHz = 0f;       // value to drift toward on silence (0 = decay)
+
+    // ── rolling analysis buffer (original-rate, fills across frames) ──
+    private static final int RING = 2400;          // ~54 ms @ 44.1 kHz
+    private final float[] ring = new float[RING];
+    private int ringPos = 0;
+    private boolean ringFull = false;
+
+    // scratch (reused each frame; sized for the worst case)
+    private final float[] decBuf = new float[RING];
+    private final float[] dBuf = new float[RING];
+    private final float[] dpBuf = new float[RING];
+
+    private static final float MIN_HZ = 55f;
+    private static final float MAX_HZ = 1000f;
+    private static final float YIN_THRESHOLD = 0.15f;
 
     public PitchTracker() { setSampleRate(44_100); }
 
@@ -46,9 +68,9 @@ public final class PitchTracker {
         return this;
     }
 
-    /** Override the LP cutoff used to suppress upper harmonics.
-     *  Defaults to 800 Hz — raise it for higher-register voices, lower
-     *  for deep voices. */
+    /** Retained for API compatibility — the decimator now provides the
+     *  anti-alias / harmonic suppression, so this no longer affects the
+     *  detector.  Kept so existing callers compile and run unchanged. */
     public PitchTracker lpCutoff(float hz) {
         this.lpCutoff = hz;
         this.lpAlpha = (float) (1.0 - Math.exp(-2.0 * Math.PI * lpCutoff / sampleRate));
@@ -77,32 +99,110 @@ public final class PitchTracker {
 
     /** Feed from a raw float array (for offline use). */
     public void feedSamples(float[] samples, int len) {
-        if (samples == null || len < 16) {
+        if (samples == null || len < 1) {
             decayIdle();
             return;
         }
-        int upwardZc = 0;
-        boolean wasPositive = lpPrev >= 0f;
+
+        // append into the rolling buffer + measure level of this chunk
         double sumSq = 0.0;
         for (int i = 0; i < len; i++) {
-            lpPrev += lpAlpha * (samples[i] - lpPrev);
-            boolean isPositive = lpPrev >= 0f;
-            if (isPositive && !wasPositive) upwardZc++;
-            wasPositive = isPositive;
-            sumSq += samples[i] * samples[i];
+            float s = samples[i];
+            ring[ringPos] = s;
+            if (++ringPos == RING) { ringPos = 0; ringFull = true; }
+            sumSq += s * s;
         }
         float rms = (float) Math.sqrt(sumSq / len);
         smoothedRms += 0.30f * (rms - smoothedRms);
 
-        if (rms > floor) {
-            float duration = len / (float) sampleRate;
-            float p = upwardZc / duration;
-            if (p < 60f)  p = 60f;
-            if (p > 800f) p = 800f;
-            smoothedHz += followRate * (p - smoothedHz);
-        } else {
+        if (rms <= floor || !ringFull) {
             decayIdle();
+            return;
         }
+
+        float freq = detect();
+        if (freq <= 0f) {                 // not periodic enough → treat as unvoiced
+            decayIdle();
+            return;
+        }
+
+        if (smoothedHz < 50f) smoothedHz = freq;                  // snap on onset
+        else                  smoothedHz += followRate * (freq - smoothedHz);
+    }
+
+    /** Run YIN over the rolling buffer; returns Hz, or 0 when the
+     *  signal isn't periodic enough to trust. */
+    private float detect() {
+        final int D = sampleRate >= 32_000 ? 4 : (sampleRate >= 16_000 ? 2 : 1);
+        final float decRate = sampleRate / (float) D;
+        final int M = RING / D;
+
+        // boxcar-decimate the buffer oldest→newest (ringPos is the oldest
+        // sample once the ring is full). Averaging D samples anti-aliases.
+        final float[] dec = decBuf;
+        for (int k = 0; k < M; k++) {
+            float acc = 0f;
+            int base = ringPos + k * D;
+            for (int j = 0; j < D; j++) {
+                int idx = base + j;
+                if (idx >= RING) idx -= RING;
+                acc += ring[idx];
+            }
+            dec[k] = acc / D;
+        }
+
+        final int minLag = Math.max(2, (int) (decRate / MAX_HZ));
+        final int maxLag = Math.min(M / 2 - 1, (int) (decRate / MIN_HZ));
+        if (maxLag <= minLag + 1) return 0f;
+        final int W = M - maxLag;          // integration window
+
+        // difference function d(tau) and cumulative-mean-normalized dp(tau)
+        final float[] d = dBuf;
+        final float[] dp = dpBuf;
+        dp[0] = 1f;
+        float running = 0f;
+        for (int tau = 1; tau <= maxLag; tau++) {
+            float sum = 0f;
+            for (int j = 0; j < W; j++) {
+                float diff = dec[j] - dec[j + tau];
+                sum += diff * diff;
+            }
+            d[tau] = sum;
+            running += sum;
+            dp[tau] = running > 0f ? (sum * tau / running) : 1f;
+        }
+
+        // first dip below the absolute threshold, descended to its local min
+        int tauEst = -1;
+        for (int tau = minLag; tau < maxLag; tau++) {
+            if (dp[tau] < YIN_THRESHOLD) {
+                while (tau + 1 <= maxLag && dp[tau + 1] < dp[tau]) tau++;
+                tauEst = tau;
+                break;
+            }
+        }
+        if (tauEst < 0) {                  // nothing crossed the threshold → global min
+            float best = Float.MAX_VALUE;
+            for (int tau = minLag; tau <= maxLag; tau++) {
+                if (dp[tau] < best) { best = dp[tau]; tauEst = tau; }
+            }
+        }
+
+        clarity = 1f - Math.min(1f, dp[tauEst]);
+        if (dp[tauEst] > 0.55f) return 0f;  // too aperiodic to trust
+
+        // parabolic interpolation around the chosen minimum
+        float betterTau = tauEst;
+        if (tauEst > minLag && tauEst < maxLag) {
+            float s0 = dp[tauEst - 1], s1 = dp[tauEst], s2 = dp[tauEst + 1];
+            float denom = s0 + s2 - 2f * s1;
+            if (Math.abs(denom) > 1e-9f) betterTau = tauEst + 0.5f * (s0 - s2) / denom;
+        }
+
+        float freq = decRate / betterTau;
+        if (freq < MIN_HZ) freq = MIN_HZ;
+        if (freq > MAX_HZ) freq = MAX_HZ;
+        return freq;
     }
 
     private void decayIdle() {
@@ -115,6 +215,10 @@ public final class PitchTracker {
 
     /** Smoothed RMS — useful for "is the user singing right now". */
     public float rms() { return smoothedRms; }
+
+    /** Detection clarity 0..1 of the most recent voiced frame
+     *  (1 = perfectly periodic). */
+    public float clarity() { return clarity; }
 
     /** True when the user is actually voicing (RMS > floor + pitch
      *  in vocal range). */
@@ -135,5 +239,8 @@ public final class PitchTracker {
         lpPrev = 0f;
         smoothedHz = 0f;
         smoothedRms = 0f;
+        clarity = 0f;
+        ringPos = 0;
+        ringFull = false;
     }
 }

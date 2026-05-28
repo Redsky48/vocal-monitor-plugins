@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-28T22:41:00.870Z",
+  "generatedAt": "2026-05-28T23:04:15.473Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -509,7 +509,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/angry-chirp/angry-chirp.dex",
-      "sizeBytes": 54488,
+      "sizeBytes": 55488,
       "className": "com.vocalmonitor.plugin.community.AngryChirp",
       "ui_kind": "canvas",
       "ui": {
@@ -750,7 +750,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/voice-rocket/voice-rocket.dex",
-      "sizeBytes": 54100,
+      "sizeBytes": 55100,
       "className": "com.vocalmonitor.plugin.community.VoiceRocket",
       "ui_kind": "canvas",
       "ui": {
@@ -1902,7 +1902,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/interval-trainer/interval-trainer.dex",
-      "sizeBytes": 54696,
+      "sizeBytes": 55676,
       "className": "com.vocalmonitor.plugin.community.IntervalTrainer",
       "ui_kind": "canvas",
       "ui": {
@@ -1934,7 +1934,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/lip-trill/lip-trill.dex",
-      "sizeBytes": 53520,
+      "sizeBytes": 54500,
       "className": "com.vocalmonitor.plugin.community.LipTrill",
       "ui_kind": "canvas",
       "ui": {
@@ -1964,7 +1964,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/pitch-arrow/pitch-arrow.dex",
-      "sizeBytes": 5576,
+      "sizeBytes": 50328,
       "className": "com.vocalmonitor.plugin.community.PitchArrow",
       "ui_kind": "canvas",
       "ui": {
@@ -1993,7 +1993,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/scale-runner/scale-runner.dex",
-      "sizeBytes": 7040,
+      "sizeBytes": 51644,
       "className": "com.vocalmonitor.plugin.community.ScaleRunner",
       "ui_kind": "canvas",
       "ui": {
@@ -2024,12 +2024,13 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/siren-slide/siren-slide.dex",
-      "sizeBytes": 51992,
+      "sizeBytes": 52972,
       "className": "com.vocalmonitor.plugin.community.SirenSlide",
       "ui_kind": "canvas",
       "ui": {
         "aspect": "9:16",
-        "min_height_dp": 480
+        "min_height_dp": 480,
+        "controls": "canvas"
       },
       "streams": [
         "waveform"
@@ -2053,7 +2054,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/target-tone/target-tone.dex",
-      "sizeBytes": 5904,
+      "sizeBytes": 50820,
       "className": "com.vocalmonitor.plugin.community.TargetTone",
       "ui_kind": "canvas",
       "ui": {
@@ -2127,7 +2128,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/visual/svg-demo/svg-demo.dex",
-      "sizeBytes": 47340,
+      "sizeBytes": 48336,
       "className": "com.vocalmonitor.plugin.community.SvgDemo",
       "ui_kind": "canvas",
       "ui": {
@@ -2182,7 +2183,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/visual/voice-knobs/voice-knobs.dex",
-      "sizeBytes": 47844,
+      "sizeBytes": 48840,
       "className": "com.vocalmonitor.plugin.community.VoiceKnobs",
       "ui_kind": "canvas",
       "ui": {
