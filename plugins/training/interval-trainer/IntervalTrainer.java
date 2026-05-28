@@ -242,24 +242,34 @@ public final class IntervalTrainer extends GamePluginBase {
             nextRound(lastHitGood);
         }
 
+        // Sound the active reference tone via the host. On slim's live
+        // monitor the host only calls render() (never process()), so the
+        // tone synthesised in process() would never be heard — playTone()
+        // routes it to the host's audio output instead. Silent in LISTEN /
+        // RESULT (soundingHz() returns 0).
+        if (host != null) {
+            float toneHz = soundingHz();
+            host.playTone(toneHz, toneHz > 0f ? toneLevel : 0f);
+        }
+
         // ── background ──
         Gfx.gradientSky(c, w, h, 0xFF0C1322, 0xFF141B2E);
         c.save();
         juice.applyShake(c);
 
         float cx = w * 0.5f;
-        Gfx.textCenter(c, "Interval Trainer", cx, 38f * scale, 23f * scale, Palette.UI_TEXT);
+        Gfx.textCenter(c, "Interval Trainer", cx, 22f * scale, 20f * scale, Palette.UI_TEXT);
 
         // mode label
         String modeLbl = Math.round(mode) == 0 ? "Perfect intervals"
                        : Math.round(mode) == 1 ? "Thirds & fifths" : "Mixed intervals";
-        Gfx.textCenter(c, modeLbl, cx, 58f * scale, 13f * scale, Palette.UI_TEXT_DIM);
+        Gfx.textCenter(c, modeLbl, cx, 40f * scale, 12f * scale, Palette.UI_TEXT_DIM);
 
         // ── interval ladder ──
         // Two rungs: root (lower) and target (higher). We place them on a
         // vertical staff so the *visual jump* matches the musical jump.
         float ladderX = cx;
-        float ladderTop = h * 0.20f, ladderBot = h * 0.66f;
+        float ladderTop = h * 0.26f, ladderBot = h * 0.66f;
         float ladderH = ladderBot - ladderTop;
         // normalise the interval to a 0..1 height inside the ladder
         float maxSemi = 12f;
@@ -293,8 +303,9 @@ public final class IntervalTrainer extends GamePluginBase {
             NoteName.of(targetHz), intervalName(curSemitones), targCol,
             targetLit || state == ST_LISTEN || state == ST_RESULT);
 
-        // big interval name centre-left during play
-        Gfx.textCenter(c, intervalName(curSemitones), cx, h * 0.135f, 30f * scale,
+        // big interval name (focal point) — sits in the header gap above
+        // the ladder so it never collides with the title / mode label.
+        Gfx.textCenter(c, intervalName(curSemitones), cx, 66f * scale, 26f * scale,
             targetLit ? targCol : Palette.UI_TEXT);
 
         // ── phase-specific lower panel ──

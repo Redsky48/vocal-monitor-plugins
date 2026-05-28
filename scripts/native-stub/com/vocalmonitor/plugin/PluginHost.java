@@ -47,4 +47,16 @@ public interface PluginHost {
      * implement this and procedural fallback is the graceful path.
      */
     default String loadAssetText(String name) { return null; }
+
+    /**
+     * Sound a continuous reference tone through the host's audio output.
+     * For ear-training / interval / pitch-match plugins that need to
+     * <em>play</em> a note for the singer to match. {@code freqHz <= 0}
+     * silences it; {@code level} is linear amplitude 0..1. The host
+     * smooths transitions so switching notes is click-free. Call it every
+     * frame from {@code render()} with the note that should be sounding
+     * (or {@code (0, 0)} for silence). Default no-op — older hosts that
+     * don't support tone output degrade gracefully to silence.
+     */
+    default void playTone(float freqHz, float level) {}
 }

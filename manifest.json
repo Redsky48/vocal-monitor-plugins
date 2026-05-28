@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-28T22:22:58.860Z",
+  "generatedAt": "2026-05-28T22:35:30.262Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -1902,12 +1902,13 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/interval-trainer/interval-trainer.dex",
-      "sizeBytes": 54620,
+      "sizeBytes": 54696,
       "className": "com.vocalmonitor.plugin.community.IntervalTrainer",
       "ui_kind": "canvas",
       "ui": {
         "aspect": "9:16",
-        "min_height_dp": 480
+        "min_height_dp": 480,
+        "controls": "canvas"
       },
       "streams": [
         "waveform"

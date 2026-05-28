@@ -8,7 +8,7 @@
   "engine": "native",
   "className": "com.vocalmonitor.plugin.community.IntervalTrainer",
   "ui_kind": "canvas",
-  "ui": { "aspect": "9:16", "min_height_dp": 480 },
+  "ui": { "aspect": "9:16", "min_height_dp": 480, "controls": "canvas" },
   "fullscreen": true,
   "streams": ["waveform"]
 }
