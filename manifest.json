@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-28T21:50:16.242Z",
+  "generatedAt": "2026-05-28T22:03:39.262Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -509,7 +509,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/angry-chirp/angry-chirp.dex",
-      "sizeBytes": 11516,
+      "sizeBytes": 54488,
       "className": "com.vocalmonitor.plugin.community.AngryChirp",
       "ui_kind": "canvas",
       "ui": {
@@ -750,7 +750,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/voice-rocket/voice-rocket.dex",
-      "sizeBytes": 11212,
+      "sizeBytes": 54100,
       "className": "com.vocalmonitor.plugin.community.VoiceRocket",
       "ui_kind": "canvas",
       "ui": {
@@ -1902,7 +1902,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/interval-trainer/interval-trainer.dex",
-      "sizeBytes": 11912,
+      "sizeBytes": 54620,
       "className": "com.vocalmonitor.plugin.community.IntervalTrainer",
       "ui_kind": "canvas",
       "ui": {
@@ -1933,7 +1933,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/lip-trill/lip-trill.dex",
-      "sizeBytes": 9948,
+      "sizeBytes": 52792,
       "className": "com.vocalmonitor.plugin.community.LipTrill",
       "ui_kind": "canvas",
       "ui": {
@@ -2023,7 +2023,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/training/siren-slide/siren-slide.dex",
-      "sizeBytes": 9296,
+      "sizeBytes": 51992,
       "className": "com.vocalmonitor.plugin.community.SirenSlide",
       "ui_kind": "canvas",
       "ui": {
@@ -2126,7 +2126,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/visual/svg-demo/svg-demo.dex",
-      "sizeBytes": 2680,
+      "sizeBytes": 47340,
       "className": "com.vocalmonitor.plugin.community.SvgDemo",
       "ui_kind": "canvas",
       "ui": {
@@ -2181,7 +2181,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/visual/voice-knobs/voice-knobs.dex",
-      "sizeBytes": 3596,
+      "sizeBytes": 47844,
       "className": "com.vocalmonitor.plugin.community.VoiceKnobs",
       "ui_kind": "canvas",
       "ui": {

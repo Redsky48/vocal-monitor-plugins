@@ -26,6 +26,11 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PLUGINS_DIR = join(ROOT, 'plugins');
 const STUB_DIR = join(ROOT, 'scripts', 'native-stub');
 const BUILD_DIR = join(STUB_DIR, 'build');
+// Canonical gamekit source. Plugins that extend GamePluginBase need these
+// classes packed INTO their .dex — the host only ships the base plugin API
+// (PluginCanvas/PluginHost/…), not gamekit, so a gamekit plugin that didn't
+// bundle it would fail to load with "Didn't find class".
+const GAMEKIT_DIR = join(ROOT, 'shared', 'src', 'main', 'java', 'com', 'vocalmonitor', 'plugin', 'gamekit');
 
 const D8 = process.env.DEX_TOOL
   ?? (process.platform === 'win32'
@@ -42,6 +47,20 @@ async function listDir(dir) {
 
 async function exists(p) {
   try { await access(p); return true; } catch { return false; }
+}
+
+// Recursively collect every .java path under dir.
+async function collectJava(dir) {
+  const out = [];
+  async function walk(d) {
+    for (const e of await readdir(d, { withFileTypes: true })) {
+      const p = join(d, e.name);
+      if (e.isDirectory()) await walk(p);
+      else if (e.name.endsWith('.java')) out.push(p);
+    }
+  }
+  await walk(dir);
+  return out;
 }
 
 function run(cmd, args, opts = {}) {
@@ -92,6 +111,16 @@ async function compileOne(category, name, meta) {
   const javaSrc = join(folder, `${simpleName}.java`);
   if (!await exists(javaSrc)) throw new Error(`no source at ${javaSrc}`);
 
+  // Gamekit plugins must carry the gamekit classes in their own .dex.
+  // Detect by import and, when present, add the real gamekit sources to
+  // the javac invocation so their .class files land in classOut and get
+  // dexed alongside the plugin. The host-API classes they reference stay
+  // external (resolved from the stub classpath, never emitted to classOut).
+  const src = await readFile(javaSrc, 'utf8');
+  const gamekitSources = /com\.vocalmonitor\.plugin\.gamekit/.test(src)
+    ? await collectJava(GAMEKIT_DIR)
+    : [];
+
   // 1. javac to .class.
   const classOut = join(BUILD_DIR, name);
   await rm(classOut, { recursive: true, force: true });
@@ -103,6 +132,7 @@ async function compileOne(category, name, meta) {
     '-cp', stubCp,
     '-d', classOut,
     javaSrc,
+    ...gamekitSources,
   ]);
   if (r1.code !== 0) throw new Error(`javac failed:\n${r1.err || r1.out}`);
 
