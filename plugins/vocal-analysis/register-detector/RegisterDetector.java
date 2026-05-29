@@ -17,11 +17,16 @@ import java.util.Map;
  * pulled straight from the voice-science literature:
  *
  *   - **f0**       : fundamental from YIN (de Cheveigné 2002).
- *   - **H1-H2**    : amplitude of the first harmonic minus the
- *                    second.  Henrich (2005) showed H1-H2 is the
- *                    single best discriminator of laryngeal
- *                    mechanism: M1 (chest) → ≈ 0 dB, M2 (falsetto)
- *                    → +10..+20 dB.
+ *   - **H1*-H2***  : amplitude of the first harmonic minus the
+ *                    second, **formant-corrected** (Iseli-Alwan 2007):
+ *                    each harmonic is compensated for the boosting of
+ *                    F1/F2 via the vocal-tract transfer function before
+ *                    the subtraction.  Without this the raw H1-H2 is
+ *                    unreliable whenever a formant sits near H1 or H2 —
+ *                    exactly the high-voice case.  Henrich (2005)
+ *                    showed H1-H2 is the single best discriminator of
+ *                    laryngeal mechanism: M1 (chest) → ≈ 0 dB,
+ *                    M2 (falsetto) → +10..+20 dB.
  *   - **H1-A3**    : H1 minus the peak amplitude in the F3 region
  *                    (2.5–3.5 kHz).  Stevens' spectral-tilt proxy —
  *                    head/falsetto has a much steeper roll-off than
@@ -38,11 +43,16 @@ import java.util.Map;
  *   - **OQ**       : Open Quotient estimate from Henrich's
  *                    approximation OQ ≈ 0.5 + 0.025·(H1-H2).
  *                    Closed pressed phonation ≈ 0.3; modal ≈ 0.5;
- *                    breathy falsetto ≈ 0.8.
+ *                    breathy falsetto ≈ 0.8.  **Shown for reference
+ *                    only** — since OQ here is a deterministic function
+ *                    of H1-H2, feeding it back as an independent
+ *                    classifier feature would double-count the same
+ *                    cue, so it is excluded from the scoring.
  *
  * Classification is the multinomial product of per-feature gaussians
- * (one (μ, σ) per register per feature, tabulated from the
- * literature), normalised and smoothed for visual stability.
+ * over {f0, H1*-H2*, H1-A3, HRF, SPR} (one (μ, σ) per register per
+ * feature, tabulated from the literature), normalised and smoothed for
+ * visual stability.
  *
  * Honest scope: a true clinical classifier would need EGG / video-
  * laryngoscopy or a CNN trained on labelled chest/mix/head data.
@@ -93,6 +103,22 @@ public final class RegisterDetector
     }
     private int ringW = 0, sampleAcc = 0;
 
+    // ── Formant estimation (for the Iseli-Alwan H1*-H2* correction) ──
+    // Pre-emphasis → 5 kHz anti-alias → decimate /4 → WLP(14) → roots.
+    // Same proven pipeline as the formant-tracker plugin.
+    private static final int FMT_DEC   = 4;
+    private static final int FMT_DECN  = FFT_N / FMT_DEC;   // 512 @ 11.025 kHz
+    private static final int FMT_ORDER = 14;
+    private final float[]  fmtScratch = new float[FFT_N];   // pre-emph + AA work buf
+    private final float[]  fmtDec   = new float[FMT_DECN];
+    private final float[]  fmtA     = new float[FMT_ORDER + 1];
+    private final float[]  fmtR     = new float[FMT_ORDER + 1];
+    private final double[] fmtRootRe = new double[FMT_ORDER];
+    private final double[] fmtRootIm = new double[FMT_ORDER];
+    private final float[]  fmtF     = new float[FMT_ORDER];   // detected freqs
+    private final float[]  fmtB     = new float[FMT_ORDER];   // detected bandwidths
+    private float[] aaCoefs;
+
     // ── Registers ──
     private static final int N_REG = 5;
     private static final String[] REG = { "CHEST", "MIX", "HEAD", "FALSETTO", "BELT" };
@@ -115,8 +141,6 @@ public final class RegisterDetector
     private static final float[] SG_HRF   = {   4f,       4f,       5f,       6f,       4f };
     private static final float[] MU_SPR   = { -22f,     -15f,     -20f,     -25f,      -7f };
     private static final float[] SG_SPR   = {   6f,       6f,       6f,       7f,       5f };
-    private static final float[] MU_OQ    = { 0.40f,   0.55f,   0.65f,   0.78f,   0.42f };
-    private static final float[] SG_OQ    = { 0.10f,   0.10f,   0.10f,   0.10f,   0.10f };
 
     private final float[] scores      = new float[N_REG];
     private final float[] scoreSmooth = new float[N_REG];
@@ -229,8 +253,22 @@ public final class RegisterDetector
         }
         if (nH < 2) return;
 
-        // H1-H2
-        h1h2 = hDb[1] - hDb[2];
+        // Formant-correct H1 and H2 (Iseli-Alwan): compensate each
+        // harmonic for the F1/F2 transfer-function boost so H1*-H2*
+        // reflects the source, not the vocal tract.  Falls back to raw
+        // amplitudes when formant estimation is unusable.
+        int nf = estimateFormants();
+        float h1c = hDb[1], h2c = hDb[2];
+        if (nf >= 2) {
+            float F1 = fmtF[0], B1 = fmtB[0], F2 = fmtF[1], B2 = fmtB[1];
+            if (F1 >= 150f && F1 <= 1300f && F2 >= 700f && F2 <= 3600f) {
+                h1c += formantCorr(currentFreq,       F1, B1) + formantCorr(currentFreq,       F2, B2);
+                h2c += formantCorr(2f * currentFreq,  F1, B1) + formantCorr(2f * currentFreq,  F2, B2);
+            }
+        }
+
+        // H1*-H2* (formant-corrected)
+        h1h2 = h1c - h2c;
 
         // HRF (Childers): H1_dB − 10·log10(Σ |Hₙ|² for n=2..nH)
         double higherPower = 0;
@@ -240,12 +278,12 @@ public final class RegisterDetector
         }
         hrf = hDb[1] - 10f * (float) Math.log10(Math.max(1e-9, higherPower));
 
-        // H1-A3: H1 − max(magDb in 2.5..3.5 kHz)
+        // H1-A3: (corrected) H1 − max(magDb in 2.5..3.5 kHz)
         int kA3Lo = Math.max(1, (int) Math.floor(2500f / binHz));
         int kA3Hi = Math.min(FFT_HALF - 1, (int) Math.ceil(3500f / binHz));
         float a3 = -120f;
         for (int k = kA3Lo; k <= kA3Hi; k++) if (magDb[k] > a3) a3 = magDb[k];
-        h1a3 = hDb[1] - a3;
+        h1a3 = h1c - a3;
 
         // SPR (Sundberg): peak dB(2–4 kHz) − peak dB(80–2000 Hz)
         int kLo1 = Math.max(1, (int) Math.floor(80f / binHz));
@@ -270,8 +308,7 @@ public final class RegisterDetector
             float e3 = gauss(h1a3,         MU_H1A3[i],  SG_H1A3[i]);
             float e4 = gauss(hrf,          MU_HRF[i],   SG_HRF[i]);
             float e5 = gauss(spr,          MU_SPR[i],   SG_SPR[i]);
-            float e6 = gauss(oq,           MU_OQ[i],    SG_OQ[i]);
-            scores[i] = e1 * e2 * e3 * e4 * e5 * e6;
+            scores[i] = e1 * e2 * e3 * e4 * e5;
         }
         float maxR = 0f;
         for (float r : scores) if (r > maxR) maxR = r;
@@ -305,6 +342,212 @@ public final class RegisterDetector
     private static float gauss(float x, float c, float s) {
         float d = (x - c) / s;
         return (float) Math.exp(-0.5 * d * d);
+    }
+
+    // ── Iseli-Alwan (2007) formant correction ─────────────────────
+    // dB to ADD to a harmonic at frequency f to remove the boost a
+    // single resonance (centre F, bandwidth B) gave it via the vocal-
+    // tract transfer function.  Applying this to H1 and H2 turns the
+    // raw H1-H2 into the source-only H1*-H2*.
+    private static float formantCorr(float f, float F, float B) {
+        double wB = Math.PI * B;
+        double w  = 2.0 * Math.PI * f;
+        double wF = 2.0 * Math.PI * F;
+        double num1 = wB * wB + (w - wF) * (w - wF);
+        double num2 = wB * wB + (w + wF) * (w + wF);
+        double den  = wB * wB + wF * wF;
+        double c = 10.0 * Math.log10(num1 * num2 / (den * den));
+        if (c >  20.0) c =  20.0;
+        if (c < -20.0) c = -20.0;
+        return (float) c;
+    }
+
+    // Estimate formants from the current yinBuf via the same pipeline
+    // as the formant-tracker plugin: pre-emphasis → 5 kHz anti-alias →
+    // decimate /4 → WLP(14) (autocorr+Levinson fallback) → Durand-Kerner
+    // roots.  Fills fmtF/fmtB ascending and returns the count.
+    private int estimateFormants() {
+        if (aaCoefs == null) aaCoefs = lowPassBiquad(5000f, 0.707f, sampleRate);
+        float prev = 0f;
+        double energy = 0;
+        for (int i = 0; i < FFT_N; i++) {
+            float v = yinBuf[i] - 0.97f * prev;
+            prev = yinBuf[i];
+            fmtScratch[i] = v;
+            energy += v * v;
+        }
+        if (Math.sqrt(energy / FFT_N) < 1e-4) return 0;
+        float s1a = 0f, s1b = 0f, s1c = 0f, s1d = 0f;
+        float s2a = 0f, s2b = 0f, s2c = 0f, s2d = 0f;
+        for (int i = 0; i < FFT_N; i++) {
+            float x = fmtScratch[i];
+            float y1 = aaCoefs[0] * x + aaCoefs[1] * s1a + aaCoefs[2] * s1b
+                     - aaCoefs[3] * s1c - aaCoefs[4] * s1d;
+            s1b = s1a; s1a = x; s1d = s1c; s1c = y1;
+            float y2 = aaCoefs[0] * y1 + aaCoefs[1] * s2a + aaCoefs[2] * s2b
+                     - aaCoefs[3] * s2c - aaCoefs[4] * s2d;
+            s2b = s2a; s2a = y1; s2d = s2c; s2c = y2;
+            fmtScratch[i] = y2;
+        }
+        for (int i = 0; i < FMT_DECN; i++) {
+            float w = (float)(0.5 - 0.5 * Math.cos(2 * Math.PI * i / (FMT_DECN - 1)));
+            fmtDec[i] = fmtScratch[i * FMT_DEC] * w;
+        }
+        if (!wlp(fmtDec, FMT_DECN, FMT_ORDER, FMT_ORDER, fmtA)) {
+            for (int k = 0; k <= FMT_ORDER; k++) {
+                float sum = 0f;
+                for (int i = k; i < FMT_DECN; i++) sum += fmtDec[i] * fmtDec[i - k];
+                fmtR[k] = sum;
+            }
+            if (fmtR[0] < 1e-9f) return 0;
+            float[] a = new float[FMT_ORDER + 1];
+            float[] aPrev = new float[FMT_ORDER + 1];
+            float Eerr = fmtR[0];
+            a[0] = 1f;
+            for (int p = 1; p <= FMT_ORDER; p++) {
+                float k = -fmtR[p];
+                for (int j = 1; j < p; j++) k -= a[j] * fmtR[p - j];
+                k /= Eerr;
+                if (k > 0.99f) k = 0.99f; if (k < -0.99f) k = -0.99f;
+                System.arraycopy(a, 0, aPrev, 0, p);
+                a[p] = k;
+                for (int j = 1; j < p; j++) a[j] = aPrev[j] + k * aPrev[p - j];
+                Eerr *= 1f - k * k;
+                if (Eerr < 1e-9f) Eerr = 1e-9f;
+            }
+            System.arraycopy(a, 0, fmtA, 0, FMT_ORDER + 1);
+        }
+        float decSr = sampleRate / (float) FMT_DEC;
+        return formantRoots(fmtA, FMT_ORDER, decSr, fmtF, fmtB);
+    }
+
+    // Weighted Linear Prediction via the covariance normal equations.
+    // W[n] is the short-time energy of the previous M samples, so the
+    // fit weights the glottal closed phase.  Returns false (caller
+    // falls back to autocorrelation) when the p×p system is singular.
+    private boolean wlp(float[] x, int N, int p, int M, float[] aOut) {
+        int n0 = Math.max(p, M);
+        if (N <= n0 + 2) return false;
+        double[][] C = new double[p][p];
+        double[] b = new double[p];
+        for (int n = n0; n < N; n++) {
+            double w = 0;
+            for (int k = 1; k <= M; k++) { double v = x[n - k]; w += v * v; }
+            if (w <= 0) continue;
+            double xn = x[n];
+            for (int i = 1; i <= p; i++) {
+                double xi = w * x[n - i];
+                b[i - 1] -= xi * xn;
+                for (int j = i; j <= p; j++) C[i - 1][j - 1] += xi * x[n - j];
+            }
+        }
+        for (int i = 0; i < p; i++)
+            for (int j = 0; j < i; j++) C[i][j] = C[j][i];
+        double[] sol = new double[p];
+        if (!solveLinear(C, b, p, sol)) return false;
+        aOut[0] = 1f;
+        for (int i = 0; i < p; i++) aOut[i + 1] = (float) sol[i];
+        return true;
+    }
+
+    // Gaussian elimination with partial pivoting, solves A·out = b.
+    private boolean solveLinear(double[][] A, double[] b, int n, double[] out) {
+        double[][] M = new double[n][n + 1];
+        for (int i = 0; i < n; i++) {
+            System.arraycopy(A[i], 0, M[i], 0, n);
+            M[i][n] = b[i];
+        }
+        for (int col = 0; col < n; col++) {
+            int piv = col;
+            for (int r = col + 1; r < n; r++)
+                if (Math.abs(M[r][col]) > Math.abs(M[piv][col])) piv = r;
+            if (Math.abs(M[piv][col]) < 1e-12) return false;
+            double[] tmp = M[col]; M[col] = M[piv]; M[piv] = tmp;
+            for (int r = 0; r < n; r++) {
+                if (r == col) continue;
+                double f = M[r][col] / M[col][col];
+                for (int c = col; c <= n; c++) M[r][c] -= f * M[col][c];
+            }
+        }
+        for (int i = 0; i < n; i++) out[i] = M[i][n] / M[i][i];
+        return true;
+    }
+
+    // Durand-Kerner (Weierstrass) — all p complex roots of the monic
+    // polynomial.  Each root with positive imaginary part, inside the
+    // unit circle (outside roots reflected in), becomes a formant.
+    // Fills outF/outBw ascending by frequency; returns the count.
+    private int formantRoots(float[] a, int p, float decSr,
+                             float[] outF, float[] outBw) {
+        double zr = 1, zi = 0;                 // seed (0.4+0.9i)^i
+        for (int i = 0; i < p; i++) {
+            fmtRootRe[i] = zr; fmtRootIm[i] = zi;
+            double nr = zr * 0.4 - zi * 0.9, ni = zr * 0.9 + zi * 0.4;
+            zr = nr; zi = ni;
+        }
+        for (int it = 0; it < 80; it++) {
+            double maxd = 0;
+            for (int i = 0; i < p; i++) {
+                double pr = 1, pi = 0;         // P(z) via Horner
+                for (int k = 1; k <= p; k++) {
+                    double nr = pr * fmtRootRe[i] - pi * fmtRootIm[i] + a[k];
+                    double ni = pr * fmtRootIm[i] + pi * fmtRootRe[i];
+                    pr = nr; pi = ni;
+                }
+                double dr = 1, di = 0;         // Π_{j≠i}(z_i − z_j)
+                for (int j = 0; j < p; j++) {
+                    if (j == i) continue;
+                    double ar = fmtRootRe[i] - fmtRootRe[j], ai = fmtRootIm[i] - fmtRootIm[j];
+                    double nr = dr * ar - di * ai, ni = dr * ai + di * ar;
+                    dr = nr; di = ni;
+                }
+                double den = dr * dr + di * di;
+                if (den < 1e-30) continue;
+                double qr = (pr * dr + pi * di) / den;
+                double qi = (pi * dr - pr * di) / den;
+                fmtRootRe[i] -= qr; fmtRootIm[i] -= qi;
+                maxd = Math.max(maxd, Math.abs(qr) + Math.abs(qi));
+            }
+            if (maxd < 1e-10) break;
+        }
+        int n = 0;
+        for (int i = 0; i < p && n < outF.length; i++) {
+            if (fmtRootIm[i] < 0) continue;    // one of each conjugate pair
+            double rr = fmtRootRe[i], ii = fmtRootIm[i];
+            double r = Math.hypot(rr, ii);
+            if (r >= 1) { rr /= r * r; ii /= r * r; r = 1 / r; }   // reflect inside
+            if (r <= 0 || r >= 1) continue;
+            double th = Math.atan2(ii, rr);
+            if (th < 0) th += 2 * Math.PI;
+            float f  = (float) (th * decSr / (2 * Math.PI));
+            float bw = (float) (-Math.log(r) * decSr / Math.PI);
+            if (f < 90f || f > 5500f || bw > 700f) continue;
+            outF[n] = f; outBw[n] = bw; n++;
+        }
+        for (int i = 1; i < n; i++) {          // insertion sort ascending
+            float kf = outF[i], kbw = outBw[i];
+            int j = i - 1;
+            while (j >= 0 && outF[j] > kf) {
+                outF[j + 1] = outF[j]; outBw[j + 1] = outBw[j]; j--;
+            }
+            outF[j + 1] = kf; outBw[j + 1] = kbw;
+        }
+        return n;
+    }
+
+    // RBJ-cookbook low-pass biquad, normalised to a0=1 form.
+    private static float[] lowPassBiquad(float fc, float q, int sr) {
+        double w = 2.0 * Math.PI * fc / sr;
+        double cs = Math.cos(w), sn = Math.sin(w);
+        double alpha = sn / (2.0 * q);
+        double a0 = 1 + alpha;
+        return new float[] {
+            (float)((1 - cs) * 0.5 / a0),
+            (float)((1 - cs)        / a0),
+            (float)((1 - cs) * 0.5 / a0),
+            (float)(-2 * cs        / a0),
+            (float)((1 - alpha)    / a0),
+        };
     }
 
     // In-place radix-2 Cooley-Tukey FFT.
@@ -366,7 +609,7 @@ public final class RegisterDetector
         textBright.setColor(COLOR_TEXT_BRIGHT).setTextSize(12f).setTextAlign(0);
         canvas.drawText("REGISTER DETECTOR", 12f, 16f, textBright);
         textDim.setColor(COLOR_TEXT_DIM).setTextSize(9f).setTextAlign(2);
-        canvas.drawText("pro: H1-H2 + H1-A3 + HRF + SPR + OQ", W - 12f, 16f, textDim);
+        canvas.drawText("pro: H1*-H2* + H1-A3 + HRF + SPR", W - 12f, 16f, textDim);
 
         // Big register label on the left.
         String big = bestIdx >= 0 ? REG[bestIdx] : "-";
@@ -381,7 +624,7 @@ public final class RegisterDetector
         drawStat(canvas, panelX, panelY0 + 0 * lineH,
                 "f0",     String.format("%.0f Hz", currentFreq));
         drawStat(canvas, panelX, panelY0 + 1 * lineH,
-                "H1-H2",  String.format("%+.1f dB", h1h2));
+                "H1*-H2*", String.format("%+.1f dB", h1h2));
         drawStat(canvas, panelX, panelY0 + 2 * lineH,
                 "H1-A3",  String.format("%+.1f dB", h1a3));
         drawStat(canvas, panelX, panelY0 + 3 * lineH,

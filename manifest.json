@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-28T23:46:22.419Z",
+  "generatedAt": "2026-05-29T00:00:45.394Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -2339,8 +2339,8 @@
       "name": "Register Detector",
       "author": "Vocal Monitor",
       "category": "Vocal Analysis",
-      "description": "Estimates which vocal register the singer is in: chest, mix, head, falsetto, or belt. Based on pitch, spectral slope, harmonic richness and the singer's-formant cluster ratio. Useful for training — see whether a high note actually stays in mix or slips into falsetto.",
-      "version": "1.0.0",
+      "description": "Estimates which vocal register the singer is in: chest, mix, head, falsetto, or belt. Classifies from f0, formant-corrected H1*-H2* (Iseli-Alwan), spectral tilt (H1-A3), harmonic richness (HRF) and the singer's power ratio (SPR). Useful for training — see whether a high note actually stays in mix or slips into falsetto.",
+      "version": "2.0.0",
       "tags": [
         "vocal-analysis",
         "register",
@@ -2350,7 +2350,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/register-detector/register-detector.dex",
-      "sizeBytes": 10008,
+      "sizeBytes": 13916,
       "className": "com.vocalmonitor.plugin.community.RegisterDetector",
       "ui_kind": "canvas",
       "ui": {
