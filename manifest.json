@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-29T11:11:59.219Z",
+  "generatedAt": "2026-05-29T12:15:28.789Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -2426,6 +2426,41 @@
       },
       "streams": [
         "waveform"
+      ]
+    },
+    {
+      "id": "technique-detector",
+      "name": "Technique Detector",
+      "author": "Vocal Monitor",
+      "category": "Vocal Analysis",
+      "description": "Detects expressive vocal techniques live as independent yes/no signals — several can be true at once. Trained on GTSinger's phoneme-level technique annotations over the same acoustic features as the Register Detector: formant-corrected H1*-H2*, spectral tilt (H1-A3), harmonic richness (HRF) and the singer's power ratio (SPR). Tells you when the tone goes breathy or pulls into bright pharyngeal twang.",
+      "version": "1.0.0",
+      "tags": [
+        "vocal-analysis",
+        "technique",
+        "voice",
+        "training",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/technique-detector/technique-detector.dex",
+      "sizeBytes": 14388,
+      "className": "com.vocalmonitor.plugin.community.TechniqueDetector",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "16:9",
+        "min_height_dp": 200
+      },
+      "streams": [
+        "waveform"
+      ],
+      "assets": [
+        {
+          "name": "technique.onnx",
+          "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/technique-detector/technique.onnx",
+          "sizeBytes": 3286,
+          "sha256": "a56098cce65ca914f91eea7a5447a2179ba8b97aecb1b20420dd45b213d33d95"
+        }
       ]
     },
     {
