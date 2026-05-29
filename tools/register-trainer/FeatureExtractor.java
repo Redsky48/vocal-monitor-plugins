@@ -36,16 +36,6 @@ import java.util.Locale;
  */
 public final class FeatureExtractor {
 
-    // Technique tokens that appear in VocalSet filenames / paths. Lower-
-    // cased substring match. Order matters only for disambiguation —
-    // longer / more specific tokens first.
-    private static final String[] TECHNIQUES = {
-        "vocal_fry", "lip_trill", "fast_forte", "fast_piano", "slow_forte",
-        "slow_piano", "long_tones", "messa", "arpeggios", "scales",
-        "vibrato", "straight", "breathy", "belt", "trillo", "trill",
-        "inhaled", "spoken", "forte", "piano",
-    };
-
     public static void main(String[] args) throws Exception {
         if (args.length < 2) {
             System.err.println("usage: FeatureExtractor <vocalset-root> <out.csv> [hop] [maxFramesPerFile]");
@@ -148,12 +138,14 @@ public final class FeatureExtractor {
         return "unknown";
     }
 
+    // VocalSet layout is singer/exercise/technique/file.wav, so the WAV's
+    // immediate parent directory IS the phonation technique. Normalise the
+    // dataset's "vibrado" typo so those frames count as vibrato.
     private static String parseTechnique(File wav) {
-        String hay = wav.getAbsolutePath().toLowerCase(Locale.US).replace('\\', '/');
-        for (String t : TECHNIQUES) {
-            if (hay.contains(t)) return t;
-        }
-        return "other";
+        File parent = wav.getParentFile();
+        if (parent == null) return "other";
+        String t = parent.getName().toLowerCase(Locale.US);
+        return t.equals("vibrado") ? "vibrato" : t;
     }
 
     // ── Minimal WAV decode → mono float[] in [-1, 1] at native SR ──

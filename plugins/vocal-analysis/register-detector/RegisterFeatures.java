@@ -209,8 +209,15 @@ public final class RegisterFeatures {
         }
         float y1 = magDb[k - 1], y2 = magDb[k], y3 = magDb[k + 1];
         float denom = (y1 - 2f * y2 + y3);
-        if (Math.abs(denom) < 1e-6f) return y2;
+        // Parabolic refinement is only valid at a concave peak (denom < 0).
+        // A requested harmonic that lands in a spectral valley has denom >= 0,
+        // where the vertex formula extrapolates upward without bound and
+        // produces absurd dB (which then blows H1*-H2* and HRF to ±1e5/-Inf).
+        // Fall back to the bin magnitude there, and clamp the offset to a
+        // half-bin so even at a peak the result stays physically bounded.
+        if (denom > -1e-6f) return y2;
         float p = 0.5f * (y1 - y3) / denom;
+        if (p < -0.5f) p = -0.5f; else if (p > 0.5f) p = 0.5f;
         return y2 - 0.25f * (y1 - y3) * p;
     }
 

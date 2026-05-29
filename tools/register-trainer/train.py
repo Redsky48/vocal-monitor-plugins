@@ -31,13 +31,13 @@ CLASSES = ["CHEST", "MIX", "HEAD", "FALSETTO", "BELT"]
 FEATURES = ["f0", "h1h2", "h1a3", "hrf", "spr"]
 
 # Techniques that are clean, sustained, register-revealing phonation.
-# Everything else (vocal_fry, lip_trill, trill, trillo, inhaled, spoken)
-# is dropped — those frames don't represent a steady register.
+# These are VocalSet's technique-dir names (FeatureExtractor reads the WAV's
+# parent dir). Everything else (vocal_fry, lip_trill, trill, trillo, inhaled,
+# spoken) is dropped — those frames don't represent a steady register.
 KEEP_TECHNIQUES = {
     "straight", "vibrato", "belt", "breathy", "messa",
-    "forte", "piano", "slow_forte", "slow_piano",
-    "fast_forte", "fast_piano", "long_tones", "scales", "arpeggios",
-    "other",
+    "forte", "pp", "slow_forte", "slow_piano",
+    "fast_forte", "fast_piano",
 }
 
 
@@ -99,12 +99,21 @@ def main():
     for i, c in enumerate(CLASSES):
         print(f"  {c:9s} {int((df['label'] == i).sum())}")
 
+    # Drop any frame with a non-finite feature before standardising — a
+    # single inf/NaN poisons the column mean/std and collapses the model to
+    # one class. The DSP shouldn't emit these, but guard anyway.
+    finite = np.isfinite(df[FEATURES].to_numpy(dtype=np.float64)).all(axis=1)
+    dropped = int((~finite).sum())
+    if dropped:
+        print(f"dropping {dropped} frames with non-finite features")
+        df = df[finite].copy()
+
     X = df[FEATURES].to_numpy(dtype=np.float32)
     y = df["label"].to_numpy(dtype=np.int64)
 
     # Split by SINGER so the val set measures generalisation to unseen
     # voices, not just unseen frames of a singer the model memorised.
-    singers = df["singer"].unique()
+    singers = np.asarray(df["singer"].unique(), dtype=object)
     rng = np.random.default_rng(0)
     rng.shuffle(singers)
     n_val = max(1, len(singers) // 5)
@@ -177,11 +186,15 @@ def main():
     print(confusion_matrix(yva, pred, labels=list(range(len(CLASSES)))))
 
     dummy = torch.zeros(1, 5, dtype=torch.float32)
+    # dynamo=False keeps the stable TorchScript exporter, which honours
+    # opset_version + dynamic_axes and (unlike the newer dynamo path) prints
+    # no emoji that a Windows cp1252 console can't encode.
     torch.onnx.export(
         model, dummy, onnx_path,
         input_names=["input"], output_names=["logits"],
         dynamic_axes={"input": {0: "batch"}, "logits": {0: "batch"}},
         opset_version=13,
+        dynamo=False,
     )
     print(f"exported {onnx_path}")
     print("Next: copy register.onnx into the plugin folder and add it to "
