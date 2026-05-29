@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-29T00:01:29.514Z",
+  "generatedAt": "2026-05-29T00:36:43.033Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -524,22 +524,26 @@
         {
           "name": "bird.svg",
           "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/angry-chirp/assets/bird.svg",
-          "sizeBytes": 1843
+          "sizeBytes": 1843,
+          "sha256": "3f32cd2f57bbf3adf151928163bd5df2d8e0a267d002a51786ad64698b3167ed"
         },
         {
           "name": "pipe-top.svg",
           "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/angry-chirp/assets/pipe-top.svg",
-          "sizeBytes": 961
+          "sizeBytes": 961,
+          "sha256": "403289e1dfdb9be0dd76278090a50cf24bcd481226983e208e1508d2be726f1a"
         },
         {
           "name": "pipe-bottom.svg",
           "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/angry-chirp/assets/pipe-bottom.svg",
-          "sizeBytes": 851
+          "sizeBytes": 851,
+          "sha256": "fcce60060564aa0d513fa93dca7cca4422c03462a422ca3e9e134222671b2c7c"
         },
         {
           "name": "cloud.svg",
           "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/angry-chirp/assets/cloud.svg",
-          "sizeBytes": 488
+          "sizeBytes": 488,
+          "sha256": "bd66402ce0dceb9d36a415b71dde97b7936e75abfd78c3fc2b7bda995f88f7a1"
         }
       ]
     },
@@ -2143,7 +2147,8 @@
         {
           "name": "bird.svg",
           "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/visual/svg-demo/assets/bird.svg",
-          "sizeBytes": 808
+          "sizeBytes": 808,
+          "sha256": "8dbb2c7585ec9d21b1305619d1f37b731300a2a5843f4e8acb46af1de6a3aa21"
         }
       ]
     },

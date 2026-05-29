@@ -49,6 +49,32 @@ public interface PluginHost {
     default String loadAssetText(String name) { return null; }
 
     /**
+     * Read a binary asset shipped alongside the plugin.  Same resolution
+     * rules as {@link #loadAssetText} — the file is declared in
+     * {@code plugin.json}'s {@code "assets"} array and fetched / cached by
+     * the host.  Returns {@code null} when the host doesn't ship assets,
+     * the file is missing, or the plugin was authored against an older
+     * host.  Use this for non-text resources such as ONNX models, PNG
+     * sprites, or lookup tables.
+     */
+    default byte[] loadAssetBytes(String name) { return null; }
+
+    /**
+     * Load an ONNX model shipped as a plugin asset and return a ready
+     * {@link InferenceSession}.  {@code assetName} must match an entry in
+     * {@code plugin.json}'s {@code "assets"} array (e.g.
+     * {@code "register-net.onnx"}).  The host owns the inference runtime
+     * and caches one session per (plugin, asset), so calling this repeatedly
+     * with the same name is cheap and returns the same underlying session.
+     *
+     * <p>Returns {@code null} when the host has no inference runtime, the
+     * asset is missing / not a valid model, or the plugin runs on an older
+     * host.  Plugins MUST null-check and fall back to a non-ML path — this
+     * is what keeps an ML plugin loadable (degraded) on any host.
+     */
+    default InferenceSession loadModel(String assetName) { return null; }
+
+    /**
      * Sound a continuous reference tone through the host's audio output.
      * For ear-training / interval / pitch-match plugins that need to
      * <em>play</em> a note for the singer to match. {@code freqHz <= 0}

@@ -8,6 +8,7 @@
 import { readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PLUGINS_DIR = join(ROOT, 'plugins');
@@ -132,21 +133,27 @@ async function readPlugin(categoryDir, pluginDir, cfg) {
       const candidates = [a, `assets/${a}`];
       let resolved = null;
       let sizeBytes = 0;
+      let abs = null;
       for (const c of candidates) {
         const candidate = join(folder, c);
         try {
           const st = await stat(candidate);
-          if (st.isFile()) { resolved = c; sizeBytes = st.size; break; }
+          if (st.isFile()) { resolved = c; sizeBytes = st.size; abs = candidate; break; }
         } catch { /* try next */ }
       }
       if (resolved == null) {
         throw new Error(`${categoryDir}/${pluginDir}/plugin.json: declared asset "${a}" not found ` +
           `(looked in plugin folder and in assets/)`);
       }
+      // sha256 of the asset bytes, baked into the (signed) manifest so the
+      // host can verify the downloaded file's integrity — important for
+      // binary assets like ONNX models served from a CDN.
+      const sha256 = createHash('sha256').update(await readFile(abs)).digest('hex');
       assets.push({
         name: a,
         source: `https://raw.githubusercontent.com/${cfg.repository}/${cfg.branch}/plugins/${categoryDir}/${pluginDir}/${resolved}`,
         sizeBytes,
+        sha256,
       });
     }
     if (assets.length > 0) entry.assets = assets;
