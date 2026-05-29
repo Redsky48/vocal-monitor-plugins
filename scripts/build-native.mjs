@@ -121,6 +121,13 @@ async function compileOne(category, name, meta) {
     ? await collectJava(GAMEKIT_DIR)
     : [];
 
+  // Compile EVERY .java in the plugin folder, not just <ClassName>.java,
+  // so a plugin can split helper classes into sibling files (e.g.
+  // register-detector ships RegisterFeatures.java alongside the main
+  // class). They all dex into the one <id>.dex. Asset subdirs hold no
+  // .java so they're naturally skipped by collectJava.
+  const pluginSources = await collectJava(folder);
+
   // 1. javac to .class.
   const classOut = join(BUILD_DIR, name);
   await rm(classOut, { recursive: true, force: true });
@@ -131,7 +138,7 @@ async function compileOne(category, name, meta) {
     '-encoding', 'utf-8',
     '-cp', stubCp,
     '-d', classOut,
-    javaSrc,
+    ...pluginSources,
     ...gamekitSources,
   ]);
   if (r1.code !== 0) throw new Error(`javac failed:\n${r1.err || r1.out}`);
