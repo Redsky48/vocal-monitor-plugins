@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-29T01:42:06.917Z",
+  "generatedAt": "2026-05-29T11:09:45.878Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -2345,7 +2345,7 @@
       "author": "Vocal Monitor",
       "category": "Vocal Analysis",
       "description": "Estimates which vocal register the singer is in: chest, mix, head, falsetto, or belt. Classifies from f0, formant-corrected H1*-H2* (Iseli-Alwan), spectral tilt (H1-A3), harmonic richness (HRF) and the singer's power ratio (SPR). Useful for training — see whether a high note actually stays in mix or slips into falsetto.",
-      "version": "2.1.0",
+      "version": "2.2.0",
       "tags": [
         "vocal-analysis",
         "register",
@@ -2370,7 +2370,7 @@
           "name": "register.onnx",
           "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/vocal-analysis/register-detector/register.onnx",
           "sizeBytes": 3490,
-          "sha256": "ae24813e1313a7431649648e261c21a7aa081963cf22d16ee24c85c7b778f264"
+          "sha256": "392bb668d294ba861460b4b1a1b67ce1ee36ffd1e0796d65d3bfe0032f560c43"
         }
       ]
     },

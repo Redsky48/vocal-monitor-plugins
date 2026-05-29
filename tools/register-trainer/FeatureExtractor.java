@@ -5,8 +5,10 @@ import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.FileOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -18,7 +20,12 @@ import java.util.Locale;
  * {@link RegisterFeatures} code the phone uses on overlapping FFT_N
  * windows. Each voiced frame becomes one CSV row:
  *
- *   file,singer,technique,sr,f0,h1h2,h1a3,hrf,spr,oq
+ *   file,singer,technique,sr,t,f0,h1h2,h1a3,hrf,spr,oq
+ *
+ * `file` is the WAV path RELATIVE to the dataset root (forward slashes) and
+ * `t` is the frame-centre time in seconds. Both exist so a labeller that
+ * lives outside VocalSet (e.g. the GTSinger JSON join) can map each frame
+ * back to its source file and the technique/note interval covering it.
  *
  * Crucial: this links against the plugin's own RegisterFeatures.java
  * (compiled together — see README), so the feature vector here is
@@ -60,8 +67,12 @@ public final class FeatureExtractor {
         long totalRows = 0;
         int fileNo = 0;
 
-        try (BufferedWriter w = new BufferedWriter(new FileWriter(outFile))) {
-            w.write("file,singer,technique,sr,f0,h1h2,h1a3,hrf,spr,oq\n");
+        // Write UTF-8 explicitly: relative paths can carry accented song
+        // titles (DE/FR/IT/ES), and the default platform charset (cp1252 on
+        // Windows) would otherwise make the CSV non-portable to UTF-8 readers.
+        try (BufferedWriter w = new BufferedWriter(new OutputStreamWriter(
+                new FileOutputStream(outFile), StandardCharsets.UTF_8))) {
+            w.write("file,singer,technique,sr,t,f0,h1h2,h1a3,hrf,spr,oq\n");
             for (File wav : wavs) {
                 fileNo++;
                 float[] mono;
@@ -78,16 +89,18 @@ public final class FeatureExtractor {
 
                 String singer = parseSinger(wav, root);
                 String technique = parseTechnique(wav);
-                String fileTag = wav.getName().replace(",", "_");
+                String fileTag = relPath(wav, root).replace(",", "_");
 
                 int framesThisFile = 0;
                 for (int start = 0; start + FFT_N <= mono.length; start += hop) {
                     System.arraycopy(mono, start, frame, 0, FFT_N);
                     if (!feat.analyse(frame, sr)) continue;
+                    double tSec = (start + FFT_N / 2.0) / sr;
                     w.write(fileTag); w.write(',');
                     w.write(singer); w.write(',');
                     w.write(technique); w.write(',');
                     w.write(Integer.toString(sr)); w.write(',');
+                    w.write(fmt((float) tSec)); w.write(',');
                     w.write(fmt(feat.f0));   w.write(',');
                     w.write(fmt(feat.h1h2)); w.write(',');
                     w.write(fmt(feat.h1a3)); w.write(',');
@@ -110,6 +123,17 @@ public final class FeatureExtractor {
 
     private static String fmt(float v) {
         return String.format(Locale.US, "%.5g", v);
+    }
+
+    // WAV path relative to the dataset root, forward-slashed, so an external
+    // labeller can locate the sibling annotation file (e.g. GTSinger's .json).
+    private static String relPath(File wav, File root) {
+        String wp = wav.getAbsolutePath();
+        String rp = root.getAbsolutePath();
+        String rel = wp.length() > rp.length() ? wp.substring(rp.length()) : wp;
+        rel = rel.replace('\\', '/');
+        while (rel.startsWith("/")) rel = rel.substring(1);
+        return rel;
     }
 
     private static void collectWavs(File dir, List<File> out) {

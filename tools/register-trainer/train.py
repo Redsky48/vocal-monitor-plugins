@@ -20,7 +20,13 @@ Pipeline:
 Requirements:  pip install torch numpy pandas scikit-learn
 
 Usage:
-  python train.py features.csv register.onnx
+  python train.py features.csv register.onnx [--extra labeled.csv ...]
+
+  --extra points at a STRONGLY-labelled CSV (singer,reg,f0,h1h2,h1a3,hrf,spr)
+  such as the one gtsinger_label.py emits. Those rows skip the weak VocalSet
+  tercile heuristic — their `reg` is the ground-truth class — and are
+  concatenated in before the singer split, so held-out validation still
+  measures generalisation to unseen voices across BOTH datasets.
 """
 import sys
 import numpy as np
@@ -81,20 +87,40 @@ def assign_labels(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def main():
-    if len(sys.argv) < 3:
-        print("usage: train.py features.csv register.onnx", file=sys.stderr)
+    args = sys.argv[1:]
+    extras = []
+    while "--extra" in args:
+        i = args.index("--extra")
+        extras.append(args[i + 1])
+        del args[i:i + 2]
+    if len(args) < 2:
+        print("usage: train.py features.csv register.onnx [--extra labeled.csv ...]",
+              file=sys.stderr)
         sys.exit(2)
-    csv_path, onnx_path = sys.argv[1], sys.argv[2]
+    csv_path, onnx_path = args[0], args[1]
 
     import torch
     import torch.nn as nn
     from sklearn.model_selection import train_test_split
     from sklearn.metrics import classification_report, confusion_matrix
 
-    df = pd.read_csv(csv_path)
-    print(f"loaded {len(df)} rows, {df['singer'].nunique()} singers, "
-          f"{df['technique'].nunique()} techniques")
-    df = assign_labels(df)
+    raw = pd.read_csv(csv_path)
+    print(f"loaded {len(raw)} VocalSet rows, {raw['singer'].nunique()} singers, "
+          f"{raw['technique'].nunique()} techniques")
+    df = assign_labels(raw)[["singer", "label"] + FEATURES].copy()
+
+    # Strongly-labelled extras (e.g. GTSinger): reg name -> class index, then
+    # concatenate. These carry their own singer ids that don't collide with
+    # VocalSet's m1/f1, so the singer split holds out voices from both sets.
+    cls_idx = {c: i for i, c in enumerate(CLASSES)}
+    for path in extras:
+        ex = pd.read_csv(path)
+        ex = ex[ex["reg"].isin(cls_idx)].copy()
+        ex["label"] = ex["reg"].map(cls_idx).astype(int)
+        df = pd.concat([df, ex[["singer", "label"] + FEATURES]],
+                       ignore_index=True)
+        print(f"merged {len(ex)} labelled rows from {path}")
+
     print("label distribution:")
     for i, c in enumerate(CLASSES):
         print(f"  {c:9s} {int((df['label'] == i).sum())}")
@@ -144,9 +170,18 @@ def main():
     model = Net(mean, std)
 
     # Class-weighted loss to counter the chest/mix/head/belt imbalance.
+    # SQRT of inverse frequency, not raw inverse: full inverse weighting
+    # over-boosts the tiny BELT class and crushes the huge MIX class so
+    # hard the model almost never predicts MIX (recall collapses). The
+    # square root keeps a corrective tilt toward minorities while leaving
+    # the dominant classes learnable.
+    # Exponent 0.7 sits between full inverse (1.0, which starves MIX) and
+    # plain sqrt (0.5, which under-weights BELT until the model stops
+    # predicting it) — the balance that keeps MIX recall high without
+    # collapsing the tiny BELT class.
     counts = np.bincount(ytr, minlength=len(CLASSES)).astype(np.float32)
-    weights = torch.tensor(counts.sum() / (len(CLASSES) * np.maximum(counts, 1)),
-                           dtype=torch.float32)
+    inv = counts.sum() / (len(CLASSES) * np.maximum(counts, 1))
+    weights = torch.tensor(np.power(inv, 0.7), dtype=torch.float32)
     loss_fn = nn.CrossEntropyLoss(weight=weights)
     opt = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)
 
