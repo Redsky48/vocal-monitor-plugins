@@ -1,0 +1,14 @@
+{
+  "id": "passaggio-coach",
+  "name": "Passaggio Coach",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "Coaches the hardest move in singing: the chest-to-head 'gear change' through the passaggio. It runs the same register MLP as the Register Detector, collapses the chest/mix/head estimate to a single register coordinate, and draws the live path of your crossover as you sing through the break. A blend score rewards riding mixed voice through the middle and flags abrupt flips or voicing cracks — so you can see, not just feel, whether the transition is seamless.",
+  "tags": ["vocal-analysis", "passaggio", "register", "mix", "training", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.PassaggioCoach",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "16:9", "min_height_dp": 220 },
+  "streams": ["waveform"],
+  "assets": ["register.onnx"]
+}
