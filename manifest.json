@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-29T12:19:46.835Z",
+  "generatedAt": "2026-05-30T07:27:11.378Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -761,6 +761,37 @@
       "ui": {
         "aspect": "16:9",
         "min_height_dp": 320
+      },
+      "streams": [
+        "waveform"
+      ],
+      "fullscreen": true
+    },
+    {
+      "id": "vowel-snake",
+      "name": "Vowel Snake",
+      "author": "Vocal Monitor",
+      "category": "Entertainment",
+      "description": "Sing the snake around the board. Five sung vowels steer it — I = up, A = down, E = left, U = right — and O is the extra action: hold it for a burst of boost that drains a meter and recharges when you rest. Vowels are detected live from your mic by the same formant analysis (weighted LPC + root finding) the Formant Tracker uses, so clean, sustained vowel targets win — a real articulation workout disguised as a game. Pure DSP, no model.",
+      "version": "1.0.0",
+      "tags": [
+        "entertainment",
+        "game",
+        "snake",
+        "vowel",
+        "formant",
+        "voice-control",
+        "fullscreen",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/vowel-snake/vowel-snake.dex",
+      "sizeBytes": 61232,
+      "className": "com.vocalmonitor.plugin.community.VowelSnake",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "3:4",
+        "min_height_dp": 460
       },
       "streams": [
         "waveform"
