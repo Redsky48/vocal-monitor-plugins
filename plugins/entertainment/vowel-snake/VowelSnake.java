@@ -134,11 +134,13 @@ public final class VowelSnake extends GamePluginBase {
 
     // ─── Board layout ───
     private float boardX0, boardY0, cellPx;
-    private static final float HUD_TOP = 44f, LEGEND_BOT = 26f;
+    // Top HUD strip + bottom control-map band (the compass of vowel→direction
+    // buttons lives in the band so it never overlaps the play field).
+    private static final float HUD_TOP = 44f, CTRL_BAND = 110f;
 
     private void layout(int width, int height) {
         float availW = width - 8f;
-        float availH = height - HUD_TOP - LEGEND_BOT;
+        float availH = height - HUD_TOP - CTRL_BAND;
         if (availH < 40f) availH = height * 0.7f;
         int targetCell = 24;
         int nc = Math.max(8, (int) (availW / targetCell));
@@ -232,10 +234,10 @@ public final class VowelSnake extends GamePluginBase {
     private void requestDir(int vowel) {
         int dir;
         switch (vowel) {
-            case V_I: dir = UP;    break;
-            case V_A: dir = DOWN;  break;
-            case V_E: dir = LEFT;  break;
-            case V_U: dir = RIGHT; break;
+            case V_A: dir = LEFT;  break;
+            case V_E: dir = RIGHT; break;
+            case V_U: dir = UP;    break;
+            case V_I: dir = DOWN;  break;
             default: return;             // O or none
         }
         // Reject a 180° reversal against the *current* heading.
@@ -649,10 +651,10 @@ public final class VowelSnake extends GamePluginBase {
         }
 
         drawHud(canvas, W);
-        drawLegend(canvas, W, H);
+        drawControlMap(canvas, W, H);
 
         if (state == READY) drawCenter(canvas, W, H, "VOWEL SNAKE",
-                "Sing  I↑  A↓  E←  U→   •   O = boost", COL_HEAD);
+                "sing a vowel to start", COL_HEAD);
         else if (state == OVER) drawCenter(canvas, W, H, "GAME OVER",
                 "score " + score + "   •   sing or tap to retry", COL_FOOD);
     }
@@ -699,28 +701,100 @@ public final class VowelSnake extends GamePluginBase {
 
     private int vowelDir(int vowel) {
         switch (vowel) {
-            case V_I: return UP;
-            case V_A: return DOWN;
-            case V_E: return LEFT;
-            default:  return RIGHT; // V_U
+            case V_U: return UP;
+            case V_I: return DOWN;
+            case V_A: return LEFT;
+            default:  return RIGHT; // V_E
         }
     }
 
-    private void drawLegend(PluginCanvas canvas, float W, float H) {
-        String[] parts = { "I up", "A dn", "E lf", "U rt", "O boost" };
-        int[] idx = { V_I, V_A, V_E, V_U, V_O };
-        float total = W - 16f;
-        float seg = total / parts.length;
-        for (int i = 0; i < parts.length; i++) {
-            txtDim.setColor(VOW_COL[idx[i]]).setTextSize(9f).setTextAlign(1);
-            canvas.drawText(parts[i], 8f + seg * (i + 0.5f), H - 8f, txtDim);
+    // Compass control map: the five vowel "buttons" arranged like a D-pad so
+    // it's instantly readable — U on top, I on bottom, A left, E right, and O
+    // (boost) in the centre. The button for the vowel you're singing lights up.
+    private void drawControlMap(PluginCanvas canvas, float W, float H) {
+        float bandTop = H - CTRL_BAND;
+        // Faint divider above the band.
+        cellP.setColor(COL_BORDER).setStyle(PluginStyle.STROKE).setStrokeWidth(0.8f);
+        canvas.drawLine(12f, bandTop + 2f, W - 12f, bandTop + 2f, cellP);
+
+        float cx = W * 0.5f;
+        float cy = bandTop + CTRL_BAND * 0.5f + 2f;
+        float hs = Math.min(22f, CTRL_BAND * 0.20f);   // chip half-extent
+        float gv = hs * 2.05f;                         // vertical spacing
+        float gh = hs * 2.55f;                         // horizontal spacing
+
+        drawChip(canvas, V_U, cx,      cy - gv, hs, UP);
+        drawChip(canvas, V_I, cx,      cy + gv, hs, DOWN);
+        drawChip(canvas, V_A, cx - gh, cy,      hs, LEFT);
+        drawChip(canvas, V_E, cx + gh, cy,      hs, RIGHT);
+        drawChip(canvas, V_O, cx,      cy,      hs, -1);   // boost (centre)
+    }
+
+    private void drawChip(PluginCanvas canvas, int vowel, float x, float y,
+                          float hs, int dir) {
+        int base = VOW_COL[vowel];
+        boolean active = (curVowel == vowel);
+        boolean boostChip = (vowel == V_O);
+        if (boostChip && boosting) active = true;
+        // Body.
+        cellP.setColor(active ? base : COL_BOARD).setStyle(PluginStyle.FILL);
+        canvas.drawRoundRect(x - hs, y - hs, x + hs, y + hs, hs * 0.42f, cellP);
+        cellP.setColor(active ? 0xFFFFFFFF : base).setStyle(PluginStyle.STROKE)
+                .setStrokeWidth(active ? 2f : 1.2f);
+        canvas.drawRoundRect(x - hs, y - hs, x + hs, y + hs, hs * 0.42f, cellP);
+        // Vowel letter.
+        txt.setColor(active ? 0xFF101014 : COL_TEXT).setTextSize(hs * 0.95f).setTextAlign(1);
+        canvas.drawText(VOW_NAME[vowel], x, y + hs * 0.10f, txt);
+        // Direction chevron (outer edge), or a "boost" tag for O.
+        if (dir >= 0) {
+            int chev = active ? 0xFF101014 : base;
+            drawChevron(canvas, dir, x, y, hs, chev);
+        } else {
+            txtDim.setColor(active ? 0xFF101014 : COL_DIM).setTextSize(hs * 0.42f).setTextAlign(1);
+            canvas.drawText("boost", x, y + hs * 0.78f, txtDim);
+        }
+    }
+
+    // Two-stroke chevron pointing in `dir`, drawn just inside the chip's outer
+    // edge so the arrow sits on the side the snake will move.
+    private void drawChevron(PluginCanvas canvas, int dir, float x, float y,
+                             float hs, int color) {
+        meter.setColor(color).setStyle(PluginStyle.STROKE).setStrokeWidth(2f);
+        float r = hs * 0.34f;
+        float e = hs * 0.62f;          // how far out toward the edge
+        switch (dir) {
+            case UP: {
+                float ay = y - e;
+                canvas.drawLine(x - r, ay + r * 0.6f, x, ay - r * 0.4f, meter);
+                canvas.drawLine(x, ay - r * 0.4f, x + r, ay + r * 0.6f, meter);
+                break;
+            }
+            case DOWN: {
+                float ay = y + e;
+                canvas.drawLine(x - r, ay - r * 0.6f, x, ay + r * 0.4f, meter);
+                canvas.drawLine(x, ay + r * 0.4f, x + r, ay - r * 0.6f, meter);
+                break;
+            }
+            case LEFT: {
+                float ax = x - e;
+                canvas.drawLine(ax + r * 0.6f, y - r, ax - r * 0.4f, y, meter);
+                canvas.drawLine(ax - r * 0.4f, y, ax + r * 0.6f, y + r, meter);
+                break;
+            }
+            case RIGHT: {
+                float ax = x + e;
+                canvas.drawLine(ax - r * 0.6f, y - r, ax + r * 0.4f, y, meter);
+                canvas.drawLine(ax + r * 0.4f, y, ax - r * 0.6f, y + r, meter);
+                break;
+            }
+            default: break;
         }
     }
 
     private void drawCenter(PluginCanvas canvas, float W, float H,
                             String title, String sub, int col) {
         bg.setColor(0xCC0E0F12).setStyle(PluginStyle.FILL);
-        canvas.drawRect(0, HUD_TOP, W, H - LEGEND_BOT, bg);
+        canvas.drawRect(0, HUD_TOP, W, H - CTRL_BAND, bg);
         txt.setColor(col).setTextSize(26f).setTextAlign(1);
         canvas.drawText(title, W * 0.5f, H * 0.46f, txt);
         txtDim.setColor(COL_TEXT).setTextSize(12f).setTextAlign(1);
