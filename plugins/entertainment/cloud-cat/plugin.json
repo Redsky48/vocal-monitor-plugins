@@ -1,0 +1,14 @@
+{
+  "id": "cloud-cat",
+  "name": "Cloud Cat",
+  "author": "Vocal Monitor",
+  "version": "1.0.0",
+  "description": "A cat bounces endlessly up a tower of clouds — some hold, some crumble and fall the moment you push off, so keep moving. Drag your finger to steer the cat left and right, catch crystals and gold coins on the clouds, and grab the gift that drops in when you climb high enough. Spend your loot in the shop on hats and outfits that show up on the cat. Touch only, no microphone.",
+  "tags": ["entertainment", "game", "cat", "platformer", "kids", "touch", "fullscreen", "native"],
+  "engine": "native",
+  "className": "com.vocalmonitor.plugin.community.CloudCat",
+  "ui_kind": "canvas",
+  "ui": { "aspect": "9:16", "min_height_dp": 480 },
+  "fullscreen": true,
+  "streams": []
+}

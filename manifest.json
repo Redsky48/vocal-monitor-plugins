@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-30T07:45:48.195Z",
+  "generatedAt": "2026-05-30T09:38:21.004Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -605,6 +605,35 @@
       "streams": [
         "waveform"
       ],
+      "fullscreen": true
+    },
+    {
+      "id": "cloud-cat",
+      "name": "Cloud Cat",
+      "author": "Vocal Monitor",
+      "category": "Entertainment",
+      "description": "A cat bounces endlessly up a tower of clouds — some hold, some crumble and fall the moment you push off, so keep moving. Drag your finger to steer the cat left and right, catch crystals and gold coins on the clouds, and grab the gift that drops in when you climb high enough. Spend your loot in the shop on hats and outfits that show up on the cat. Touch only, no microphone.",
+      "version": "1.0.0",
+      "tags": [
+        "entertainment",
+        "game",
+        "cat",
+        "platformer",
+        "kids",
+        "touch",
+        "fullscreen",
+        "native"
+      ],
+      "engine": "native",
+      "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/cloud-cat/cloud-cat.dex",
+      "sizeBytes": 62056,
+      "className": "com.vocalmonitor.plugin.community.CloudCat",
+      "ui_kind": "canvas",
+      "ui": {
+        "aspect": "9:16",
+        "min_height_dp": 480
+      },
+      "streams": [],
       "fullscreen": true
     },
     {
