@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-30T07:34:48.643Z",
+  "generatedAt": "2026-05-30T07:37:04.015Z",
   "repository": "Redsky48/vocal-monitor-plugins",
   "plugins": [
     {
@@ -786,7 +786,7 @@
       ],
       "engine": "native",
       "source": "https://raw.githubusercontent.com/Redsky48/vocal-monitor-plugins/main/plugins/entertainment/vowel-snake/vowel-snake.dex",
-      "sizeBytes": 62296,
+      "sizeBytes": 63076,
       "className": "com.vocalmonitor.plugin.community.VowelSnake",
       "ui_kind": "canvas",
       "ui": {

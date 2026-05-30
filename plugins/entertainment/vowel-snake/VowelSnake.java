@@ -70,6 +70,14 @@ public final class VowelSnake extends GamePluginBase {
 
     private long rng = 0x9E3779B97F4A7C15L;
 
+    // Difficulty (host setting): 0 = easy, 1 = normal, 2 = hard. Sets the
+    // per-cell move interval (lower = faster) and how fast it ramps with score.
+    private float difficulty = 1f;
+    private static final String[] DIFF_NAME = { "EASY", "NORMAL", "HARD" };
+    private static final float[] DIFF_BASE  = { 0.34f, 0.25f, 0.17f };  // s/cell at score 0
+    private static final float[] DIFF_MIN   = { 0.17f, 0.13f, 0.09f };  // fastest s/cell
+    private static final float[] DIFF_RAMP  = { 0.0016f, 0.0024f, 0.0032f };
+
     // Vowel confirm (debounce raw classification jitter).
     private int curVowel = -1;     // confirmed vowel this frame (-1 none)
     private int lastRaw = -1, rawRun = 0;
@@ -85,6 +93,23 @@ public final class VowelSnake extends GamePluginBase {
         java.util.Arrays.fill(audioRing, 0f);
         ringW = 0;
         f1 = f2 = 0f;
+    }
+
+    // ── Difficulty exposed as a host setting (stepped 0..2) ──
+    @Override public String[] parameterNames() { return new String[] { "difficulty" }; }
+    @Override public float parameterMin(String n)     { return 0f; }
+    @Override public float parameterMax(String n)     { return 2f; }
+    @Override public float parameterDefault(String n) { return 1f; }
+    @Override public String parameterLabel(String n)  {
+        return "Difficulty (0 easy / 1 normal / 2 hard)";
+    }
+    @Override public void setParameter(String n, float v) {
+        if ("difficulty".equals(n)) difficulty = v;
+    }
+
+    private int diffLevel() {
+        int d = Math.round(difficulty);
+        return d < 0 ? 0 : (d > 2 ? 2 : d);
     }
 
     // ═══════════════════════ Render / loop ═══════════════════════
@@ -262,8 +287,10 @@ public final class VowelSnake extends GamePluginBase {
         if (boosting) boost = Math.max(0f, boost - dtSec / 2.2f);
         else          boost = Math.min(1f, boost + dtSec / 4f);
 
-        // Tick interval: speeds up slightly with score, halves while boosting.
-        float interval = Math.max(0.075f, 0.16f - score * 0.0025f);
+        // Tick interval (per cell) from the chosen difficulty: speeds up
+        // slightly with score, halves while boosting.
+        int d = diffLevel();
+        float interval = Math.max(DIFF_MIN[d], DIFF_BASE[d] - score * DIFF_RAMP[d]);
         if (boosting) interval *= 0.5f;
 
         tickAcc += dtSec;
@@ -654,7 +681,7 @@ public final class VowelSnake extends GamePluginBase {
         drawControlMap(canvas, W, H);
 
         if (state == READY) drawCenter(canvas, W, H, "VOWEL SNAKE",
-                "sing a vowel to start", COL_HEAD);
+                DIFF_NAME[diffLevel()] + "   •   sing a vowel to start", COL_HEAD);
         else if (state == OVER) drawCenter(canvas, W, H, "GAME OVER",
                 "score " + score + "   •   sing or tap to retry", COL_FOOD);
     }
