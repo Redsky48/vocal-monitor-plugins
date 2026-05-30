@@ -95,22 +95,17 @@ public final class VowelSnake extends GamePluginBase {
         f1 = f2 = 0f;
     }
 
-    // ── Difficulty exposed as a host setting (stepped 0..2) ──
-    @Override public String[] parameterNames() { return new String[] { "difficulty" }; }
-    @Override public float parameterMin(String n)     { return 0f; }
-    @Override public float parameterMax(String n)     { return 2f; }
-    @Override public float parameterDefault(String n) { return 1f; }
-    @Override public String parameterLabel(String n)  {
-        return "Difficulty (0 easy / 1 normal / 2 hard)";
-    }
-    @Override public void setParameter(String n, float v) {
-        if ("difficulty".equals(n)) difficulty = v;
-    }
-
+    // Difficulty is chosen IN-GAME via tappable pills on the title / game-over
+    // screen — NOT a host knob (GamePluginBase's empty parameter list stands).
+    // diffLevel() is the rounded 0..2 index.
     private int diffLevel() {
         int d = Math.round(difficulty);
         return d < 0 ? 0 : (d > 2 ? 2 : d);
     }
+    // Difficulty-pill hit rects, refreshed by drawMenu() each frame.
+    private final float[] pillX0 = new float[3];
+    private float pillW = 0f, pillY0 = 0f, pillY1 = 0f;
+    private boolean menuShown = false;
 
     // ═══════════════════════ Render / loop ═══════════════════════
     @Override
@@ -135,8 +130,14 @@ public final class VowelSnake extends GamePluginBase {
 
     @Override
     public void onTouchDown(float x, float y) {
-        if (state == READY) startGame();
-        else if (state == OVER) { reset(); startGame(); }
+        if (state == PLAYING) return;
+        // Difficulty pills first (only while the menu is on screen).
+        if (menuShown && y >= pillY0 && y <= pillY1) {
+            for (int i = 0; i < 3; i++) {
+                if (x >= pillX0[i] && x <= pillX0[i] + pillW) { difficulty = i; return; }
+            }
+        }
+        startGame();   // anywhere else starts / restarts at the current level
     }
 
     private void startGame() {
@@ -159,15 +160,16 @@ public final class VowelSnake extends GamePluginBase {
 
     // ─── Board layout ───
     private float boardX0, boardY0, cellPx;
-    // Top HUD strip + bottom control-map band (the compass of vowel→direction
-    // buttons lives in the band so it never overlaps the play field).
-    private static final float HUD_TOP = 44f, CTRL_BAND = 110f;
+    // Slim top HUD only; the board uses the entire rest of the panel. The
+    // control map is drawn as a translucent overlay ON the board, so nothing
+    // steals play-field space.
+    private static final float HUD_TOP = 40f, BOT_MARGIN = 6f;
 
     private void layout(int width, int height) {
         float availW = width - 8f;
-        float availH = height - HUD_TOP - CTRL_BAND;
+        float availH = height - HUD_TOP - BOT_MARGIN;
         if (availH < 40f) availH = height * 0.7f;
-        int targetCell = 24;
+        int targetCell = 22;
         int nc = Math.max(8, (int) (availW / targetCell));
         int nr = Math.max(8, (int) (availH / targetCell));
         if (nc != cols || nr != rows || segCell == null) {
@@ -677,13 +679,12 @@ public final class VowelSnake extends GamePluginBase {
             }
         }
 
+        if (state == PLAYING) drawControlMap(canvas, W, H);   // overlay on board
         drawHud(canvas, W);
-        drawControlMap(canvas, W, H);
 
-        if (state == READY) drawCenter(canvas, W, H, "VOWEL SNAKE",
-                DIFF_NAME[diffLevel()] + "   •   sing a vowel to start", COL_HEAD);
-        else if (state == OVER) drawCenter(canvas, W, H, "GAME OVER",
-                "score " + score + "   •   sing or tap to retry", COL_FOOD);
+        menuShown = (state == READY || state == OVER);
+        if (state == READY) drawMenu(canvas, W, H, "VOWEL SNAKE", COL_HEAD);
+        else if (state == OVER) drawMenu(canvas, W, H, "GAME OVER  •  score " + score, COL_FOOD);
     }
 
     private void drawEyes(PluginCanvas canvas, float x0, float y0) {
@@ -735,21 +736,15 @@ public final class VowelSnake extends GamePluginBase {
         }
     }
 
-    // Compass control map: the five vowel "buttons" arranged like a D-pad so
-    // it's instantly readable — U on top, I on bottom, A left, E right, and O
-    // (boost) in the centre. The button for the vowel you're singing lights up.
+    // Translucent D-pad overlay in the board's bottom-right corner — the
+    // controls sit ON the play field so they don't shrink it. U top, I bottom,
+    // A left, E right, O (boost) centre; the vowel you're singing lights up.
     private void drawControlMap(PluginCanvas canvas, float W, float H) {
-        float bandTop = H - CTRL_BAND;
-        // Faint divider above the band.
-        cellP.setColor(COL_BORDER).setStyle(PluginStyle.STROKE).setStrokeWidth(0.8f);
-        canvas.drawLine(12f, bandTop + 2f, W - 12f, bandTop + 2f, cellP);
-
-        float cx = W * 0.5f;
-        float cy = bandTop + CTRL_BAND * 0.5f + 2f;
-        float hs = Math.min(22f, CTRL_BAND * 0.20f);   // chip half-extent
-        float gv = hs * 2.05f;                         // vertical spacing
-        float gh = hs * 2.55f;                         // horizontal spacing
-
+        float bw = cellPx * cols, bh = cellPx * rows;
+        float hs = Math.max(11f, Math.min(15f, cellPx * 0.85f));
+        float gv = hs * 1.95f, gh = hs * 2.35f;
+        float cx = boardX0 + bw - (gh + hs) - 6f;
+        float cy = boardY0 + bh - (gv + hs) - 6f;
         drawChip(canvas, V_U, cx,      cy - gv, hs, UP);
         drawChip(canvas, V_I, cx,      cy + gv, hs, DOWN);
         drawChip(canvas, V_A, cx - gh, cy,      hs, LEFT);
@@ -760,24 +755,21 @@ public final class VowelSnake extends GamePluginBase {
     private void drawChip(PluginCanvas canvas, int vowel, float x, float y,
                           float hs, int dir) {
         int base = VOW_COL[vowel];
-        boolean active = (curVowel == vowel);
-        boolean boostChip = (vowel == V_O);
-        if (boostChip && boosting) active = true;
-        // Body.
-        cellP.setColor(active ? base : COL_BOARD).setStyle(PluginStyle.FILL);
+        boolean active = (curVowel == vowel) || (vowel == V_O && boosting);
+        // Body: dark translucent normally, vowel colour when active.
+        cellP.setColor(active ? withA(base, 0xE6) : 0x99121418).setStyle(PluginStyle.FILL);
         canvas.drawRoundRect(x - hs, y - hs, x + hs, y + hs, hs * 0.42f, cellP);
-        cellP.setColor(active ? 0xFFFFFFFF : base).setStyle(PluginStyle.STROKE)
-                .setStrokeWidth(active ? 2f : 1.2f);
+        cellP.setColor(withA(active ? 0xFFFFFFFF : base, active ? 0xFF : 0xB0))
+                .setStyle(PluginStyle.STROKE).setStrokeWidth(active ? 2f : 1.2f);
         canvas.drawRoundRect(x - hs, y - hs, x + hs, y + hs, hs * 0.42f, cellP);
-        // Vowel letter.
-        txt.setColor(active ? 0xFF101014 : COL_TEXT).setTextSize(hs * 0.95f).setTextAlign(1);
+        txt.setColor(active ? 0xFF101014 : withA(COL_TEXT, 0xDD))
+                .setTextSize(hs * 0.95f).setTextAlign(1);
         canvas.drawText(VOW_NAME[vowel], x, y + hs * 0.10f, txt);
-        // Direction chevron (outer edge), or a "boost" tag for O.
         if (dir >= 0) {
-            int chev = active ? 0xFF101014 : base;
-            drawChevron(canvas, dir, x, y, hs, chev);
+            drawChevron(canvas, dir, x, y, hs, active ? 0xFF101014 : withA(base, 0xDD));
         } else {
-            txtDim.setColor(active ? 0xFF101014 : COL_DIM).setTextSize(hs * 0.42f).setTextAlign(1);
+            txtDim.setColor(active ? 0xFF101014 : withA(COL_DIM, 0xDD))
+                    .setTextSize(hs * 0.42f).setTextAlign(1);
             canvas.drawText("boost", x, y + hs * 0.78f, txtDim);
         }
     }
@@ -818,14 +810,49 @@ public final class VowelSnake extends GamePluginBase {
         }
     }
 
-    private void drawCenter(PluginCanvas canvas, float W, float H,
-                            String title, String sub, int col) {
-        bg.setColor(0xCC0E0F12).setStyle(PluginStyle.FILL);
-        canvas.drawRect(0, HUD_TOP, W, H - CTRL_BAND, bg);
-        txt.setColor(col).setTextSize(26f).setTextAlign(1);
-        canvas.drawText(title, W * 0.5f, H * 0.46f, txt);
-        txtDim.setColor(COL_TEXT).setTextSize(12f).setTextAlign(1);
-        canvas.drawText(sub, W * 0.5f, H * 0.46f + 24f, txtDim);
+    // Title / game-over menu with an in-game, tappable DIFFICULTY selector.
+    // Records the pill hit-rects into pillX0/pillW/pillY0/pillY1 for onTouchDown.
+    private void drawMenu(PluginCanvas canvas, float W, float H, String title, int col) {
+        bg.setColor(0xD8101216).setStyle(PluginStyle.FILL);
+        canvas.drawRect(0, HUD_TOP, W, H - BOT_MARGIN, bg);
+
+        float midY = (HUD_TOP + H) * 0.5f;
+        txt.setColor(col).setTextSize(22f).setTextAlign(1);
+        canvas.drawText(title, W * 0.5f, midY - 40f, txt);
+
+        // Control reminder (words — font-safe; the D-pad shows the arrows).
+        txtDim.setColor(COL_DIM).setTextSize(10f).setTextAlign(1);
+        canvas.drawText("A left  •  E right  •  U up  •  I down  •  O boost",
+                W * 0.5f, midY - 18f, txtDim);
+
+        // Difficulty pills.
+        txtDim.setColor(COL_DIM).setTextSize(9f).setTextAlign(1);
+        canvas.drawText("DIFFICULTY  (tap)", W * 0.5f, midY + 8f, txtDim);
+        float pillH = 30f, gap = 8f;
+        float totalW = Math.min(W - 28f, 312f);
+        pillW = (totalW - 2f * gap) / 3f;
+        float px = (W - totalW) * 0.5f;
+        pillY0 = midY + 16f; pillY1 = pillY0 + pillH;
+        int sel = diffLevel();
+        for (int i = 0; i < 3; i++) {
+            pillX0[i] = px + i * (pillW + gap);
+            boolean on = (i == sel);
+            int pc = i == 0 ? COL_HEAD : i == 1 ? COL_FOOD : COL_BOOST;
+            cellP.setColor(on ? pc : COL_BOARD).setStyle(PluginStyle.FILL);
+            canvas.drawRoundRect(pillX0[i], pillY0, pillX0[i] + pillW, pillY1, 8f, cellP);
+            cellP.setColor(on ? 0xFFFFFFFF : pc).setStyle(PluginStyle.STROKE)
+                    .setStrokeWidth(on ? 2f : 1.2f);
+            canvas.drawRoundRect(pillX0[i], pillY0, pillX0[i] + pillW, pillY1, 8f, cellP);
+            txt.setColor(on ? 0xFF101014 : COL_TEXT).setTextSize(12f).setTextAlign(1);
+            canvas.drawText(DIFF_NAME[i], pillX0[i] + pillW * 0.5f, pillY0 + pillH * 0.63f, txt);
+        }
+        txtDim.setColor(COL_DIM).setTextSize(10f).setTextAlign(1);
+        canvas.drawText(state == OVER ? "sing or tap to retry" : "sing or tap to start",
+                W * 0.5f, pillY1 + 18f, txtDim);
+    }
+
+    private static int withA(int argb, int a) {
+        return (a << 24) | (argb & 0x00FFFFFF);
     }
 
     private static int mix(int a, int b, float t) {
